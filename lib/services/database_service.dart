@@ -1,123 +1,201 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import '../models/transaction_model.dart';
+import '../models/account_model.dart';
 import '../models/budget_model.dart';
 import '../models/note_model.dart';
 
 class DatabaseService {
-  DatabaseService._();
-  static final DatabaseService instance = DatabaseService._();
-  Database? _db;
+  static final DatabaseService instance = DatabaseService._init();
+  static Database? _database;
+  DatabaseService._init();
 
   Future<Database> get database async {
-    _db ??= await _initDb();
-    return _db!;
+    if (_database != null) return _database!;
+    _database = await _initDB('walletscript.db');
+    return _database!;
   }
 
-  Future<Database> _initDb() async {
-    final path = join(await getDatabasesPath(), 'walletscript.db');
-    return openDatabase(path, version: 3, onCreate: _onCreate, onUpgrade: _onUpgrade);
+  Future<Database> _initDB(String filePath) async {
+    final dbPath = await getDatabasesPath();
+    final path = join(dbPath, filePath);
+    return await openDatabase(path,
+        version: 2, onCreate: _createDB, onUpgrade: _onUpgrade);
   }
 
-  Future<void> _onCreate(Database db, int version) async {
-    await db.execute('''
-      CREATE TABLE transactions(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT, amount REAL, type TEXT,
-        category TEXT, currency TEXT,
-        accountId TEXT, date TEXT, note TEXT
-      )
-    ''');
-    await db.execute('''
-      CREATE TABLE budgets(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT, emoji TEXT, targetAmount REAL,
-        currentAmount REAL, currency TEXT, color TEXT
-      )
-    ''');
-    await db.execute('''
-      CREATE TABLE notes(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT, content TEXT, createdAt TEXT,
-        updatedAt TEXT, reminderDate TEXT,
-        hasReminder INTEGER DEFAULT 0,
-        isPinned INTEGER DEFAULT 0,
-        color TEXT DEFAULT "#FFFFFF"
-      )
-    ''');
+  Future _createDB(Database db, int version) async {
+    await db.execute('''CREATE TABLE accounts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL, type TEXT NOT NULL,
+      balance REAL NOT NULL, currency TEXT NOT NULL,
+      icon TEXT NOT NULL, color TEXT NOT NULL)''');
+
+    await db.execute('''CREATE TABLE transactions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL, amount REAL NOT NULL,
+      type TEXT NOT NULL, category TEXT NOT NULL,
+      currency TEXT NOT NULL, accountId TEXT NOT NULL,
+      toAccountId TEXT, date TEXT NOT NULL,
+      note TEXT, attachmentPath TEXT)''');
+
+    await db.execute('''CREATE TABLE budgets (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL, emoji TEXT NOT NULL,
+      targetAmount REAL NOT NULL, currentAmount REAL NOT NULL,
+      currency TEXT NOT NULL, deadline TEXT, color TEXT NOT NULL)''');
+
+    await db.execute('''CREATE TABLE notes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL, content TEXT NOT NULL,
+      createdAt TEXT NOT NULL, updatedAt TEXT,
+      color TEXT NOT NULL DEFAULT '#FFFFFF',
+      isPinned INTEGER NOT NULL DEFAULT 0,
+      hasReminder INTEGER NOT NULL DEFAULT 0,
+      reminderDate TEXT)''');
+
+    await db.insert('accounts', {
+      'name': 'Cash',
+      'type': 'cash',
+      'balance': 0.0,
+      'currency': 'IDR',
+      'icon': 'wallet',
+      'color': '0xFF10B981'
+    });
+    await db.insert('accounts', {
+      'name': 'Bank',
+      'type': 'bank',
+      'balance': 0.0,
+      'currency': 'IDR',
+      'icon': 'bank',
+      'color': '0xFF6C63FF'
+    });
   }
 
-  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+  Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
-      try { await db.execute('ALTER TABLE notes ADD COLUMN reminderDate TEXT'); } catch (_) {}
-      try { await db.execute('ALTER TABLE notes ADD COLUMN hasReminder INTEGER DEFAULT 0'); } catch (_) {}
-    }
-    if (oldVersion < 3) {
-      try { await db.execute('ALTER TABLE notes ADD COLUMN updatedAt TEXT'); } catch (_) {}
-      try { await db.execute('ALTER TABLE notes ADD COLUMN isPinned INTEGER DEFAULT 0'); } catch (_) {}
-      try { await db.execute('ALTER TABLE notes ADD COLUMN color TEXT DEFAULT "#FFFFFF"'); } catch (_) {}
+      // Tambah kolom baru ke tabel notes yang sudah ada
+      await db.execute(
+          'ALTER TABLE notes ADD COLUMN hasReminder INTEGER NOT NULL DEFAULT 0');
+      await db.execute('ALTER TABLE notes ADD COLUMN reminderDate TEXT');
+      // updatedAt di versi lama NOT NULL, sekarang nullable — tidak perlu diubah
     }
   }
 
-  // -- Transactions --
-  Future<int> insertTransaction(AppTransaction t) async {
+  // ─── Accounts ───────────────────────────────────────────────
+
+  Future<List<AppAccount>> getAccounts() async {
     final db = await database;
-    return db.insert('transactions', t.toMap());
+    final maps = await db.query('accounts');
+    return maps.map((e) => AppAccount.fromMap(e)).toList();
   }
+
+  Future<AppAccount> insertAccount(AppAccount account) async {
+    final db = await database;
+    final id = await db.insert('accounts', account.toMap());
+    return AppAccount(
+        id: id,
+        name: account.name,
+        type: account.type,
+        balance: account.balance,
+        currency: account.currency,
+        icon: account.icon,
+        color: account.color);
+  }
+
+  Future updateAccountBalance(int id, double newBalance) async {
+    final db = await database;
+    await db.update('accounts', {'balance': newBalance},
+        where: 'id = ?', whereArgs: [id]);
+  }
+
+  // ─── Transactions ────────────────────────────────────────────
 
   Future<List<AppTransaction>> getTransactions() async {
     final db = await database;
     final maps = await db.query('transactions', orderBy: 'date DESC');
-    return maps.map((m) => AppTransaction.fromMap(m)).toList();
+    return maps.map((e) => AppTransaction.fromMap(e)).toList();
   }
 
-  Future<void> deleteTransaction(int id) async {
+  Future<AppTransaction> insertTransaction(AppTransaction tx) async {
+    final db = await database;
+    final id = await db.insert('transactions', tx.toMap());
+    return AppTransaction(
+        id: id,
+        title: tx.title,
+        amount: tx.amount,
+        type: tx.type,
+        category: tx.category,
+        currency: tx.currency,
+        accountId: tx.accountId,
+        toAccountId: tx.toAccountId,
+        date: tx.date,
+        note: tx.note,
+        attachmentPath: tx.attachmentPath);
+  }
+
+  Future deleteTransaction(int id) async {
     final db = await database;
     await db.delete('transactions', where: 'id = ?', whereArgs: [id]);
   }
 
-  // -- Budgets --
-  Future<int> insertBudget(AppBudget b) async {
-    final db = await database;
-    return db.insert('budgets', b.toMap());
-  }
+  // ─── Budgets ─────────────────────────────────────────────────
 
   Future<List<AppBudget>> getBudgets() async {
     final db = await database;
     final maps = await db.query('budgets');
-    return maps.map((m) => AppBudget.fromMap(m)).toList();
+    return maps.map((e) => AppBudget.fromMap(e)).toList();
   }
 
-  Future<void> updateBudgetAmount(int id, double amount) async {
+  Future<AppBudget> insertBudget(AppBudget budget) async {
     final db = await database;
-    await db.update('budgets', {'currentAmount': amount},
+    final id = await db.insert('budgets', budget.toMap());
+    return AppBudget(
+        id: id,
+        title: budget.title,
+        emoji: budget.emoji,
+        targetAmount: budget.targetAmount,
+        currentAmount: budget.currentAmount,
+        currency: budget.currency,
+        deadline: budget.deadline,
+        color: budget.color);
+  }
+
+  Future updateBudgetAmount(int id, double newAmount) async {
+    final db = await database;
+    await db.update('budgets', {'currentAmount': newAmount},
         where: 'id = ?', whereArgs: [id]);
   }
 
-  Future<void> deleteBudget(int id) async {
+  Future deleteBudget(int id) async {
     final db = await database;
     await db.delete('budgets', where: 'id = ?', whereArgs: [id]);
   }
 
-  // -- Notes --
-  Future<int> insertNote(AppNote n) async {
-    final db = await database;
-    return db.insert('notes', n.toMap());
-  }
+  // ─── Notes ───────────────────────────────────────────────────
 
   Future<List<AppNote>> getNotes() async {
     final db = await database;
-    final maps = await db.query('notes', orderBy: 'isPinned DESC, createdAt DESC');
-    return maps.map((m) => AppNote.fromMap(m)).toList();
+    final maps =
+        await db.query('notes', orderBy: 'isPinned DESC, updatedAt DESC');
+    return maps.map((e) => AppNote.fromMap(e)).toList();
   }
 
-  Future<void> updateNote(AppNote n) async {
+  Future<int> insertNote(AppNote note) async {
     final db = await database;
-    await db.update('notes', n.toMap(), where: 'id = ?', whereArgs: [n.id]);
+    final id = await db.insert('notes', note.toMap());
+    return id;
   }
 
-  Future<void> deleteNote(int id) async {
+  Future updateNote(AppNote note) async {
+    final db = await database;
+    await db
+        .update('notes', note.toMap(), where: 'id = ?', whereArgs: [note.id]);
+  }
+
+  Future deleteNote(int id) async {
     final db = await database;
     await db.delete('notes', where: 'id = ?', whereArgs: [id]);
   }
+
+  Future close() async => (await database).close();
 }

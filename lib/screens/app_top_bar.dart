@@ -4,6 +4,7 @@ import 'profile_screen.dart';
 import 'notes_screen.dart';
 import 'calendar_screen.dart';
 import '../main.dart';
+import 'notification_screen.dart';
 
 class AppTopBar extends StatelessWidget {
   const AppTopBar({super.key});
@@ -12,25 +13,27 @@ class AppTopBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        // Avatar — tap = Profile
+        // Avatar - tap = Profile
         GestureDetector(
           onTap: () => Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const ProfileScreen()),
           ),
           child: Container(
-            width: 44, height: 44,
+            width: 44,
+            height: 44,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(color: AppTheme.primary, width: 2),
               color: AppTheme.surfaceContainer,
             ),
-            child: const Icon(Icons.person_rounded, color: AppTheme.primary, size: 26),
+            child: const Icon(Icons.person_rounded,
+                color: AppTheme.primary, size: 26),
           ),
         ),
         const SizedBox(width: 10),
 
-        // WalletScript — tap = Home
+        // WalletScript - tap = Home
         GestureDetector(
           onTap: () {
             final shell = context.findAncestorStateOfType<MainShellState>();
@@ -42,7 +45,10 @@ class AppTopBar extends StatelessWidget {
           },
           child: const Text(
             'WalletScript',
-            style: TextStyle(color: AppTheme.primary, fontSize: 20, fontWeight: FontWeight.w800),
+            style: TextStyle(
+                color: AppTheme.primary,
+                fontSize: 20,
+                fontWeight: FontWeight.w800),
           ),
         ),
 
@@ -52,7 +58,8 @@ class AppTopBar extends StatelessWidget {
         _iconBtn(
           context,
           Icons.sticky_note_2_outlined,
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotesScreen())),
+          onTap: () => Navigator.push(
+              context, MaterialPageRoute(builder: (_) => const NotesScreen())),
         ),
         const SizedBox(width: 6),
 
@@ -60,19 +67,30 @@ class AppTopBar extends StatelessWidget {
         _iconBtn(
           context,
           Icons.calendar_month_outlined,
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CalendarScreen())),
+          onTap: () => Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const CalendarScreen())),
         ),
         const SizedBox(width: 6),
 
         // Notification
         Stack(
           children: [
-            _iconBtn(context, Icons.notifications_outlined, onTap: () {}),
+            _iconBtn(
+              context,
+              Icons.notifications_outlined,
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const NotificationScreen()),
+              ),
+            ),
             Positioned(
-              top: 6, right: 6,
+              top: 6,
+              right: 6,
               child: Container(
-                width: 8, height: 8,
-                decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                width: 8,
+                height: 8,
+                decoration: const BoxDecoration(
+                    color: Colors.red, shape: BoxShape.circle),
               ),
             ),
           ],
@@ -81,11 +99,13 @@ class AppTopBar extends StatelessWidget {
     );
   }
 
-  Widget _iconBtn(BuildContext context, IconData icon, {required VoidCallback onTap}) {
+  Widget _iconBtn(BuildContext context, IconData icon,
+      {required VoidCallback onTap}) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 38, height: 38,
+        width: 38,
+        height: 38,
         decoration: BoxDecoration(
           color: AppTheme.surface,
           borderRadius: BorderRadius.circular(11),
