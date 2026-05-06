@@ -1,0 +1,43 @@
+name: walletscript
+description: Smart Personal Finance Manager
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # UI
+  google_fonts: ^6.2.1
+  fl_chart: ^0.68.0
+  flutter_slidable: ^3.1.0
+  intl: ^0.19.0
+  cupertino_icons: ^1.0.6
+
+  # Database
+  sqflite: ^2.3.2
+  path: ^1.9.0
+
+  # HTTP
+  http: ^1.2.0
+
+  # State management
+  provider: ^6.1.2
+
+  # Notifications
+  flutter_local_notifications: ^17.2.2
+  timezone: ^0.9.4
+
+  # Calendar
+  table_calendar: ^3.1.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
