@@ -3,7 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../models/transaction_model.dart';
+import '../models/account_model.dart';
 import '../providers/transaction_provider.dart';
+import '../providers/account_provider.dart';
 import '../theme/app_theme.dart';
 
 class AddTransactionScreen extends StatefulWidget {
@@ -17,7 +19,10 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   final _amountController = TextEditingController();
   final _noteController = TextEditingController();
   String _category = 'Makanan';
-  String _selectedWallet = 'Personal';
+
+  // Wallet dipilih by ID, bukan hardcoded name
+  AppAccount? _selectedAccount;
+
   DateTime _date = DateTime.now();
 
   final List<Map<String, dynamic>> _expenseCategories = [
@@ -39,11 +44,66 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     {'label': 'Lainnya', 'icon': Icons.more_horiz_rounded},
   ];
 
-  final List<Map<String, dynamic>> _wallets = [
-    {'label': 'Personal', 'icon': Icons.account_balance_wallet_rounded, 'balance': 'Rp 4.250.000'},
-    {'label': 'Tabungan', 'icon': Icons.savings_rounded, 'balance': 'Rp 12.000.000'},
-    {'label': 'Bank', 'icon': Icons.credit_card_rounded, 'balance': 'Rp 1.120.000'},
+  // Icon per group (sama dengan di home_screen)
+  static const Map<String, IconData> _groupIcons = {
+    'Cash': Icons.payments_rounded,
+    'Accounts': Icons.account_balance_rounded,
+    'Card': Icons.credit_card_rounded,
+    'Debit Card': Icons.credit_card_outlined,
+    'Savings': Icons.savings_rounded,
+    'Top-Up/Prepaid': Icons.phone_android_rounded,
+    'Investments': Icons.trending_up_rounded,
+    'Overdrafts': Icons.warning_amber_rounded,
+    'Loan': Icons.request_quote_rounded,
+    'Insurance': Icons.health_and_safety_rounded,
+    'Others': Icons.wallet_rounded,
+  };
+
+  // Warna per group (sama dengan di home_screen agar konsisten)
+  static const List<Color> _groupColors = [
+    Color(0xFF6366F1),
+    Color(0xFF10B981),
+    Color(0xFFF59E0B),
+    Color(0xFFEF4444),
+    Color(0xFF0EA5E9),
+    Color(0xFFEC4899),
+    Color(0xFF8B5CF6),
+    Color(0xFF14B8A6),
+    Color(0xFFF97316),
+    Color(0xFF06B6D4),
+    Color(0xFF84CC16),
   ];
+
+  Color _colorForGroup(String group) {
+    final groups = AccountProvider.allGroups;
+    final idx = groups.indexOf(group);
+    return _groupColors[(idx < 0 ? 0 : idx) % _groupColors.length];
+  }
+
+  IconData _iconForGroup(String group) {
+    return _groupIcons[group] ?? Icons.wallet_rounded;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // Pastikan accounts sudah diload
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final accountProvider = context.read<AccountProvider>();
+      accountProvider.loadAccounts().then((_) {
+        if (mounted && accountProvider.accounts.isNotEmpty) {
+          setState(() => _selectedAccount = accountProvider.accounts.first);
+        }
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _amountController.dispose();
+    _noteController.dispose();
+    super.dispose();
+  }
 
   void _save() {
     final raw = _amountController.text.replaceAll('.', '').replaceAll(',', '');
@@ -52,20 +112,46 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           const SnackBar(content: Text('Nominal tidak boleh kosong!')));
       return;
     }
+    if (_selectedAccount == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Pilih wallet terlebih dahulu!')));
+      return;
+    }
+
+    final amount = double.parse(raw);
+    final accountProvider = context.read<AccountProvider>();
+
+    // Hitung balance baru setelah transaksi
+    double newBalance = _selectedAccount!.balance;
+    if (_type == 'expense') {
+      newBalance -= amount;
+    } else if (_type == 'income') {
+      newBalance += amount;
+    }
+    // Transfer: tidak ubah balance di sini (perlu pilih akun tujuan — bisa dikembangkan)
+
     final tx = AppTransaction(
       title: _category,
-      amount: double.parse(raw),
+      amount: amount,
       type: _type,
       category: _category,
       currency: 'IDR',
-      accountId: '1',
+      accountId: _selectedAccount!.id.toString(),
       date: _date,
       note: _noteController.text.isEmpty ? null : _noteController.text,
     );
+
+    // Simpan transaksi
     context.read<TransactionProvider>().addTransaction(tx);
+
+    // Update balance akun yang dipilih
+    if (_type != 'transfer') {
+      accountProvider.updateBalance(_selectedAccount!.id!, newBalance);
+    }
+
     Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Transaksi tersimpan')));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('Transaksi tersimpan')));
   }
 
   @override
@@ -73,6 +159,19 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     final cats = _type == 'expense' ? _expenseCategories : _incomeCategories;
     if (!cats.any((c) => c['label'] == _category)) {
       _category = cats.first['label'] as String;
+    }
+
+    // Ambil data akun real dari provider
+    final accountProvider = context.watch<AccountProvider>();
+    final accounts = accountProvider.accounts;
+    final formatter =
+        NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+
+    // Auto-select akun pertama kalau belum ada yang dipilih
+    if (_selectedAccount == null && accounts.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() => _selectedAccount = accounts.first);
+      });
     }
 
     return Scaffold(
@@ -84,17 +183,22 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text('Add Transaction',
-            style: TextStyle(color: AppTheme.onSurface, fontWeight: FontWeight.w700, fontSize: 18)),
+            style: TextStyle(
+                color: AppTheme.onSurface,
+                fontWeight: FontWeight.w700,
+                fontSize: 18)),
         actions: [
           Container(
             margin: const EdgeInsets.only(right: 12),
-            width: 36, height: 36,
+            width: 36,
+            height: 36,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(color: AppTheme.primary, width: 2),
               color: AppTheme.surfaceContainer,
             ),
-            child: const Icon(Icons.person_rounded, color: AppTheme.primary, size: 20),
+            child: const Icon(Icons.person_rounded,
+                color: AppTheme.primary, size: 20),
           ),
         ],
       ),
@@ -147,7 +251,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                         child: TextField(
                           controller: _amountController,
                           keyboardType: TextInputType.number,
-                          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly
+                          ],
                           textAlign: TextAlign.center,
                           style: const TextStyle(
                             color: AppTheme.onSurface,
@@ -173,64 +279,115 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
             ),
             const SizedBox(height: 24),
 
-            // Wallet selector
+            // ── SELECT WALLET — dari AccountProvider (real data)
             const Text('Select Wallet',
-                style: TextStyle(color: AppTheme.onSurface, fontWeight: FontWeight.w700, fontSize: 16)),
+                style: TextStyle(
+                    color: AppTheme.onSurface,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 16)),
             const SizedBox(height: 12),
-            SizedBox(
-              height: 95,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                itemCount: _wallets.length,
-                itemBuilder: (ctx, i) {
-                  final w = _wallets[i];
-                  final isSelected = _selectedWallet == w['label'];
-                  return GestureDetector(
-                    onTap: () => setState(() => _selectedWallet = w['label'] as String),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 150),
-                      width: 110,
-                      margin: const EdgeInsets.only(right: 12),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: isSelected ? AppTheme.primary : AppTheme.surface,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: isSelected ? AppTheme.primary : AppTheme.outline,
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Icon(w['icon'] as IconData,
-                              color: isSelected ? Colors.white : AppTheme.primary,
-                              size: 22),
-                          const Spacer(),
-                          Text(w['label'] as String,
-                              style: TextStyle(
-                                color: isSelected ? Colors.white : AppTheme.onSurface,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 13,
-                              )),
-                          Text(w['balance'] as String,
-                              style: TextStyle(
-                                color: isSelected
-                                    ? Colors.white.withOpacity(0.7)
-                                    : AppTheme.onSurfaceVariant,
-                                fontSize: 10,
-                              )),
-                        ],
-                      ),
+
+            accounts.isEmpty
+                ? Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppTheme.surfaceContainer,
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                  );
-                },
-              ),
-            ),
+                    child: const Row(children: [
+                      Icon(Icons.info_outline,
+                          color: AppTheme.onSurfaceVariant, size: 18),
+                      SizedBox(width: 8),
+                      Text('Belum ada wallet. Tambah dulu di halaman Wallet.',
+                          style: TextStyle(
+                              color: AppTheme.onSurfaceVariant, fontSize: 13)),
+                    ]),
+                  )
+                : SizedBox(
+                    height: 100,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: accounts.length,
+                      itemBuilder: (ctx, i) {
+                        final acc = accounts[i];
+                        final isSelected = _selectedAccount?.id == acc.id;
+                        final groupColor = _colorForGroup(acc.group);
+                        final groupIcon = _iconForGroup(acc.group);
+
+                        return GestureDetector(
+                          onTap: () => setState(() => _selectedAccount = acc),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 150),
+                            width: 120,
+                            margin: const EdgeInsets.only(right: 12),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: isSelected ? groupColor : AppTheme.surface,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color:
+                                    isSelected ? groupColor : AppTheme.outline,
+                                width: isSelected ? 2 : 1,
+                              ),
+                              boxShadow: isSelected
+                                  ? [
+                                      BoxShadow(
+                                          color: groupColor.withOpacity(0.35),
+                                          blurRadius: 12,
+                                          offset: const Offset(0, 4))
+                                    ]
+                                  : [],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(children: [
+                                  Icon(groupIcon,
+                                      color: isSelected
+                                          ? Colors.white
+                                          : groupColor,
+                                      size: 18),
+                                  const Spacer(),
+                                  if (isSelected)
+                                    const Icon(Icons.check_circle_rounded,
+                                        color: Colors.white, size: 14),
+                                ]),
+                                const Spacer(),
+                                Text(acc.name,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: isSelected
+                                          ? Colors.white
+                                          : AppTheme.onSurface,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 13,
+                                    )),
+                                const SizedBox(height: 2),
+                                Text(formatter.format(acc.balance),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: isSelected
+                                          ? Colors.white.withOpacity(0.75)
+                                          : AppTheme.onSurfaceVariant,
+                                      fontSize: 10,
+                                    )),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
             const SizedBox(height: 20),
 
             // Category
             const Text('Category',
-                style: TextStyle(color: AppTheme.onSurface, fontWeight: FontWeight.w700, fontSize: 16)),
+                style: TextStyle(
+                    color: AppTheme.onSurface,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 16)),
             const SizedBox(height: 12),
             GridView.builder(
               shrinkWrap: true,
@@ -251,21 +408,29 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                     children: [
                       AnimatedContainer(
                         duration: const Duration(milliseconds: 150),
-                        width: 56, height: 56,
+                        width: 56,
+                        height: 56,
                         decoration: BoxDecoration(
-                          color: isSelected ? AppTheme.primary : AppTheme.surfaceContainer,
+                          color: isSelected
+                              ? AppTheme.primary
+                              : AppTheme.surfaceContainer,
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: Icon(c['icon'] as IconData,
-                            color: isSelected ? Colors.white : AppTheme.onSurfaceVariant,
+                            color: isSelected
+                                ? Colors.white
+                                : AppTheme.onSurfaceVariant,
                             size: 24),
                       ),
                       const SizedBox(height: 4),
                       Text(c['label'] as String,
                           style: TextStyle(
-                            color: isSelected ? AppTheme.primary : AppTheme.onSurfaceVariant,
+                            color: isSelected
+                                ? AppTheme.primary
+                                : AppTheme.onSurfaceVariant,
                             fontSize: 11,
-                            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                            fontWeight:
+                                isSelected ? FontWeight.w700 : FontWeight.w500,
                           )),
                     ],
                   ),
@@ -294,22 +459,28 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.calendar_month_rounded, color: AppTheme.primary, size: 20),
+                    const Icon(Icons.calendar_month_rounded,
+                        color: AppTheme.primary, size: 20),
                     const SizedBox(width: 10),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text('Transaction Date',
-                            style: TextStyle(color: AppTheme.onSurfaceVariant, fontSize: 11)),
+                            style: TextStyle(
+                                color: AppTheme.onSurfaceVariant,
+                                fontSize: 11)),
                         Text(
                           DateFormat('d MMMM yyyy', 'id').format(_date),
                           style: const TextStyle(
-                              color: AppTheme.onSurface, fontWeight: FontWeight.w600, fontSize: 14),
+                              color: AppTheme.onSurface,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14),
                         ),
                       ],
                     ),
                     const Spacer(),
-                    const Icon(Icons.keyboard_arrow_down_rounded, color: AppTheme.onSurfaceVariant),
+                    const Icon(Icons.keyboard_arrow_down_rounded,
+                        color: AppTheme.onSurfaceVariant),
                   ],
                 ),
               ),
@@ -327,12 +498,14 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                 children: [
                   const Padding(
                     padding: EdgeInsets.only(left: 14),
-                    child: Icon(Icons.notes_rounded, color: AppTheme.onSurfaceVariant, size: 20),
+                    child: Icon(Icons.notes_rounded,
+                        color: AppTheme.onSurfaceVariant, size: 20),
                   ),
                   Expanded(
                     child: TextField(
                       controller: _noteController,
-                      style: const TextStyle(color: AppTheme.onSurface, fontSize: 14),
+                      style: const TextStyle(
+                          color: AppTheme.onSurface, fontSize: 14),
                       decoration: const InputDecoration(
                         hintText: 'Add a note...',
                         border: InputBorder.none,
@@ -343,7 +516,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                   ),
                   const Padding(
                     padding: EdgeInsets.only(right: 14),
-                    child: Icon(Icons.attach_file_rounded, color: AppTheme.onSurfaceVariant, size: 20),
+                    child: Icon(Icons.attach_file_rounded,
+                        color: AppTheme.onSurfaceVariant, size: 20),
                   ),
                 ],
               ),
@@ -361,7 +535,10 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text('Receipt Attachment',
-                      style: TextStyle(color: AppTheme.onSurface, fontWeight: FontWeight.w600, fontSize: 14)),
+                      style: TextStyle(
+                          color: AppTheme.onSurface,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14)),
                   const SizedBox(height: 12),
                   Row(
                     children: [
@@ -383,10 +560,14 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                 onPressed: _save,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.primary,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16)),
                 ),
                 child: const Text('Save Transaction',
-                    style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700)),
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700)),
               ),
             ),
           ],
@@ -399,7 +580,10 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     final isSelected = _type == type;
     return Expanded(
       child: GestureDetector(
-        onTap: () => setState(() => _type = type),
+        onTap: () => setState(() {
+          _type = type;
+          _selectedAccount = null; // reset pilihan saat ganti tipe
+        }),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(vertical: 10),
@@ -433,7 +617,10 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
             Icon(icon, color: AppTheme.primary, size: 24),
             const SizedBox(height: 4),
             Text(label,
-                style: const TextStyle(color: AppTheme.onSurface, fontSize: 12, fontWeight: FontWeight.w500)),
+                style: const TextStyle(
+                    color: AppTheme.onSurface,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500)),
           ],
         ),
       ),

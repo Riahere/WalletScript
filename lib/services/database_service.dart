@@ -20,15 +20,19 @@ class DatabaseService {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
     return await openDatabase(path,
-        version: 2, onCreate: _createDB, onUpgrade: _onUpgrade);
+        version: 3, onCreate: _createDB, onUpgrade: _onUpgrade);
   }
 
   Future _createDB(Database db, int version) async {
     await db.execute('''CREATE TABLE accounts (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL, type TEXT NOT NULL,
-      balance REAL NOT NULL, currency TEXT NOT NULL,
-      icon TEXT NOT NULL, color TEXT NOT NULL)''');
+      name TEXT NOT NULL,
+      grp TEXT NOT NULL DEFAULT 'Others',
+      type TEXT NOT NULL,
+      balance REAL NOT NULL,
+      currency TEXT NOT NULL,
+      icon TEXT NOT NULL,
+      color TEXT NOT NULL)''');
 
     await db.execute('''CREATE TABLE transactions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -55,6 +59,7 @@ class DatabaseService {
 
     await db.insert('accounts', {
       'name': 'Cash',
+      'grp': 'Cash',
       'type': 'cash',
       'balance': 0.0,
       'currency': 'IDR',
@@ -62,22 +67,34 @@ class DatabaseService {
       'color': '0xFF10B981'
     });
     await db.insert('accounts', {
-      'name': 'Bank',
+      'name': 'Bank BCA',
+      'grp': 'Debit Card',
       'type': 'bank',
       'balance': 0.0,
       'currency': 'IDR',
       'icon': 'bank',
       'color': '0xFF6C63FF'
     });
+    await db.insert('accounts', {
+      'name': 'Tabungan',
+      'grp': 'Savings',
+      'type': 'savings',
+      'balance': 0.0,
+      'currency': 'IDR',
+      'icon': 'savings',
+      'color': '0xFF10B981'
+    });
   }
 
   Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
-      // Tambah kolom baru ke tabel notes yang sudah ada
       await db.execute(
           'ALTER TABLE notes ADD COLUMN hasReminder INTEGER NOT NULL DEFAULT 0');
       await db.execute('ALTER TABLE notes ADD COLUMN reminderDate TEXT');
-      // updatedAt di versi lama NOT NULL, sekarang nullable — tidak perlu diubah
+    }
+    if (oldVersion < 3) {
+      await db.execute(
+          "ALTER TABLE accounts ADD COLUMN grp TEXT NOT NULL DEFAULT 'Others'");
     }
   }
 
@@ -92,20 +109,24 @@ class DatabaseService {
   Future<AppAccount> insertAccount(AppAccount account) async {
     final db = await database;
     final id = await db.insert('accounts', account.toMap());
-    return AppAccount(
-        id: id,
-        name: account.name,
-        type: account.type,
-        balance: account.balance,
-        currency: account.currency,
-        icon: account.icon,
-        color: account.color);
+    return account.copyWith(id: id);
+  }
+
+  Future updateAccount(AppAccount account) async {
+    final db = await database;
+    await db.update('accounts', account.toMap(),
+        where: 'id = ?', whereArgs: [account.id]);
   }
 
   Future updateAccountBalance(int id, double newBalance) async {
     final db = await database;
     await db.update('accounts', {'balance': newBalance},
         where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future deleteAccount(int id) async {
+    final db = await database;
+    await db.delete('accounts', where: 'id = ?', whereArgs: [id]);
   }
 
   // ─── Transactions ────────────────────────────────────────────
@@ -182,8 +203,7 @@ class DatabaseService {
 
   Future<int> insertNote(AppNote note) async {
     final db = await database;
-    final id = await db.insert('notes', note.toMap());
-    return id;
+    return await db.insert('notes', note.toMap());
   }
 
   Future updateNote(AppNote note) async {

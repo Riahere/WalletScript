@@ -159,7 +159,7 @@ lib/
 
 ## 👨‍💻 Developer
 
-**Dibuat oleh:** [Nama Kamu]  
+**Dibuat oleh:** Inria Altje Kalalo
 **Platform:** Android  
 **Status:** 🚧 In Development  
 

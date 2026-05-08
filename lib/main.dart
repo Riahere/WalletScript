@@ -6,6 +6,7 @@ import 'providers/transaction_provider.dart';
 import 'providers/budget_provider.dart';
 import 'providers/settings_provider.dart';
 import 'providers/note_provider.dart';
+import 'providers/account_provider.dart';
 import 'theme/app_theme.dart';
 import 'services/notification_service.dart';
 import 'screens/home_screen.dart';
@@ -36,6 +37,7 @@ class WalletScriptApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => BudgetProvider()),
         ChangeNotifierProvider(create: (_) => SettingsProvider()),
         ChangeNotifierProvider(create: (_) => NoteProvider()),
+        ChangeNotifierProvider(create: (_) => AccountProvider()),
       ],
       child: MaterialApp(
         title: 'WalletScript',
@@ -92,7 +94,12 @@ class MainShellState extends State<MainShell> {
       decoration: BoxDecoration(
         color: const Color(0xFF1E293B),
         borderRadius: BorderRadius.circular(36),
-        boxShadow: [BoxShadow(color: const Color(0xFF1E293B).withOpacity(0.4), blurRadius: 24, offset: const Offset(0, 8))],
+        boxShadow: [
+          BoxShadow(
+              color: const Color(0xFF1E293B).withOpacity(0.4),
+              blurRadius: 24,
+              offset: const Offset(0, 8))
+        ],
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -102,8 +109,10 @@ class MainShellState extends State<MainShell> {
           GestureDetector(
             onTap: _openAddTransaction,
             child: Container(
-              width: 52, height: 52,
-              decoration: const BoxDecoration(color: AppTheme.primary, shape: BoxShape.circle),
+              width: 52,
+              height: 52,
+              decoration: const BoxDecoration(
+                  color: AppTheme.primary, shape: BoxShape.circle),
               child: const Icon(Icons.add, color: Colors.white, size: 28),
             ),
           ),
@@ -123,7 +132,9 @@ class MainShellState extends State<MainShell> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: isSelected ? AppTheme.primary : Colors.white38, size: 22),
+            Icon(icon,
+                color: isSelected ? AppTheme.primary : Colors.white38,
+                size: 22),
             const SizedBox(height: 2),
             Text(label,
                 style: TextStyle(
@@ -137,5 +148,3 @@ class MainShellState extends State<MainShell> {
     );
   }
 }
-
-
