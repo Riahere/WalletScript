@@ -8,6 +8,7 @@ import '../theme/app_theme.dart';
 import '../models/transaction_model.dart';
 import '../models/note_model.dart';
 import '../models/account_model.dart';
+import '../main.dart';
 import 'app_top_bar.dart';
 import 'spending_detail_screen.dart';
 import 'notification_screen.dart';
@@ -201,7 +202,6 @@ class _HomeScreenState extends State<HomeScreen> {
     return const Color(0xFF1E293B);
   }
 
-  /// Hitung persentase perubahan balance 30 hari terakhir
   String _balanceTrend(List<AppTransaction> txs) {
     final now = DateTime.now();
     final cutoff = now.subtract(const Duration(days: 30));
@@ -241,8 +241,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final formatter =
         NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
 
-    // Total saldo: gabungan dari account balances (lebih akurat)
-    // Fallback ke txProvider.balance kalau belum ada akun
     final totalBalance = accountProvider.accounts.isNotEmpty
         ? accountProvider.totalBalance
         : txProvider.balance;
@@ -300,7 +298,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 16),
 
-              // ── TOTAL SALDO — CLICKABLE → WalletAllScreen
+              // ── TOTAL SALDO
               GestureDetector(
                 onTap: () => Navigator.push(context,
                     MaterialPageRoute(builder: (_) => const WalletAllScreen())),
@@ -616,7 +614,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 16),
 
-              // ── MY WALLETS — Folder Style
+              // ── MY WALLETS
               Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                 const Text('My Wallets',
                     style: TextStyle(
@@ -778,17 +776,23 @@ class _HomeScreenState extends State<HomeScreen> {
               else
                 ...dashboardTxs.take(5).map((t) => _buildTxTile(t, formatter)),
 
+              // ── LIHAT SEMUA TRANSAKSI → navigate ke History tab
               if (txProvider.transactions.length > 5)
                 Center(
-                    child: TextButton(
-                  onPressed: () {},
-                  child: const Text('LIHAT SEMUA TRANSAKSI',
-                      style: TextStyle(
-                          color: AppTheme.onSurfaceVariant,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.5)),
-                )),
+                  child: TextButton(
+                    onPressed: () {
+                      final shell =
+                          context.findAncestorStateOfType<MainShellState>();
+                      shell?.goTo(1);
+                    },
+                    child: const Text('LIHAT SEMUA TRANSAKSI',
+                        style: TextStyle(
+                            color: AppTheme.onSurfaceVariant,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.5)),
+                  ),
+                ),
             ],
           ),
         ),
@@ -1116,22 +1120,20 @@ class _FolderWalletCardsState extends State<_FolderWalletCards> {
   int _selectedIndex = 0;
   final Map<String, bool> _hidden = {};
 
-  // Setiap group punya warna yang berbeda dan vibrant
   static const List<List<Color>> _cardGradients = [
-    [Color(0xFF6366F1), Color(0xFF4F46E5)], // Indigo
-    [Color(0xFF10B981), Color(0xFF059669)], // Emerald
-    [Color(0xFFF59E0B), Color(0xFFD97706)], // Amber
-    [Color(0xFFEF4444), Color(0xFFDC2626)], // Red
-    [Color(0xFF0EA5E9), Color(0xFF0284C7)], // Sky
-    [Color(0xFFEC4899), Color(0xFFDB2777)], // Pink
-    [Color(0xFF8B5CF6), Color(0xFF7C3AED)], // Violet
-    [Color(0xFF14B8A6), Color(0xFF0D9488)], // Teal
-    [Color(0xFFF97316), Color(0xFFEA580C)], // Orange
-    [Color(0xFF06B6D4), Color(0xFF0891B2)], // Cyan
-    [Color(0xFF84CC16), Color(0xFF65A30D)], // Lime
+    [Color(0xFF6366F1), Color(0xFF4F46E5)],
+    [Color(0xFF10B981), Color(0xFF059669)],
+    [Color(0xFFF59E0B), Color(0xFFD97706)],
+    [Color(0xFFEF4444), Color(0xFFDC2626)],
+    [Color(0xFF0EA5E9), Color(0xFF0284C7)],
+    [Color(0xFFEC4899), Color(0xFFDB2777)],
+    [Color(0xFF8B5CF6), Color(0xFF7C3AED)],
+    [Color(0xFF14B8A6), Color(0xFF0D9488)],
+    [Color(0xFFF97316), Color(0xFFEA580C)],
+    [Color(0xFF06B6D4), Color(0xFF0891B2)],
+    [Color(0xFF84CC16), Color(0xFF65A30D)],
   ];
 
-  // Warna tab yang matching dengan card
   static const List<Color> _tabColors = [
     Color(0xFF6366F1),
     Color(0xFF10B981),
@@ -1167,7 +1169,6 @@ class _FolderWalletCardsState extends State<_FolderWalletCards> {
 
     final selected = groups[_selectedIndex];
     final gradColors = _cardGradients[_selectedIndex % _cardGradients.length];
-    final tabColor = _tabColors[_selectedIndex % _tabColors.length];
     final groupTotal = selected.value.fold(0.0, (s, a) => s + a.balance);
     final isHidden = _hidden[selected.key] ?? false;
     final icon = _groupIcons[selected.key] ?? Icons.wallet_rounded;
@@ -1175,7 +1176,6 @@ class _FolderWalletCardsState extends State<_FolderWalletCards> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ── Tab folders (horizontal scroll) — tiap tab warna berbeda
         SizedBox(
           height: 38,
           child: ListView.builder(
@@ -1197,7 +1197,6 @@ class _FolderWalletCardsState extends State<_FolderWalletCards> {
                       topLeft: Radius.circular(12),
                       topRight: Radius.circular(12),
                     ),
-                    // Shadow kecil pada tab aktif
                     boxShadow: isSelected
                         ? [
                             BoxShadow(
@@ -1237,8 +1236,6 @@ class _FolderWalletCardsState extends State<_FolderWalletCards> {
             },
           ),
         ),
-
-        // ── Active card — gradient sesuai tab yang dipilih
         AnimatedSwitcher(
           duration: const Duration(milliseconds: 300),
           transitionBuilder: (child, animation) => FadeTransition(
@@ -1278,7 +1275,6 @@ class _FolderWalletCardsState extends State<_FolderWalletCards> {
             ),
             child:
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              // Header row
               Row(children: [
                 Container(
                   width: 44,
@@ -1321,10 +1317,7 @@ class _FolderWalletCardsState extends State<_FolderWalletCards> {
                   ),
                 ),
               ]),
-
               const SizedBox(height: 20),
-
-              // Decorative element
               Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
@@ -1351,7 +1344,6 @@ class _FolderWalletCardsState extends State<_FolderWalletCards> {
                       ],
                     ),
                   ),
-                  // Decorative circle ornament
                   Container(
                     width: 60,
                     height: 60,
@@ -1372,8 +1364,6 @@ class _FolderWalletCardsState extends State<_FolderWalletCards> {
                   ),
                 ],
               ),
-
-              // Sub accounts
               if (selected.value.isNotEmpty) ...[
                 const SizedBox(height: 16),
                 Container(height: 1, color: Colors.white.withOpacity(0.15)),

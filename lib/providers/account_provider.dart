@@ -6,7 +6,6 @@ class AccountProvider extends ChangeNotifier {
   List<AppAccount> _accounts = [];
   List<AppAccount> get accounts => _accounts;
 
-  // Semua group yang tersedia
   static const List<String> allGroups = [
     'Cash',
     'Accounts',
@@ -21,28 +20,20 @@ class AccountProvider extends ChangeNotifier {
     'Others',
   ];
 
-  // Total balance semua akun
   double get totalBalance => _accounts.fold(0, (sum, a) => sum + a.balance);
 
-  // Balance per group
   Map<String, double> get balanceByGroup {
     final Map<String, double> map = {};
-    for (final a in _accounts) {
-      map[a.group] = (map[a.group] ?? 0) + a.balance;
-    }
+    for (final a in _accounts) map[a.group] = (map[a.group] ?? 0) + a.balance;
     return map;
   }
 
-  // Akun per group
   Map<String, List<AppAccount>> get accountsByGroup {
     final Map<String, List<AppAccount>> map = {};
-    for (final a in _accounts) {
-      map[a.group] = [...(map[a.group] ?? []), a];
-    }
+    for (final a in _accounts) map[a.group] = [...(map[a.group] ?? []), a];
     return map;
   }
 
-  // Group yang punya akun (untuk dashboard — hanya tampil yang ada isinya)
   List<String> get activeGroups => accountsByGroup.keys.toList();
 
   Future<void> loadAccounts() async {
@@ -50,10 +41,18 @@ class AccountProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> addAccount(AppAccount account) async {
+  /// Tambah akun dan return akun yang sudah punya ID
+  /// (dipakai wallet_all_screen untuk catat initial balance ke history)
+  Future<AppAccount> addAccountAndReturn(AppAccount account) async {
     final saved = await DatabaseService.instance.insertAccount(account);
     _accounts.add(saved);
     notifyListeners();
+    return saved;
+  }
+
+  /// Tambah akun tanpa return — agar kode lama tidak break
+  Future<void> addAccount(AppAccount account) async {
+    await addAccountAndReturn(account);
   }
 
   Future<void> updateAccount(AppAccount account) async {
@@ -72,9 +71,8 @@ class AccountProvider extends ChangeNotifier {
   Future<void> updateBalance(int id, double newBalance) async {
     await DatabaseService.instance.updateAccountBalance(id, newBalance);
     final idx = _accounts.indexWhere((a) => a.id == id);
-    if (idx != -1) {
+    if (idx != -1)
       _accounts[idx] = _accounts[idx].copyWith(balance: newBalance);
-    }
     notifyListeners();
   }
 }

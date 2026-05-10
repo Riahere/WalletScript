@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/account_provider.dart';
+import '../providers/transaction_provider.dart';
 import '../models/account_model.dart';
+import '../models/transaction_model.dart';
 import '../theme/app_theme.dart';
 
 class WalletAllScreen extends StatefulWidget {
@@ -76,7 +78,7 @@ class _WalletAllScreenState extends State<WalletAllScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Total Assets / Liabilities header
+            // ── Total header
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(20),
@@ -100,7 +102,7 @@ class _WalletAllScreenState extends State<WalletAllScreen> {
               ),
             ),
 
-            // Group list
+            // ── Group list
             ...byGroup.entries.map((entry) {
               final group = entry.key;
               final accounts = entry.value;
@@ -119,7 +121,6 @@ class _WalletAllScreenState extends State<WalletAllScreen> {
                 ),
                 child: Column(
                   children: [
-                    // Group header row
                     InkWell(
                       borderRadius: BorderRadius.circular(16),
                       onTap: () => setState(() => isExpanded
@@ -155,7 +156,6 @@ class _WalletAllScreenState extends State<WalletAllScreen> {
                               ],
                             ),
                           ),
-                          // Hide/show balance
                           GestureDetector(
                             onTap: () =>
                                 setState(() => _hidden[group] = !isHidden),
@@ -188,12 +188,9 @@ class _WalletAllScreenState extends State<WalletAllScreen> {
                         ]),
                       ),
                     ),
-
-                    // Individual accounts (expanded)
                     if (isExpanded) ...[
                       const Divider(height: 1, color: AppTheme.outline),
                       ...accounts.map((acc) => _accountTile(acc, color)),
-                      // Add account to this group
                       InkWell(
                         onTap: () =>
                             _showAddAccountSheet(context, group: group),
@@ -225,7 +222,6 @@ class _WalletAllScreenState extends State<WalletAllScreen> {
               );
             }),
 
-            // Add new group button
             const SizedBox(height: 8),
             SizedBox(
               width: double.infinity,
@@ -299,6 +295,8 @@ class _WalletAllScreenState extends State<WalletAllScreen> {
     ]);
   }
 
+  // ── Add Account Sheet ────────────────────────────────────────────────────────
+
   void _showAddAccountSheet(BuildContext ctx, {String? group}) {
     final nameCtrl = TextEditingController();
     final balanceCtrl = TextEditingController();
@@ -359,7 +357,7 @@ class _WalletAllScreenState extends State<WalletAllScreen> {
               ),
               const SizedBox(height: 12),
 
-              // Name field
+              // Name
               TextField(
                 controller: nameCtrl,
                 style: const TextStyle(color: AppTheme.onSurface),
@@ -375,7 +373,7 @@ class _WalletAllScreenState extends State<WalletAllScreen> {
               ),
               const SizedBox(height: 12),
 
-              // Balance field
+              // Initial balance
               TextField(
                 controller: balanceCtrl,
                 keyboardType: TextInputType.number,
@@ -401,19 +399,50 @@ class _WalletAllScreenState extends State<WalletAllScreen> {
                         borderRadius: BorderRadius.circular(14)),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
-                  onPressed: () {
+                  onPressed: () async {
                     if (nameCtrl.text.trim().isEmpty) return;
                     final balance = double.tryParse(balanceCtrl.text) ?? 0.0;
-                    ctx.read<AccountProvider>().addAccount(AppAccount(
-                          name: nameCtrl.text.trim(),
-                          group: selectedGroup,
-                          type: selectedGroup.toLowerCase(),
-                          balance: balance,
-                          currency: 'IDR',
-                          icon: 'wallet',
-                          color: '0xFF10B981',
-                        ));
+
+                    // Simpan akun → dapat ID balik
+                    final saved =
+                        await ctx.read<AccountProvider>().addAccountAndReturn(
+                              AppAccount(
+                                name: nameCtrl.text.trim(),
+                                group: selectedGroup,
+                                type: selectedGroup.toLowerCase(),
+                                balance: balance,
+                                currency: 'IDR',
+                                icon: 'wallet',
+                                color: '0xFF10B981',
+                              ),
+                            );
+
+                    // ── Saldo awal > 0 → catat ke history sebagai 'income'
+                    if (balance > 0 && saved.id != null) {
+                      // ignore: use_build_context_synchronously
+                      ctx.read<TransactionProvider>().addTransaction(
+                            AppTransaction(
+                              title: 'Saldo Awal — ${nameCtrl.text.trim()}',
+                              amount: balance,
+                              type: 'income',
+                              category: 'Saldo Awal',
+                              currency: 'IDR',
+                              accountId: saved.id.toString(),
+                              date: DateTime.now(),
+                              note:
+                                  'Initial balance akun ${nameCtrl.text.trim()}',
+                            ),
+                          );
+                    }
+
+                    // ignore: use_build_context_synchronously
                     Navigator.pop(ctx);
+                    // ignore: use_build_context_synchronously
+                    ScaffoldMessenger.of(ctx).showSnackBar(
+                      SnackBar(
+                          content: Text(
+                              'Akun ${nameCtrl.text.trim()} berhasil ditambahkan')),
+                    );
                   },
                   child: const Text('Simpan',
                       style: TextStyle(
@@ -426,6 +455,8 @@ class _WalletAllScreenState extends State<WalletAllScreen> {
       ),
     );
   }
+
+  // ── Edit Account Sheet ───────────────────────────────────────────────────────
 
   void _showEditAccountSheet(BuildContext ctx, AppAccount acc) {
     final nameCtrl = TextEditingController(text: acc.name);

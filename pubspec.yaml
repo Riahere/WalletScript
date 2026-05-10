@@ -9,31 +9,21 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-
-  # UI
-  google_fonts: ^6.2.1
+  google_fonts: ^6.1.0
   fl_chart: ^0.68.0
   flutter_slidable: ^3.1.0
   intl: ^0.19.0
-  cupertino_icons: ^1.0.6
-
-  # Database
   sqflite: ^2.3.2
   path: ^1.9.0
-
-  # HTTP
   http: ^1.2.0
-
-  # State management
   provider: ^6.1.2
-
-  # Notifications
   flutter_local_notifications: ^17.2.2
-  timezone: ^0.9.4
-
-  # Calendar
   table_calendar: ^3.1.2
-
+  cupertino_icons: ^1.0.6
+  image_picker: ^0.8.9
+  url_launcher: ^6.2.5
+  webview_flutter: ^4.4.0
+  
 dev_dependencies:
   flutter_test:
     sdk: flutter

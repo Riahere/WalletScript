@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
-import '../theme/app_theme.dart';
+import '../main.dart';
 import 'profile_screen.dart';
 import 'notes_screen.dart';
 import 'calendar_screen.dart';
-import '../main.dart';
 import 'notification_screen.dart';
+
+const _cPrimary = Color(0xFF10B981);
+const _cSurface = Color(0xFFF8FAFC);
+const _cBorder = Color(0xFFE2E8F0);
+const _cText = Color(0xFF1E293B);
 
 class AppTopBar extends StatelessWidget {
   const AppTopBar({super.key});
@@ -13,27 +17,21 @@ class AppTopBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        // Avatar - tap = Profile
         GestureDetector(
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const ProfileScreen()),
-          ),
+          onTap: () => Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const ProfileScreen())),
           child: Container(
             width: 44,
             height: 44,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              border: Border.all(color: AppTheme.primary, width: 2),
-              color: AppTheme.surfaceContainer,
+              border: Border.all(color: _cPrimary, width: 2),
+              color: _cSurface,
             ),
-            child: const Icon(Icons.person_rounded,
-                color: AppTheme.primary, size: 26),
+            child: Icon(Icons.person_rounded, color: _cPrimary, size: 26),
           ),
         ),
         const SizedBox(width: 10),
-
-        // WalletScript - tap = Home
         GestureDetector(
           onTap: () {
             final shell = context.findAncestorStateOfType<MainShellState>();
@@ -43,46 +41,26 @@ class AppTopBar extends StatelessWidget {
               Navigator.popUntil(context, (route) => route.isFirst);
             }
           },
-          child: const Text(
-            'WalletScript',
-            style: TextStyle(
-                color: AppTheme.primary,
-                fontSize: 20,
-                fontWeight: FontWeight.w800),
-          ),
+          child: Text('WalletScript',
+              style: TextStyle(
+                  color: _cPrimary, fontSize: 20, fontWeight: FontWeight.w800)),
         ),
-
         const Spacer(),
-
-        // Notes
-        _iconBtn(
-          context,
-          Icons.sticky_note_2_outlined,
-          onTap: () => Navigator.push(
-              context, MaterialPageRoute(builder: (_) => const NotesScreen())),
-        ),
+        _iconBtn(context, Icons.sticky_note_2_outlined,
+            onTap: () => Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const NotesScreen()))),
         const SizedBox(width: 6),
-
-        // Calendar
-        _iconBtn(
-          context,
-          Icons.calendar_month_outlined,
-          onTap: () => Navigator.push(context,
-              MaterialPageRoute(builder: (_) => const CalendarScreen())),
-        ),
+        _iconBtn(context, Icons.calendar_month_outlined,
+            onTap: () => Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const CalendarScreen()))),
         const SizedBox(width: 6),
-
-        // Notification
         Stack(
           children: [
-            _iconBtn(
-              context,
-              Icons.notifications_outlined,
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const NotificationScreen()),
-              ),
-            ),
+            _iconBtn(context, Icons.notifications_outlined,
+                onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const NotificationScreen()))),
             Positioned(
               top: 6,
               right: 6,
@@ -99,7 +77,7 @@ class AppTopBar extends StatelessWidget {
     );
   }
 
-  Widget _iconBtn(BuildContext context, IconData icon,
+  static Widget _iconBtn(BuildContext context, IconData icon,
       {required VoidCallback onTap}) {
     return GestureDetector(
       onTap: onTap,
@@ -107,11 +85,11 @@ class AppTopBar extends StatelessWidget {
         width: 38,
         height: 38,
         decoration: BoxDecoration(
-          color: AppTheme.surface,
+          color: _cSurface,
           borderRadius: BorderRadius.circular(11),
-          border: Border.all(color: AppTheme.outline),
+          border: Border.all(color: _cBorder),
         ),
-        child: Icon(icon, color: AppTheme.onSurface, size: 19),
+        child: Icon(icon, color: _cText, size: 19),
       ),
     );
   }
