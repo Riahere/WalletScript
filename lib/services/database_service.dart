@@ -20,7 +20,7 @@ class DatabaseService {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
     return await openDatabase(path,
-        version: 3, onCreate: _createDB, onUpgrade: _onUpgrade);
+        version: 5, onCreate: _createDB, onUpgrade: _onUpgrade);
   }
 
   Future _createDB(Database db, int version) async {
@@ -44,9 +44,28 @@ class DatabaseService {
 
     await db.execute('''CREATE TABLE budgets (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      title TEXT NOT NULL, emoji TEXT NOT NULL,
-      targetAmount REAL NOT NULL, currentAmount REAL NOT NULL,
-      currency TEXT NOT NULL, deadline TEXT, color TEXT NOT NULL)''');
+      title TEXT NOT NULL,
+      emoji TEXT NOT NULL,
+      targetAmount REAL NOT NULL,
+      currentAmount REAL NOT NULL,
+      currency TEXT NOT NULL,
+      deadline TEXT,
+      color TEXT NOT NULL,
+      imagePath TEXT,
+      description TEXT,
+      category TEXT NOT NULL DEFAULT 'other',
+      isPriority INTEGER NOT NULL DEFAULT 0)''');
+
+    await db.execute('''CREATE TABLE goal_deposits (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      budgetId INTEGER NOT NULL,
+      amount REAL NOT NULL,
+      sourceAccountId TEXT,
+      sourceAccountName TEXT,
+      note TEXT,
+      attachmentPath TEXT,
+      date TEXT NOT NULL,
+      FOREIGN KEY (budgetId) REFERENCES budgets (id) ON DELETE CASCADE)''');
 
     await db.execute('''CREATE TABLE notes (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -95,6 +114,36 @@ class DatabaseService {
     if (oldVersion < 3) {
       await db.execute(
           "ALTER TABLE accounts ADD COLUMN grp TEXT NOT NULL DEFAULT 'Others'");
+    }
+    if (oldVersion < 4) {
+      // Upgrade budgets table
+      try {
+        await db.execute('ALTER TABLE budgets ADD COLUMN imagePath TEXT');
+      } catch (_) {}
+      try {
+        await db.execute('ALTER TABLE budgets ADD COLUMN description TEXT');
+      } catch (_) {}
+      try {
+        await db.execute(
+            "ALTER TABLE budgets ADD COLUMN category TEXT NOT NULL DEFAULT 'other'");
+      } catch (_) {}
+      try {
+        await db.execute(
+            'ALTER TABLE budgets ADD COLUMN isPriority INTEGER NOT NULL DEFAULT 0');
+      } catch (_) {}
+    }
+    if (oldVersion < 5) {
+      // Create goal_deposits table
+      await db.execute('''CREATE TABLE IF NOT EXISTS goal_deposits (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        budgetId INTEGER NOT NULL,
+        amount REAL NOT NULL,
+        sourceAccountId TEXT,
+        sourceAccountName TEXT,
+        note TEXT,
+        attachmentPath TEXT,
+        date TEXT NOT NULL,
+        FOREIGN KEY (budgetId) REFERENCES budgets (id) ON DELETE CASCADE)''');
     }
   }
 
@@ -163,22 +212,20 @@ class DatabaseService {
 
   Future<List<AppBudget>> getBudgets() async {
     final db = await database;
-    final maps = await db.query('budgets');
+    final maps = await db.query('budgets', orderBy: 'isPriority DESC, id ASC');
     return maps.map((e) => AppBudget.fromMap(e)).toList();
   }
 
   Future<AppBudget> insertBudget(AppBudget budget) async {
     final db = await database;
     final id = await db.insert('budgets', budget.toMap());
-    return AppBudget(
-        id: id,
-        title: budget.title,
-        emoji: budget.emoji,
-        targetAmount: budget.targetAmount,
-        currentAmount: budget.currentAmount,
-        currency: budget.currency,
-        deadline: budget.deadline,
-        color: budget.color);
+    return budget.copyWith(id: id);
+  }
+
+  Future updateBudget(AppBudget budget) async {
+    final db = await database;
+    await db.update('budgets', budget.toMap(),
+        where: 'id = ?', whereArgs: [budget.id]);
   }
 
   Future updateBudgetAmount(int id, double newAmount) async {
@@ -187,9 +234,49 @@ class DatabaseService {
         where: 'id = ?', whereArgs: [id]);
   }
 
+  Future setPriorityBudget(int id) async {
+    final db = await database;
+    await db.update('budgets', {'isPriority': 0});
+    await db.update('budgets', {'isPriority': 1},
+        where: 'id = ?', whereArgs: [id]);
+  }
+
   Future deleteBudget(int id) async {
     final db = await database;
     await db.delete('budgets', where: 'id = ?', whereArgs: [id]);
+  }
+
+  // ─── Goal Deposits ────────────────────────────────────────────
+
+  Future<List<GoalDeposit>> getDepositsForBudget(int budgetId) async {
+    final db = await database;
+    final maps = await db.query(
+      'goal_deposits',
+      where: 'budgetId = ?',
+      whereArgs: [budgetId],
+      orderBy: 'date DESC',
+    );
+    return maps.map((e) => GoalDeposit.fromMap(e)).toList();
+  }
+
+  Future<GoalDeposit> insertDeposit(GoalDeposit deposit) async {
+    final db = await database;
+    final id = await db.insert('goal_deposits', deposit.toMap());
+    return GoalDeposit(
+      id: id,
+      budgetId: deposit.budgetId,
+      amount: deposit.amount,
+      sourceAccountId: deposit.sourceAccountId,
+      sourceAccountName: deposit.sourceAccountName,
+      note: deposit.note,
+      attachmentPath: deposit.attachmentPath,
+      date: deposit.date,
+    );
+  }
+
+  Future deleteDeposit(int id) async {
+    final db = await database;
+    await db.delete('goal_deposits', where: 'id = ?', whereArgs: [id]);
   }
 
   // ─── Notes ───────────────────────────────────────────────────

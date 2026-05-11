@@ -246,9 +246,7 @@ class MarketService {
   }
 
   // ── EXCHANGE RATES (untuk Converter) ───────────────────────────────────────
-  // Coba 3 API secara berurutan, fallback ke hardcode jika semua gagal
   static Future<Map<String, double>> fetchExchangeRates() async {
-    // API 1: open.er-api.com
     try {
       final res = await http
           .get(Uri.parse('https://open.er-api.com/v6/latest/USD'))
@@ -262,7 +260,6 @@ class MarketService {
       }
     } catch (_) {}
 
-    // API 2: frankfurter.app
     try {
       final res = await http
           .get(Uri.parse('https://api.frankfurter.app/latest?from=USD'))
@@ -278,11 +275,10 @@ class MarketService {
       }
     } catch (_) {}
 
-    // API 3: USD/IDR live dari Finnhub sebagai minimum
     try {
       final res = await http
           .get(Uri.parse(
-              'https://finnhub.io/api/v1/quote?symbol=OANDA:USD_IDR&token=d80chg1r01qq9ln3cca0d80chg1r01qq9ln3ccag'))
+              '$_finnhubBase/quote?symbol=OANDA:USD_IDR&token=$_finnhubKey'))
           .timeout(const Duration(seconds: 8));
       if (res.statusCode == 200) {
         final d = jsonDecode(res.body);
@@ -298,25 +294,18 @@ class MarketService {
     return _fallbackRates();
   }
 
-  // Konversi langsung antar dua currency menggunakan fetchExchangeRates
-  // Semua dihitung via USD sebagai perantara (akurat, bukan via IDR)
+  // ── CONVERT ────────────────────────────────────────────────────────────────
   static Future<double?> convert({
     required double amount,
     required String from,
     required String to,
-    Map<String, double>? rates, // opsional: pass rates yang sudah di-fetch
+    Map<String, double>? rates,
   }) async {
     final r = rates ?? await fetchExchangeRates();
     if (r.isEmpty) return null;
-
-    // Crypto: ambil harga dalam IDR dari CoinGecko, lalu convert via IDR→USD
-    // Untuk BTC/ETH, harga dalam IDR tersedia dari fetchCrypto()
-    // Tapi di sini kita handle via rates saja kalau ada
     final fromRate = r[from];
     final toRate = r[to];
     if (fromRate == null || toRate == null) return null;
-
-    // Convert: amount in FROM → USD → TO
     final inUSD = amount / fromRate;
     return inUSD * toRate;
   }
@@ -329,11 +318,7 @@ class MarketService {
         fetchStocks(),
         fetchIDX(),
       ]);
-      final all = [
-        ...results[0],
-        ...results[1],
-        ...results[2],
-      ];
+      final all = [...results[0], ...results[1], ...results[2]];
       all.sort((a, b) => b.changePercent.compareTo(a.changePercent));
       final gainers = all.where((p) => p.changePercent > 0).take(5).toList();
       final losers = all
@@ -484,7 +469,7 @@ class MarketService {
         .toList();
   }
 
-  // ── NEWS ───────────────────────────────────────────────────────────────────
+  // ── NEWS (general) ─────────────────────────────────────────────────────────
   static Future<List<NewsItem>> fetchNews() async {
     try {
       final uri =
@@ -494,6 +479,98 @@ class MarketService {
       final List data = jsonDecode(res.body);
       return data
           .take(10)
+          .map((n) => NewsItem(
+                headline: n['headline'] ?? '',
+                source: n['source'] ?? '',
+                summary: n['summary'] ?? '',
+                url: n['url'] ?? '',
+                datetime: DateTime.fromMillisecondsSinceEpoch(
+                    (((n['datetime'] as num?) ?? 0).toInt()) * 1000),
+              ))
+          .where((n) => n.headline.isNotEmpty)
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  // ── NEWS PER ASET (real-time, contextual) ──────────────────────────────────
+  /// Fetch berita yang relevan dengan aset tertentu.
+  /// - crypto  → Finnhub crypto news
+  /// - stock   → Finnhub company news by symbol
+  /// - idx     → Finnhub company news by Yahoo symbol (strip .JK)
+  /// - forex   → Finnhub forex news
+  static Future<List<NewsItem>> fetchAssetNews(MarketPrice asset,
+      {int limit = 8}) async {
+    try {
+      Uri uri;
+
+      if (asset.type == 'crypto') {
+        // Crypto category news dari Finnhub
+        uri =
+            Uri.parse('$_finnhubBase/news?category=crypto&token=$_finnhubKey');
+      } else if (asset.type == 'stock') {
+        // Company-specific news
+        final from = DateTime.now().subtract(const Duration(days: 7));
+        final to = DateTime.now();
+        final fmt = (DateTime d) =>
+            '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+        uri = Uri.parse(
+          '$_finnhubBase/company-news?symbol=${asset.symbol}'
+          '&from=${fmt(from)}&to=${fmt(to)}&token=$_finnhubKey',
+        );
+      } else if (asset.type == 'idx') {
+        // IDX: coba company-news pakai symbol asli (tanpa .JK)
+        final from = DateTime.now().subtract(const Duration(days: 14));
+        final to = DateTime.now();
+        final fmt = (DateTime d) =>
+            '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+        // Finnhub tidak selalu punya IDX, fallback ke general
+        uri = Uri.parse(
+          '$_finnhubBase/company-news?symbol=${asset.symbol}'
+          '&from=${fmt(from)}&to=${fmt(to)}&token=$_finnhubKey',
+        );
+      } else {
+        // Forex → general forex news
+        uri = Uri.parse('$_finnhubBase/news?category=forex&token=$_finnhubKey');
+      }
+
+      final res = await http.get(uri).timeout(const Duration(seconds: 10));
+      if (res.statusCode != 200) return _fallbackAssetNews(asset);
+
+      final List data = jsonDecode(res.body);
+      final items = data
+          .take(limit)
+          .map((n) => NewsItem(
+                headline: n['headline'] ?? '',
+                source: n['source'] ?? '',
+                summary: n['summary'] ?? '',
+                url: n['url'] ?? '',
+                datetime: DateTime.fromMillisecondsSinceEpoch(
+                    (((n['datetime'] as num?) ?? 0).toInt()) * 1000),
+              ))
+          .where((n) => n.headline.isNotEmpty)
+          .toList();
+
+      // Kalau hasilnya kosong (IDX sering kosong), fallback ke general
+      if (items.isEmpty) return _fallbackAssetNews(asset);
+      return items;
+    } catch (_) {
+      return _fallbackAssetNews(asset);
+    }
+  }
+
+  /// Fallback: general market news jika asset-specific tidak ada hasilnya
+  static Future<List<NewsItem>> _fallbackAssetNews(MarketPrice asset) async {
+    try {
+      final category = asset.type == 'forex' ? 'forex' : 'general';
+      final uri =
+          Uri.parse('$_finnhubBase/news?category=$category&token=$_finnhubKey');
+      final res = await http.get(uri).timeout(const Duration(seconds: 10));
+      if (res.statusCode != 200) return [];
+      final List data = jsonDecode(res.body);
+      return data
+          .take(8)
           .map((n) => NewsItem(
                 headline: n['headline'] ?? '',
                 source: n['source'] ?? '',
@@ -524,6 +601,81 @@ class MarketService {
     } catch (_) {
       return _fallbackFearGreed();
     }
+  }
+
+  // ── FEAR & GREED HISTORY ───────────────────────────────────────────────────
+  static Future<List<Map<String, dynamic>>> fetchFearGreedHistory(
+      int days) async {
+    try {
+      final uri = Uri.parse('https://api.alternative.me/fng/?limit=$days');
+      final res = await http.get(uri).timeout(const Duration(seconds: 8));
+      if (res.statusCode != 200) return _fallbackFearGreedHistory();
+      final d = jsonDecode(res.body);
+      final List data = d['data'];
+      return data.map((item) {
+        final ts = int.tryParse(item['timestamp'].toString()) ?? 0;
+        final dt = DateTime.fromMillisecondsSinceEpoch(ts * 1000);
+        return {
+          'value': int.tryParse(item['value'].toString()) ?? 50,
+          'classification': item['value_classification'] ?? 'Neutral',
+          'date': '${dt.day}/${dt.month}',
+        };
+      }).toList();
+    } catch (_) {
+      return _fallbackFearGreedHistory();
+    }
+  }
+
+  static List<Map<String, dynamic>> _fallbackFearGreedHistory() {
+    final now = DateTime.now();
+    final values = [
+      74,
+      68,
+      72,
+      65,
+      58,
+      61,
+      70,
+      75,
+      80,
+      77,
+      65,
+      60,
+      55,
+      50,
+      48,
+      52,
+      58,
+      63,
+      69,
+      74,
+      71,
+      66,
+      60,
+      54,
+      49,
+      53,
+      57,
+      62,
+      68,
+      72,
+    ];
+    return List.generate(values.length, (i) {
+      final dt = now.subtract(Duration(days: i));
+      return {
+        'value': values[i],
+        'classification': _classifyFearGreed(values[i]),
+        'date': '${dt.day}/${dt.month}',
+      };
+    });
+  }
+
+  static String _classifyFearGreed(int v) {
+    if (v <= 25) return 'Extreme Fear';
+    if (v <= 45) return 'Fear';
+    if (v <= 55) return 'Neutral';
+    if (v <= 75) return 'Greed';
+    return 'Extreme Greed';
   }
 
   // ── FALLBACKS ──────────────────────────────────────────────────────────────
@@ -679,7 +831,7 @@ class MarketService {
             symbol: 'USD',
             name: 'USD / IDR',
             sub: 'FOREX',
-            price: 16215,
+            price: 17450,
             changePercent: 0.0,
             type: 'forex',
             yahooSym: 'USDIDR=X'),
@@ -687,7 +839,7 @@ class MarketService {
             symbol: 'EUR',
             name: 'EUR / IDR',
             sub: 'FOREX',
-            price: 17850,
+            price: 19550,
             changePercent: 0.3,
             type: 'forex',
             yahooSym: 'EURIDR=X'),
@@ -695,7 +847,7 @@ class MarketService {
             symbol: 'GBP',
             name: 'GBP / IDR',
             sub: 'FOREX',
-            price: 20540,
+            price: 22840,
             changePercent: -0.2,
             type: 'forex',
             yahooSym: 'GBPIDR=X'),
@@ -703,7 +855,7 @@ class MarketService {
             symbol: 'JPY',
             name: 'JPY / IDR',
             sub: 'FOREX',
-            price: 108,
+            price: 112,
             changePercent: 0.1,
             type: 'forex',
             yahooSym: 'JPYIDR=X'),
@@ -711,7 +863,7 @@ class MarketService {
             symbol: 'SGD',
             name: 'SGD / IDR',
             sub: 'FOREX',
-            price: 12100,
+            price: 13150,
             changePercent: 0.2,
             type: 'forex',
             yahooSym: 'SGDIDR=X'),

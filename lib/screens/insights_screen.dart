@@ -24,8 +24,8 @@ class InsightsScreen extends StatefulWidget {
 
 class _InsightsScreenState extends State<InsightsScreen>
     with SingleTickerProviderStateMixin {
-  int _mainTab = 0; // 0=Crypto, 1=Saham, 2=Forex, 3=Gainers
-  int _sahamTab = 0; // 0=IDX, 1=US
+  int _mainTab = 0;
+  int _sahamTab = 0;
 
   List<MarketPrice> _cryptoPrices = [];
   List<MarketPrice> _stocksUS = [];
@@ -36,20 +36,15 @@ class _InsightsScreenState extends State<InsightsScreen>
   List<NewsItem> _news = [];
   Map<String, dynamic> _fearGreed = {'value': 50, 'classification': 'Neutral'};
 
-  // Watchlist
   final Set<String> _watchlist = {};
-
-  // Price Alerts
   final Map<String, Map<String, double?>> _priceAlerts = {};
 
-  // Search
   bool _searching = false;
   final _searchCtrl = TextEditingController();
   MarketPrice? _searchResult;
   bool _searchLoading = false;
   String? _searchError;
 
-  // Ticker scroll controller
   late final ScrollController _tickerScrollCtrl;
   bool _loadingMarket = true;
   bool _loadingNews = true;
@@ -205,7 +200,6 @@ class _InsightsScreenState extends State<InsightsScreen>
         MaterialPageRoute(builder: (_) => MarketDetailScreen(asset: p)));
   }
 
-  // ── Open News Full Page WebView ────────────────────────────────────────────
   void _openNewsWebView(NewsItem n) {
     if (n.url.isEmpty) return;
     Navigator.push(
@@ -214,7 +208,6 @@ class _InsightsScreenState extends State<InsightsScreen>
     );
   }
 
-  // ── Open Converter Bottom Sheet ────────────────────────────────────────────
   void _openConverterSheet() {
     showModalBottomSheet(
       context: context,
@@ -228,7 +221,15 @@ class _InsightsScreenState extends State<InsightsScreen>
     );
   }
 
-  // ── Price Alert Dialog ─────────────────────────────────────────────────────
+  void _openFearGreedSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _FearGreedSheet(currentValue: _fearGreed['value'] as int),
+    );
+  }
+
   void _showAlertDialog(MarketPrice p) {
     final key = _watchKey(p);
     final existing = _priceAlerts[key];
@@ -243,7 +244,8 @@ class _InsightsScreenState extends State<InsightsScreen>
         backgroundColor: _cSurface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(children: [
-          Icon(Icons.notifications_active_rounded, color: _cPrimary, size: 20),
+          const Icon(Icons.notifications_active_rounded,
+              color: _cPrimary, size: 20),
           const SizedBox(width: 8),
           Text('Price Alert — ${p.symbol}',
               style: const TextStyle(
@@ -338,15 +340,18 @@ class _InsightsScreenState extends State<InsightsScreen>
 
     return Scaffold(
       backgroundColor: _cBackground,
-      // ── Floating Converter Button ────────────────────────────────────────
-      floatingActionButton: FloatingActionButton(
-        onPressed: _openConverterSheet,
-        backgroundColor: _cPrimary,
-        elevation: 4,
-        tooltip: 'Currency Converter',
-        child:
-            const Icon(Icons.calculate_rounded, color: Colors.white, size: 26),
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 85),
+        child: FloatingActionButton(
+          onPressed: _openConverterSheet,
+          backgroundColor: _cPrimary,
+          elevation: 4,
+          tooltip: 'Currency Converter',
+          child: const Icon(Icons.calculate_rounded,
+              color: Colors.white, size: 26),
+        ),
       ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: SafeArea(
         bottom: false,
         child: RefreshIndicator(
@@ -361,85 +366,100 @@ class _InsightsScreenState extends State<InsightsScreen>
                 const AppTopBar(),
                 const SizedBox(height: 24),
 
-                // ── Sentiment Card ─────────────────────────────────────
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: _cSurface,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: _cBorder),
-                  ),
-                  child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(children: [
-                          const Text('MARKET SENTIMENT',
-                              style: TextStyle(
-                                  color: _cTextSub,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: 0.8)),
-                          const Spacer(),
-                          if (_lastUpdated != null)
-                            Text(
-                                'Updated ${DateFormat('HH:mm').format(_lastUpdated!)}',
-                                style: const TextStyle(
-                                    color: _cTextSub, fontSize: 10)),
-                        ]),
-                        const SizedBox(height: 4),
-                        _loadingMarket
-                            ? _shimLine(140, 22)
-                            : Text(_sentimentTitle(fgVal),
-                                style: const TextStyle(
-                                    color: _cText,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w800)),
-                        const SizedBox(height: 6),
-                        _loadingMarket
-                            ? _shimLine(double.infinity, 14)
-                            : Text(_sentimentDesc(fgVal),
-                                style: const TextStyle(
-                                    color: _cTextSub, fontSize: 13)),
-                        const SizedBox(height: 14),
-                        Row(children: [
-                          Icon(
-                            fgVal > 50
-                                ? Icons.trending_up_rounded
-                                : fgVal < 50
-                                    ? Icons.trending_down_rounded
-                                    : Icons.trending_flat_rounded,
-                            color: fgColor,
-                            size: 18,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(4),
-                              child: LinearProgressIndicator(
-                                value: _loadingMarket ? 0.5 : fgVal / 100,
-                                minHeight: 8,
-                                backgroundColor: const Color(0xFFEAEEF2),
-                                valueColor:
-                                    AlwaysStoppedAnimation<Color>(fgColor),
+                // ── Sentiment Card (TAPPABLE) ──────────────────────────
+                GestureDetector(
+                  onTap: _loadingMarket ? null : _openFearGreedSheet,
+                  child: Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: _cSurface,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: _cBorder),
+                    ),
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(children: [
+                            const Text('MARKET SENTIMENT',
+                                style: TextStyle(
+                                    color: _cTextSub,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 0.8)),
+                            const Spacer(),
+                            if (_lastUpdated != null)
+                              Text(
+                                  'Updated ${DateFormat('HH:mm').format(_lastUpdated!)}',
+                                  style: const TextStyle(
+                                      color: _cTextSub, fontSize: 10)),
+                            if (!_loadingMarket) ...[
+                              const SizedBox(width: 6),
+                              const Icon(Icons.chevron_right_rounded,
+                                  color: _cTextSub, size: 16),
+                            ],
+                          ]),
+                          const SizedBox(height: 4),
+                          _loadingMarket
+                              ? _shimLine(140, 22)
+                              : Text(_sentimentTitle(fgVal),
+                                  style: const TextStyle(
+                                      color: _cText,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w800)),
+                          const SizedBox(height: 6),
+                          _loadingMarket
+                              ? _shimLine(double.infinity, 14)
+                              : Text(_sentimentDesc(fgVal),
+                                  style: const TextStyle(
+                                      color: _cTextSub, fontSize: 13)),
+                          const SizedBox(height: 14),
+                          Row(children: [
+                            Icon(
+                              fgVal > 50
+                                  ? Icons.trending_up_rounded
+                                  : fgVal < 50
+                                      ? Icons.trending_down_rounded
+                                      : Icons.trending_flat_rounded,
+                              color: fgColor,
+                              size: 18,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(4),
+                                child: LinearProgressIndicator(
+                                  value: _loadingMarket ? 0.5 : fgVal / 100,
+                                  minHeight: 8,
+                                  backgroundColor: const Color(0xFFEAEEF2),
+                                  valueColor:
+                                      AlwaysStoppedAnimation<Color>(fgColor),
+                                ),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(_loadingMarket ? '...' : _fearGreedLabel(fgVal),
-                              style: const TextStyle(
-                                  color: _cTextSub, fontSize: 12)),
+                            const SizedBox(width: 8),
+                            Text(
+                                _loadingMarket ? '...' : _fearGreedLabel(fgVal),
+                                style: const TextStyle(
+                                    color: _cTextSub, fontSize: 12)),
+                          ]),
+                          if (!_loadingMarket) ...[
+                            const SizedBox(height: 8),
+                            Center(
+                              child: Text('Fear & Greed Index: $fgVal / 100',
+                                  style: TextStyle(
+                                      color: fgColor,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700)),
+                            ),
+                            const SizedBox(height: 2),
+                            const Center(
+                              child: Text('Tap untuk detail & history',
+                                  style: TextStyle(
+                                      color: _cTextSub, fontSize: 10)),
+                            ),
+                          ],
                         ]),
-                        if (!_loadingMarket) ...[
-                          const SizedBox(height: 8),
-                          Center(
-                            child: Text('Fear & Greed Index: $fgVal / 100',
-                                style: TextStyle(
-                                    color: fgColor,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w700)),
-                          ),
-                        ],
-                      ]),
+                  ),
                 ),
                 const SizedBox(height: 12),
 
@@ -496,7 +516,7 @@ class _InsightsScreenState extends State<InsightsScreen>
                   const SizedBox(height: 12),
                 ],
 
-                // ── Main Tabs (no emoji) ───────────────────────────────
+                // ── Main Tabs ──────────────────────────────────────────
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(children: [
@@ -539,7 +559,6 @@ class _InsightsScreenState extends State<InsightsScreen>
                 ),
                 const SizedBox(height: 12),
 
-                // ── Saham Subtabs ──────────────────────────────────────
                 if (_mainTab == 1) ...[
                   Row(children: [
                     _subtab('IDX', 0, _sahamTab,
@@ -551,13 +570,11 @@ class _InsightsScreenState extends State<InsightsScreen>
                   const SizedBox(height: 12),
                 ],
 
-                // ── Gainers & Losers Tab ───────────────────────────────
                 if (_mainTab == 3) ...[
                   _buildGainersLosersSection(),
                   const SizedBox(height: 20),
                 ],
 
-                // ── Search Bar (tab 0,1,2) ─────────────────────────────
                 if (_mainTab < 3) ...[
                   GestureDetector(
                     onTap: () => setState(() {
@@ -617,7 +634,6 @@ class _InsightsScreenState extends State<InsightsScreen>
                       ]),
                     ),
                   ),
-
                   if (_searching && _searchResult != null) ...[
                     const SizedBox(height: 8),
                     _marketItem(_searchResult!, isSearchResult: true),
@@ -641,8 +657,6 @@ class _InsightsScreenState extends State<InsightsScreen>
                     ),
                   ],
                   const SizedBox(height: 12),
-
-                  // ── Live Market header ─────────────────────────────
                   Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -684,16 +698,13 @@ class _InsightsScreenState extends State<InsightsScreen>
                               ),
                       ]),
                   const SizedBox(height: 12),
-
                   if (_loadingMarket)
                     ...List.generate(5, (_) => _shimCard())
                   else
                     ..._currentPrices.map((p) => _marketItem(p)),
-
                   const SizedBox(height: 20),
                 ],
 
-                // ── News ───────────────────────────────────────────────
                 if (_mainTab < 3) ...[
                   Row(children: [
                     const Icon(Icons.newspaper_rounded,
@@ -724,7 +735,6 @@ class _InsightsScreenState extends State<InsightsScreen>
     );
   }
 
-  // ── Gainers & Losers ───────────────────────────────────────────────────────
   Widget _buildGainersLosersSection() {
     if (_loadingMarket) {
       return Column(children: List.generate(6, (_) => _shimCard()));
@@ -778,7 +788,6 @@ class _InsightsScreenState extends State<InsightsScreen>
     ]);
   }
 
-  // ── Widgets ────────────────────────────────────────────────────────────────
   Widget _tab(String label, int index, int current, ValueChanged<int> onTap) {
     final sel = current == index;
     return GestureDetector(
@@ -993,6 +1002,424 @@ class _InsightsScreenState extends State<InsightsScreen>
       );
 }
 
+// ── Fear & Greed Detail Bottom Sheet ─────────────────────────────────────────
+class _FearGreedSheet extends StatefulWidget {
+  final int currentValue;
+  const _FearGreedSheet({required this.currentValue});
+
+  @override
+  State<_FearGreedSheet> createState() => _FearGreedSheetState();
+}
+
+class _FearGreedSheetState extends State<_FearGreedSheet> {
+  List<Map<String, dynamic>> _history = [];
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadHistory();
+  }
+
+  Future<void> _loadHistory() async {
+    final data = await MarketService.fetchFearGreedHistory(30);
+    if (mounted) {
+      setState(() {
+        _history = data;
+        _loading = false;
+      });
+    }
+  }
+
+  Color _colorFor(int v) {
+    if (v <= 25) return const Color(0xFFEF4444);
+    if (v <= 45) return const Color(0xFFF97316);
+    if (v <= 55) return const Color(0xFFEAB308);
+    if (v <= 75) return const Color(0xFF10B981);
+    return const Color(0xFF059669);
+  }
+
+  String _labelFor(int v) {
+    if (v <= 25) return 'Extreme Fear';
+    if (v <= 45) return 'Fear';
+    if (v <= 55) return 'Neutral';
+    if (v <= 75) return 'Greed';
+    return 'Extreme Greed';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final v = widget.currentValue;
+    final color = _colorFor(v);
+
+    return DraggableScrollableSheet(
+      initialChildSize: 0.92,
+      minChildSize: 0.5,
+      maxChildSize: 0.95,
+      builder: (_, scrollCtrl) => Container(
+        decoration: const BoxDecoration(
+          color: Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: ListView(
+          controller: scrollCtrl,
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+          children: [
+            // Handle
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                    color: const Color(0xFFE2E8F0),
+                    borderRadius: BorderRadius.circular(2)),
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Header
+            Row(children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                    color: color.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(12)),
+                child: Icon(Icons.psychology_rounded, color: color, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Text('Fear & Greed Index',
+                    style: TextStyle(
+                        color: Color(0xFF1E293B),
+                        fontWeight: FontWeight.w800,
+                        fontSize: 17)),
+                Text('Crypto Market Sentiment',
+                    style: TextStyle(color: color, fontSize: 12)),
+              ]),
+            ]),
+            const SizedBox(height: 20),
+
+            // Big score card
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.07),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: color.withOpacity(0.2)),
+              ),
+              child: Column(children: [
+                Text('$v',
+                    style: TextStyle(
+                        color: color,
+                        fontSize: 60,
+                        fontWeight: FontWeight.w900,
+                        height: 1)),
+                const SizedBox(height: 4),
+                Text(_labelFor(v),
+                    style: TextStyle(
+                        color: color,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700)),
+                const SizedBox(height: 14),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: LinearProgressIndicator(
+                    value: v / 100,
+                    minHeight: 12,
+                    backgroundColor: const Color(0xFFE2E8F0),
+                    valueColor: AlwaysStoppedAnimation<Color>(color),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: const [
+                    Text('0\nExtreme Fear',
+                        textAlign: TextAlign.center,
+                        style:
+                            TextStyle(color: Color(0xFF64748B), fontSize: 9)),
+                    Text('50\nNeutral',
+                        textAlign: TextAlign.center,
+                        style:
+                            TextStyle(color: Color(0xFF64748B), fontSize: 9)),
+                    Text('100\nExtreme Greed',
+                        textAlign: TextAlign.center,
+                        style:
+                            TextStyle(color: Color(0xFF64748B), fontSize: 9)),
+                  ],
+                ),
+              ]),
+            ),
+            const SizedBox(height: 20),
+
+            // Penjelasan
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Apa itu Fear & Greed Index?',
+                        style: TextStyle(
+                            color: Color(0xFF1E293B),
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13)),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Indeks ini mengukur sentimen investor di pasar crypto. '
+                      'Nilainya 0–100. Semakin rendah berarti pasar lebih ketakutan, '
+                      'semakin tinggi berarti pasar lebih serakah (euforia).',
+                      style: TextStyle(
+                          color: Color(0xFF64748B), fontSize: 12, height: 1.5),
+                    ),
+                    const SizedBox(height: 14),
+                    _infoRow(
+                        '0–25',
+                        'Extreme Fear — potensi peluang beli jangka panjang',
+                        const Color(0xFFEF4444)),
+                    _infoRow(
+                        '26–45',
+                        'Fear — sentimen negatif, investor berhati-hati',
+                        const Color(0xFFF97316)),
+                    _infoRow('46–55', 'Neutral — tidak ada tren kuat',
+                        const Color(0xFFEAB308)),
+                    _infoRow(
+                        '56–75',
+                        'Greed — momentum bullish, investor percaya diri',
+                        const Color(0xFF10B981)),
+                    _infoRow(
+                        '76–100',
+                        'Extreme Greed — euforia tinggi, waspadai koreksi',
+                        const Color(0xFF059669)),
+                  ]),
+            ),
+            const SizedBox(height: 20),
+
+            // 30-day chart
+            const Text('Trend 30 Hari',
+                style: TextStyle(
+                    color: Color(0xFF1E293B),
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14)),
+            const SizedBox(height: 10),
+            _loading
+                ? const Center(
+                    child: Padding(
+                    padding: EdgeInsets.all(20),
+                    child: CircularProgressIndicator(
+                        color: Color(0xFF10B981), strokeWidth: 2),
+                  ))
+                : _history.isEmpty
+                    ? const Text('Data tidak tersedia',
+                        style: TextStyle(color: Color(0xFF64748B)))
+                    : Container(
+                        height: 110,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                        ),
+                        child: CustomPaint(
+                          painter: _FearGreedChartPainter(
+                            data: _history.take(30).toList().reversed.toList(),
+                            colorFor: _colorFor,
+                          ),
+                          size: Size.infinite,
+                        ),
+                      ),
+            const SizedBox(height: 20),
+
+            // 7-day history
+            const Text('History 7 Hari',
+                style: TextStyle(
+                    color: Color(0xFF1E293B),
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14)),
+            const SizedBox(height: 10),
+            _loading
+                ? const Center(
+                    child: CircularProgressIndicator(
+                        color: Color(0xFF10B981), strokeWidth: 2))
+                : _history.isEmpty
+                    ? const Text('Data tidak tersedia',
+                        style: TextStyle(color: Color(0xFF64748B)))
+                    : Column(
+                        children: _history.take(7).map((d) {
+                          final val = d['value'] as int;
+                          final col = _colorFor(val);
+                          final date = d['date'] as String;
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border:
+                                  Border.all(color: const Color(0xFFE2E8F0)),
+                            ),
+                            child: Row(children: [
+                              Text(date,
+                                  style: const TextStyle(
+                                      color: Color(0xFF64748B), fontSize: 12)),
+                              const Spacer(),
+                              SizedBox(
+                                width: 90,
+                                height: 6,
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(3),
+                                  child: LinearProgressIndicator(
+                                    value: val / 100,
+                                    backgroundColor: const Color(0xFFE2E8F0),
+                                    valueColor:
+                                        AlwaysStoppedAnimation<Color>(col),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              SizedBox(
+                                width: 28,
+                                child: Text('$val',
+                                    textAlign: TextAlign.right,
+                                    style: TextStyle(
+                                        color: col,
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 13)),
+                              ),
+                              const SizedBox(width: 8),
+                              SizedBox(
+                                width: 72,
+                                child: Text(_labelFor(val),
+                                    style: TextStyle(color: col, fontSize: 10)),
+                              ),
+                            ]),
+                          );
+                        }).toList(),
+                      ),
+
+            const SizedBox(height: 8),
+            Center(
+              child: TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Tutup',
+                    style: TextStyle(color: Color(0xFF64748B))),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _infoRow(String range, String desc, Color color) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 7),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Container(
+          width: 8,
+          height: 8,
+          margin: const EdgeInsets.only(top: 3, right: 8),
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        Expanded(
+          child: RichText(
+            text: TextSpan(children: [
+              TextSpan(
+                  text: '$range  ',
+                  style: TextStyle(
+                      color: color, fontWeight: FontWeight.w700, fontSize: 11)),
+              TextSpan(
+                  text: desc,
+                  style:
+                      const TextStyle(color: Color(0xFF64748B), fontSize: 11)),
+            ]),
+          ),
+        ),
+      ]),
+    );
+  }
+}
+
+// ── Fear & Greed Chart Painter ────────────────────────────────────────────────
+class _FearGreedChartPainter extends CustomPainter {
+  final List<Map<String, dynamic>> data;
+  final Color Function(int) colorFor;
+
+  _FearGreedChartPainter({required this.data, required this.colorFor});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (data.length < 2) return;
+    final values = data.map((d) => (d['value'] as int).toDouble()).toList();
+    const minV = 0.0;
+    const maxV = 100.0;
+    final stepX = size.width / (values.length - 1);
+
+    final path = Path();
+    final fillPath = Path();
+
+    for (int i = 0; i < values.length; i++) {
+      final x = i * stepX;
+      final y =
+          size.height - ((values[i] - minV) / (maxV - minV)) * size.height;
+      if (i == 0) {
+        path.moveTo(x, y);
+        fillPath.moveTo(x, size.height);
+        fillPath.lineTo(x, y);
+      } else {
+        path.lineTo(x, y);
+        fillPath.lineTo(x, y);
+      }
+    }
+
+    fillPath.lineTo((values.length - 1) * stepX, size.height);
+    fillPath.close();
+
+    final lastColor = colorFor(values.last.toInt());
+
+    // Fill
+    final fillPaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [lastColor.withOpacity(0.3), lastColor.withOpacity(0.0)],
+      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height))
+      ..style = PaintingStyle.fill;
+    canvas.drawPath(fillPath, fillPaint);
+
+    // Line
+    final linePaint = Paint()
+      ..color = lastColor
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    canvas.drawPath(path, linePaint);
+
+    // Dots
+    for (int i = 0; i < values.length; i++) {
+      final x = i * stepX;
+      final y =
+          size.height - ((values[i] - minV) / (maxV - minV)) * size.height;
+      canvas.drawCircle(
+          Offset(x, y),
+          2.5,
+          Paint()
+            ..color = colorFor(values[i].toInt())
+            ..style = PaintingStyle.fill);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+}
+
 // ── News Full Page WebView ────────────────────────────────────────────────────
 class _NewsWebViewScreen extends StatefulWidget {
   final NewsItem news;
@@ -1036,19 +1463,15 @@ class _NewsWebViewScreenState extends State<_NewsWebViewScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              widget.news.source,
-              style: const TextStyle(
-                  color: Color(0xFF10B981),
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700),
-            ),
-            Text(
-              widget.news.headline,
-              style: const TextStyle(color: Color(0xFF64748B), fontSize: 10),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
+            Text(widget.news.source,
+                style: const TextStyle(
+                    color: Color(0xFF10B981),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700)),
+            Text(widget.news.headline,
+                style: const TextStyle(color: Color(0xFF64748B), fontSize: 10),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis),
           ],
         ),
         actions: [
@@ -1134,7 +1557,6 @@ class _ConverterSheetState extends State<_ConverterSheet> {
 
   Future<void> _loadRates() async {
     final rates = await MarketService.fetchExchangeRates();
-    // Tambah crypto: harga IDR → rate vs USD
     final usdToIDR = rates['IDR'] ?? 17450.0;
     for (final p in widget.cryptoPrices) {
       rates[p.symbol] = p.price / usdToIDR;
@@ -1160,8 +1582,6 @@ class _ConverterSheetState extends State<_ConverterSheet> {
       setState(() => _convertedResult = null);
       return;
     }
-    // rates = berapa unit currency per 1 USD
-    // FROM → USD → TO
     final inUSD = input / fromRate;
     setState(() => _convertedResult = inUSD * toRate);
   }
@@ -1189,7 +1609,6 @@ class _ConverterSheetState extends State<_ConverterSheet> {
       padding: EdgeInsets.fromLTRB(
           20, 16, 20, MediaQuery.of(context).viewInsets.bottom + 24),
       child: Column(mainAxisSize: MainAxisSize.min, children: [
-        // Handle
         Container(
           width: 36,
           height: 4,
@@ -1198,7 +1617,6 @@ class _ConverterSheetState extends State<_ConverterSheet> {
               borderRadius: BorderRadius.circular(2)),
         ),
         const SizedBox(height: 16),
-
         Row(children: [
           Container(
             padding: const EdgeInsets.all(8),
@@ -1209,19 +1627,31 @@ class _ConverterSheetState extends State<_ConverterSheet> {
                 color: Color(0xFF10B981), size: 20),
           ),
           const SizedBox(width: 10),
-          const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('Currency Converter',
-                style: TextStyle(
-                    color: Color(0xFF1E293B),
-                    fontWeight: FontWeight.w700,
-                    fontSize: 16)),
-            Text('Rate live dari pasar',
-                style: TextStyle(color: Color(0xFF64748B), fontSize: 12)),
-          ]),
+          Expanded(
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text('Currency Converter',
+                  style: TextStyle(
+                      color: Color(0xFF1E293B),
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16)),
+              Text(
+                _loadingRates
+                    ? 'Memuat rate live...'
+                    : 'Rate live · open.er-api.com',
+                style: const TextStyle(color: Color(0xFF64748B), fontSize: 11),
+              ),
+            ]),
+          ),
+          if (_loadingRates)
+            const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(
+                  strokeWidth: 2, color: Color(0xFF10B981)),
+            ),
         ]),
         const SizedBox(height: 20),
-
-        // Amount input
         TextField(
           controller: _amountCtrl,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -1249,8 +1679,6 @@ class _ConverterSheetState extends State<_ConverterSheet> {
           onChanged: (_) => _doConvert(),
         ),
         const SizedBox(height: 12),
-
-        // From / To dropdowns
         Row(children: [
           Expanded(
               child: _currencyDropdown(_fromCurrency, (v) {
@@ -1285,8 +1713,6 @@ class _ConverterSheetState extends State<_ConverterSheet> {
           })),
         ]),
         const SizedBox(height: 16),
-
-        // Result
         Container(
           width: double.infinity,
           padding: const EdgeInsets.all(16),
@@ -1295,33 +1721,31 @@ class _ConverterSheetState extends State<_ConverterSheet> {
             borderRadius: BorderRadius.circular(14),
             border: Border.all(color: const Color(0xFF10B981).withOpacity(0.2)),
           ),
-          child: _convertedResult != null
-              ? Column(children: [
-                  Text(
-                    '${_amountCtrl.text} $_fromCurrency =',
-                    style:
-                        const TextStyle(color: Color(0xFF64748B), fontSize: 12),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _formatConverted(_convertedResult!, _toCurrency),
-                    style: const TextStyle(
-                        color: Color(0xFF10B981),
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800),
-                  ),
-                  if (widget.loadingMarket) ...[
-                    const SizedBox(height: 4),
-                    const Text('Menggunakan rate estimasi',
-                        style:
-                            TextStyle(color: Color(0xFF64748B), fontSize: 10)),
-                  ],
-                ])
-              : const Text(
-                  'Masukkan jumlah untuk melihat konversi',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Color(0xFF64748B), fontSize: 13),
-                ),
+          child: _loadingRates
+              ? const Center(
+                  child: Text('Memuat rate live...',
+                      style: TextStyle(color: Color(0xFF64748B), fontSize: 13)))
+              : _convertedResult != null
+                  ? Column(children: [
+                      Text(
+                        '${_amountCtrl.text} $_fromCurrency =',
+                        style: const TextStyle(
+                            color: Color(0xFF64748B), fontSize: 12),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _formatConverted(_convertedResult!, _toCurrency),
+                        style: const TextStyle(
+                            color: Color(0xFF10B981),
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800),
+                      ),
+                    ])
+                  : const Text(
+                      'Masukkan jumlah untuk melihat konversi',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Color(0xFF64748B), fontSize: 13),
+                    ),
         ),
         const SizedBox(height: 8),
         TextButton(

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../services/market_service.dart';
 
 const _cPrimary = Color(0xFF10B981);
@@ -27,10 +29,15 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
   // Tooltip state
   int? _hoverIndex;
 
+  // News state
+  List<NewsItem> _news = [];
+  bool _newsLoading = true;
+
   @override
   void initState() {
     super.initState();
     _loadChart();
+    _loadNews();
   }
 
   Future<void> _loadChart() async {
@@ -58,6 +65,21 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
     }
   }
 
+  Future<void> _loadNews() async {
+    setState(() => _newsLoading = true);
+    try {
+      final news = await MarketService.fetchAssetNews(widget.asset, limit: 8);
+      if (mounted) {
+        setState(() {
+          _news = news;
+          _newsLoading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _newsLoading = false);
+    }
+  }
+
   String _formatPrice(double price) {
     final p = widget.asset;
     if (p.type == 'crypto' || p.type == 'forex' || p.type == 'idx') {
@@ -74,6 +96,22 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
         .round()
         .clamp(0, _points.length - 1);
     setState(() => _hoverIndex = idx);
+  }
+
+  String _timeAgo(DateTime dt) {
+    final diff = DateTime.now().difference(dt);
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    return '${diff.inDays}d ago';
+  }
+
+  Future<void> _openUrl(String url) async {
+    if (url.isEmpty) return;
+    final uri = Uri.tryParse(url);
+    if (uri == null) return;
+    try {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {}
   }
 
   @override
@@ -184,7 +222,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // ── Price display — updates live saat hover ────────
+                    // ── Price display ──────────────────────────────────
                     _buildPriceHeader(
                         hoveredPoint, lastVal, periodChange, chartColor),
                     const SizedBox(height: 12),
@@ -307,6 +345,12 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
                         ),
                       ),
                     ],
+
+                    const SizedBox(height: 24),
+
+                    // ── Berita terkait aset ────────────────────────────
+                    _buildNewsSection(),
+
                     const SizedBox(height: 20),
                   ],
                 ),
@@ -316,6 +360,225 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
         ),
       ),
     );
+  }
+
+  // ── NEWS SECTION ───────────────────────────────────────────────────────────
+  Widget _buildNewsSection() {
+    final typeLabel = {
+          'crypto': 'Crypto',
+          'stock': widget.asset.symbol,
+          'idx': widget.asset.symbol,
+          'forex': 'Forex',
+        }[widget.asset.type] ??
+        widget.asset.symbol;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              'Berita $typeLabel',
+              style: TextStyle(
+                  color: _cText, fontWeight: FontWeight.w700, fontSize: 15),
+            ),
+            const Spacer(),
+            if (!_newsLoading)
+              GestureDetector(
+                onTap: _loadNews,
+                child: Row(
+                  children: [
+                    Icon(Icons.refresh_rounded, color: _cPrimary, size: 14),
+                    const SizedBox(width: 4),
+                    Text('Refresh',
+                        style: TextStyle(
+                            color: _cPrimary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600)),
+                  ],
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        if (_newsLoading)
+          _buildNewsShimmer()
+        else if (_news.isEmpty)
+          _buildNewsEmpty()
+        else
+          Column(
+            children: _news
+                .asMap()
+                .entries
+                .map((e) => _buildNewsCard(e.value, e.key == _news.length - 1))
+                .toList(),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildNewsShimmer() {
+    return Column(
+      children: List.generate(
+        3,
+        (_) => Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: _cSurface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: _cBorder),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // shimmer baris judul
+              Container(
+                  height: 12,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                      color: _cBorder, borderRadius: BorderRadius.circular(6))),
+              const SizedBox(height: 6),
+              Container(
+                  height: 12,
+                  width: 220,
+                  decoration: BoxDecoration(
+                      color: _cBorder, borderRadius: BorderRadius.circular(6))),
+              const SizedBox(height: 10),
+              Container(
+                  height: 10,
+                  width: 100,
+                  decoration: BoxDecoration(
+                      color: _cBorder, borderRadius: BorderRadius.circular(6))),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNewsEmpty() {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 32),
+      alignment: Alignment.center,
+      child: Column(
+        children: [
+          Icon(Icons.newspaper_rounded, color: _cBorder, size: 40),
+          const SizedBox(height: 8),
+          Text('Belum ada berita tersedia',
+              style: TextStyle(color: _cTextSub, fontSize: 13)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNewsCard(NewsItem item, bool isLast) {
+    return GestureDetector(
+      onTap: () => _openUrl(item.url),
+      child: Container(
+        margin: EdgeInsets.only(bottom: isLast ? 0 : 10),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: _cSurface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: _cBorder),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Ikon kategori kecil ──
+            Container(
+              width: 36,
+              height: 36,
+              margin: const EdgeInsets.only(right: 12, top: 2),
+              decoration: BoxDecoration(
+                color: _cPrimary.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                _newsIcon(widget.asset.type),
+                color: _cPrimary,
+                size: 18,
+              ),
+            ),
+            // ── Konten ──
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.headline,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: _cText,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                      height: 1.4,
+                    ),
+                  ),
+                  if (item.summary.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      item.summary,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          color: _cTextSub, fontSize: 11, height: 1.4),
+                    ),
+                  ],
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      if (item.source.isNotEmpty) ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 7, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: _cBorder,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            item.source,
+                            style: TextStyle(
+                                color: _cTextSub,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                      ],
+                      Text(
+                        _timeAgo(item.datetime),
+                        style: TextStyle(color: _cTextSub, fontSize: 10),
+                      ),
+                      const Spacer(),
+                      Icon(Icons.open_in_new_rounded,
+                          color: _cTextSub, size: 13),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  IconData _newsIcon(String type) {
+    switch (type) {
+      case 'crypto':
+        return Icons.currency_bitcoin_rounded;
+      case 'stock':
+        return Icons.show_chart_rounded;
+      case 'idx':
+        return Icons.bar_chart_rounded;
+      case 'forex':
+        return Icons.currency_exchange_rounded;
+      default:
+        return Icons.article_rounded;
+    }
   }
 
   Widget _buildPriceHeader(ChartPoint? hovered, double? lastVal,
@@ -425,7 +688,6 @@ class _InteractiveLinePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     if (points.length < 2) return;
 
-    // Gradient fill
     final fillPath = Path();
     fillPath.moveTo(_toOffset(0, size).dx, size.height);
     for (int i = 0; i < points.length; i++) {
@@ -444,7 +706,6 @@ class _InteractiveLinePainter extends CustomPainter {
         ).createShader(Rect.fromLTWH(0, 0, size.width, size.height)),
     );
 
-    // Line
     final linePath = Path();
     linePath.moveTo(_toOffset(0, size).dx, _toOffset(0, size).dy);
     for (int i = 1; i < points.length; i++) {
@@ -460,11 +721,9 @@ class _InteractiveLinePainter extends CustomPainter {
         ..strokeJoin = StrokeJoin.round,
     );
 
-    // Hover crosshair
     if (hoverIndex != null) {
       final hPt = _toOffset(hoverIndex!, size);
 
-      // Vertical dashed line
       final dashPaint = Paint()
         ..color = color.withOpacity(0.35)
         ..strokeWidth = 1.2;
@@ -477,10 +736,7 @@ class _InteractiveLinePainter extends CustomPainter {
         y += dashLen + dashGap;
       }
 
-      // Glow
       canvas.drawCircle(hPt, 12, Paint()..color = color.withOpacity(0.12));
-
-      // Dot
       canvas.drawCircle(hPt, 5, Paint()..color = color);
       canvas.drawCircle(
         hPt,
