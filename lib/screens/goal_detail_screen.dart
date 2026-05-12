@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:share_plus/share_plus.dart';
 import '../models/budget_model.dart';
 import '../models/account_model.dart';
 import '../providers/budget_provider.dart';
@@ -44,10 +45,8 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
   Future<void> _loadDeposits() async {
     if (_budget.id == null) return;
 
-    // Reload from DB first
     await context.read<BudgetProvider>().loadBudgets();
 
-    // Get fresh budget & deposits
     final deps = await context.read<BudgetProvider>().getDeposits(_budget.id!);
     final updated = context
         .read<BudgetProvider>()
@@ -63,6 +62,38 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
     }
   }
 
+  // ─── STREAK CALCULATION ───────────────────────────────────────────────────
+  int _calculateStreak() {
+    if (_deposits.isEmpty) return 0;
+
+    final monthsWithDeposit = _deposits
+        .map((d) => '${d.date.year}-${d.date.month.toString().padLeft(2, '0')}')
+        .toSet()
+        .toList()
+      ..sort((a, b) => b.compareTo(a));
+
+    if (monthsWithDeposit.isEmpty) return 0;
+
+    int streak = 1;
+    for (int i = 0; i < monthsWithDeposit.length - 1; i++) {
+      final current = _parseYearMonth(monthsWithDeposit[i]);
+      final prev = _parseYearMonth(monthsWithDeposit[i + 1]);
+      final expectedPrev = DateTime(current.year, current.month - 1);
+      if (prev.year == expectedPrev.year && prev.month == expectedPrev.month) {
+        streak++;
+      } else {
+        break;
+      }
+    }
+    return streak;
+  }
+
+  DateTime _parseYearMonth(String ym) {
+    final parts = ym.split('-');
+    return DateTime(int.parse(parts[0]), int.parse(parts[1]));
+  }
+
+  // ─── ADD DEPOSIT ──────────────────────────────────────────────────────────
   void _showAddDeposit() {
     final amountCtrl = TextEditingController();
     final noteCtrl = TextEditingController();
@@ -91,7 +122,6 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Handle bar
                 Center(
                   child: Container(
                     width: 40,
@@ -113,8 +143,6 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                     style: const TextStyle(
                         color: AppTheme.onSurfaceVariant, fontSize: 13)),
                 const SizedBox(height: 24),
-
-                // Amount
                 const Text('Jumlah',
                     style: TextStyle(
                         color: AppTheme.onSurface,
@@ -148,8 +176,6 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                   ),
                 ),
                 const SizedBox(height: 20),
-
-                // Source wallet
                 const Text('Sumber Dana',
                     style: TextStyle(
                         color: AppTheme.onSurface,
@@ -212,8 +238,6 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                   ],
                 ),
                 const SizedBox(height: 20),
-
-                // Note
                 const Text('Catatan (opsional)',
                     style: TextStyle(
                         color: AppTheme.onSurface,
@@ -234,8 +258,6 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                   ),
                 ),
                 const SizedBox(height: 20),
-
-                // Attachment — pakai image_picker saja (tanpa file_picker)
                 GestureDetector(
                   onTap: () async {
                     final picker = ImagePicker();
@@ -293,8 +315,6 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                   ),
                 ),
                 const SizedBox(height: 28),
-
-                // Submit
                 SizedBox(
                   width: double.infinity,
                   height: 54,
@@ -337,8 +357,657 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
     );
   }
 
+  // ─── SHARE CARD ───────────────────────────────────────────────────────────
+  void _showShareCard() {
+    final progress = _budget.progress;
+    final percent = (progress * 100).toStringAsFixed(0);
+    final streak = _calculateStreak();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppTheme.surface,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 20),
+              decoration: BoxDecoration(
+                  color: AppTheme.outline,
+                  borderRadius: BorderRadius.circular(2)),
+            ),
+            const Text('Bagikan Progress',
+                style: TextStyle(
+                    color: AppTheme.onSurface,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800)),
+            const SizedBox(height: 4),
+            const Text('Tunjukkan perkembangan goalmu ke teman!',
+                style:
+                    TextStyle(color: AppTheme.onSurfaceVariant, fontSize: 12)),
+            const SizedBox(height: 20),
+
+            // Share card preview
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    AppTheme.primary,
+                    AppTheme.primary.withOpacity(0.7),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Text('WalletScript',
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700)),
+                      ),
+                      const Spacer(),
+                      const Text('✦',
+                          style: TextStyle(
+                              fontSize: 18,
+                              color: Colors.white,
+                              fontWeight: FontWeight.w300)),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Goal name
+                  Text(_budget.title,
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800)),
+                  if (_budget.description != null) ...[
+                    const SizedBox(height: 2),
+                    Text(_budget.description!,
+                        style: TextStyle(
+                            color: Colors.white.withOpacity(0.8), fontSize: 12),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis),
+                  ],
+                  const SizedBox(height: 16),
+
+                  // Progress bar
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: LinearProgressIndicator(
+                      value: progress,
+                      minHeight: 10,
+                      backgroundColor: Colors.white.withOpacity(0.2),
+                      valueColor:
+                          const AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Stats
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('$percent% tercapai',
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 18)),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(_fmt.format(_budget.currentAmount),
+                              style: TextStyle(
+                                  color: Colors.white.withOpacity(0.9),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600)),
+                          Text('dari ${_fmt.format(_budget.targetAmount)}',
+                              style: TextStyle(
+                                  color: Colors.white.withOpacity(0.6),
+                                  fontSize: 10)),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Badges row
+                  Row(
+                    children: [
+                      if (streak >= 2) ...[
+                        _shareBadge('◈ $streak bln streak'),
+                        const SizedBox(width: 8),
+                      ],
+                      if (_budget.deadline != null &&
+                          _budget.daysLeft != null) ...[
+                        _shareBadge('⏳ ${_budget.daysLeft} hari lagi'),
+                        const SizedBox(width: 8),
+                      ],
+                      if (_budget.isCompleted) _shareBadge('★ SELESAI!'),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Share buttons
+            Row(
+              children: [
+                Expanded(
+                  child: _shareButton(
+                    icon: Icons.copy_rounded,
+                    label: 'Salin Teks',
+                    color: AppTheme.surfaceContainer,
+                    textColor: AppTheme.onSurface,
+                    onTap: () {
+                      final text = _buildShareText(percent, streak);
+                      Clipboard.setData(ClipboardData(text: text));
+                      Navigator.pop(ctx);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Teks berhasil disalin!'),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _shareButton(
+                    icon: Icons.share_rounded,
+                    label: 'Bagikan',
+                    color: AppTheme.primary,
+                    textColor: Colors.white,
+                    onTap: () async {
+                      Navigator.pop(ctx);
+                      final text = _buildShareText(percent, streak);
+                      await Share.share(
+                        text,
+                        subject: 'Goal: ${_budget.title}',
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _buildShareText(String percent, int streak) {
+    return '★ Financial Goal: ${_budget.title}\n'
+        '◈ Progress: $percent% (${_fmt.format(_budget.currentAmount)} / ${_fmt.format(_budget.targetAmount)})\n'
+        '${streak >= 2 ? '◈ Streak $streak bulan berturut-turut!\n' : ''}'
+        '${_budget.deadline != null ? '⏳ Deadline: ${DateFormat('dd MMM yyyy', 'id').format(_budget.deadline!)}\n' : ''}'
+        '\nDibuat dengan WalletScript ✦';
+  }
+
+  Widget _shareBadge(String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(label,
+          style: const TextStyle(
+              color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700)),
+    );
+  }
+
+  Widget _shareButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required Color textColor,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: textColor, size: 18),
+            const SizedBox(width: 8),
+            Text(label,
+                style: TextStyle(
+                    color: textColor,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ─── AUTO-DEDUCT SCHEDULE ─────────────────────────────────────────────────
+  void _showAutoDeductSchedule() {
+    final accounts = context.read<AccountProvider>().accounts;
+    AppAccount? selectedAccount =
+        _budget.autoDeductAccountId != null && accounts.isNotEmpty
+            ? accounts.firstWhere(
+                (a) => a.id?.toString() == _budget.autoDeductAccountId,
+                orElse: () => accounts.first)
+            : null;
+    int selectedDay = _budget.autoDeductDay ?? 1;
+    double autoAmount = _budget.autoDeductAmount ?? 0;
+    final amountCtrl = TextEditingController(
+        text: autoAmount > 0 ? autoAmount.toStringAsFixed(0) : '');
+    bool isEnabled = _budget.autoDeductEnabled;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppTheme.surface,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheet) => Padding(
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 24,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 32,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 20),
+                    decoration: BoxDecoration(
+                        color: AppTheme.outline,
+                        borderRadius: BorderRadius.circular(2)),
+                  ),
+                ),
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Auto-Deduct Bulanan',
+                              style: TextStyle(
+                                  color: AppTheme.onSurface,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w800)),
+                          SizedBox(height: 2),
+                          Text('Potong otomatis setiap bulan',
+                              style: TextStyle(
+                                  color: AppTheme.onSurfaceVariant,
+                                  fontSize: 12)),
+                        ],
+                      ),
+                    ),
+                    Switch(
+                      value: isEnabled,
+                      activeColor: AppTheme.primary,
+                      onChanged: (v) => setSheet(() => isEnabled = v),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                AnimatedOpacity(
+                  opacity: isEnabled ? 1.0 : 0.4,
+                  duration: const Duration(milliseconds: 200),
+                  child: IgnorePointer(
+                    ignoring: !isEnabled,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Nominal per Bulan',
+                            style: TextStyle(
+                                color: AppTheme.onSurface,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13)),
+                        const SizedBox(height: 8),
+                        if (_budget.deadline != null) ...[
+                          Builder(builder: (_) {
+                            final months = _budget.deadline!
+                                    .difference(DateTime.now())
+                                    .inDays /
+                                30;
+                            final suggested = months > 0
+                                ? (_budget.remaining / months).ceil()
+                                : 0;
+                            return GestureDetector(
+                              onTap: () => setSheet(
+                                  () => amountCtrl.text = suggested.toString()),
+                              child: Container(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.primary.withOpacity(0.08),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                      color: AppTheme.primary.withOpacity(0.3)),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.lightbulb_outline_rounded,
+                                        color: Colors.amber, size: 14),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'Saran: ${_fmt.format(suggested.toDouble())}/bln biar tepat waktu',
+                                      style: const TextStyle(
+                                          color: AppTheme.onSurface,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600),
+                                    ),
+                                    const Spacer(),
+                                    const Text('Pakai →',
+                                        style: TextStyle(
+                                            color: AppTheme.primary,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w700)),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }),
+                        ],
+                        TextField(
+                          controller: amountCtrl,
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly
+                          ],
+                          style: const TextStyle(
+                              color: AppTheme.onSurface,
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700),
+                          decoration: InputDecoration(
+                            prefixText: 'Rp ',
+                            prefixStyle: const TextStyle(
+                                color: AppTheme.primary,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 20),
+                            hintText: '0',
+                            filled: true,
+                            fillColor: AppTheme.surfaceContainer,
+                            border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(16),
+                                borderSide: BorderSide.none),
+                            focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(16),
+                                borderSide: const BorderSide(
+                                    color: AppTheme.primary, width: 1.5)),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        const Text('Tanggal Potong Setiap Bulan',
+                            style: TextStyle(
+                                color: AppTheme.onSurface,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13)),
+                        const SizedBox(height: 8),
+                        SizedBox(
+                          height: 44,
+                          child: ListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: 28,
+                            itemBuilder: (_, i) {
+                              final day = i + 1;
+                              final isSelected = selectedDay == day;
+                              return GestureDetector(
+                                onTap: () => setSheet(() => selectedDay = day),
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 150),
+                                  width: 40,
+                                  height: 40,
+                                  margin: const EdgeInsets.only(right: 6),
+                                  decoration: BoxDecoration(
+                                    color: isSelected
+                                        ? AppTheme.primary
+                                        : AppTheme.surfaceContainer,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Center(
+                                    child: Text('$day',
+                                        style: TextStyle(
+                                            color: isSelected
+                                                ? Colors.white
+                                                : AppTheme.onSurface,
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 13)),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Potongan dilakukan setiap tanggal $selectedDay',
+                          style: const TextStyle(
+                              color: AppTheme.onSurfaceVariant, fontSize: 12),
+                        ),
+                        const SizedBox(height: 16),
+                        const Text('Wallet Sumber',
+                            style: TextStyle(
+                                color: AppTheme.onSurface,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13)),
+                        const SizedBox(height: 8),
+                        if (accounts.isEmpty)
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppTheme.surfaceContainer,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Text('Belum ada wallet',
+                                style: TextStyle(
+                                    color: AppTheme.onSurfaceVariant)),
+                          )
+                        else
+                          DropdownButtonFormField<AppAccount>(
+                            value: selectedAccount,
+                            hint: const Text('Pilih wallet'),
+                            decoration: InputDecoration(
+                              filled: true,
+                              fillColor: AppTheme.surfaceContainer,
+                              border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                  borderSide: BorderSide.none),
+                            ),
+                            items: accounts
+                                .map((a) => DropdownMenuItem(
+                                      value: a,
+                                      child: Row(children: [
+                                        Text(a.name,
+                                            style: const TextStyle(
+                                                color: AppTheme.onSurface,
+                                                fontWeight: FontWeight.w600)),
+                                        const SizedBox(width: 8),
+                                        Text(_fmt.format(a.balance),
+                                            style: const TextStyle(
+                                                color: AppTheme.primary,
+                                                fontSize: 12)),
+                                      ]),
+                                    ))
+                                .toList(),
+                            onChanged: (v) =>
+                                setSheet(() => selectedAccount = v),
+                          ),
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.withOpacity(0.08),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                                color: Colors.amber.withOpacity(0.3)),
+                          ),
+                          child: const Row(
+                            children: [
+                              Icon(Icons.info_outline_rounded,
+                                  color: Colors.amber, size: 16),
+                              SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Auto-deduct akan berjalan saat kamu membuka aplikasi pada atau setelah tanggal yang ditentukan.',
+                                  style: TextStyle(
+                                      color: AppTheme.onSurfaceVariant,
+                                      fontSize: 11),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  height: 54,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primary,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16)),
+                    ),
+                    onPressed: () async {
+                      Navigator.pop(ctx);
+                      final amount =
+                          double.tryParse(amountCtrl.text.trim()) ?? 0;
+                      final updated = _budget.copyWith(
+                        autoDeductEnabled: isEnabled,
+                        autoDeductAmount: isEnabled ? amount : 0,
+                        autoDeductDay: isEnabled ? selectedDay : null,
+                        autoDeductAccountId:
+                            isEnabled ? selectedAccount?.id?.toString() : null,
+                      );
+                      await context
+                          .read<BudgetProvider>()
+                          .updateBudget(updated);
+                      await _loadDeposits();
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(isEnabled
+                                ? 'Auto-deduct diaktifkan setiap tgl $selectedDay'
+                                : 'Auto-deduct dinonaktifkan'),
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      }
+                    },
+                    child: const Text('Simpan Jadwal',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 16)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ─── ARCHIVE ──────────────────────────────────────────────────────────────
+  void _confirmArchive() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Arsipkan Goal?',
+            style: TextStyle(color: AppTheme.onSurface)),
+        content: Text(
+          'Goal "${_budget.title}" akan dipindah ke arsip. '
+          'Kamu bisa memulihkannya kapan saja.',
+          style: const TextStyle(color: AppTheme.onSurfaceVariant),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await context.read<BudgetProvider>().archiveBudget(_budget.id!);
+              if (mounted) Navigator.pop(context);
+            },
+            child: const Text('Arsipkan', style: TextStyle(color: Colors.grey)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─── DELETE ───────────────────────────────────────────────────────────────
+  void _confirmDelete() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Hapus Goal?',
+            style: TextStyle(color: AppTheme.onSurface)),
+        content: Text(
+          'Goal "${_budget.title}" dan semua setoran akan dihapus permanen.',
+          style: const TextStyle(color: AppTheme.onSurfaceVariant),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await context.read<BudgetProvider>().deleteBudget(_budget.id!);
+              if (mounted) Navigator.pop(context);
+            },
+            child: const Text('Hapus', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─── VISION BOARD ─────────────────────────────────────────────────────────
   void _showEditVisionBoard() async {
-    // Pilih: foto dari galeri atau kamera
     final choice = await showModalBottomSheet<String>(
       context: context,
       backgroundColor: AppTheme.surface,
@@ -368,28 +1037,22 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                 style:
                     TextStyle(color: AppTheme.onSurfaceVariant, fontSize: 13)),
             const SizedBox(height: 24),
-            _sheetOption(
-              ctx,
-              icon: Icons.photo_library_rounded,
-              label: 'Pilih dari Galeri',
-              value: 'gallery',
-            ),
+            _sheetOption(ctx,
+                icon: Icons.photo_library_rounded,
+                label: 'Pilih dari Galeri',
+                value: 'gallery'),
             const SizedBox(height: 10),
-            _sheetOption(
-              ctx,
-              icon: Icons.camera_alt_rounded,
-              label: 'Ambil Foto',
-              value: 'camera',
-            ),
+            _sheetOption(ctx,
+                icon: Icons.camera_alt_rounded,
+                label: 'Ambil Foto',
+                value: 'camera'),
             if (_budget.imagePath != null) ...[
               const SizedBox(height: 10),
-              _sheetOption(
-                ctx,
-                icon: Icons.delete_outline_rounded,
-                label: 'Hapus Foto',
-                value: 'remove',
-                color: Colors.red,
-              ),
+              _sheetOption(ctx,
+                  icon: Icons.delete_outline_rounded,
+                  label: 'Hapus Foto',
+                  value: 'remove',
+                  color: Colors.red),
             ],
           ],
         ),
@@ -399,8 +1062,6 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
     if (choice == null) return;
 
     if (choice == 'remove') {
-      final updated = _budget.copyWith(imagePath: '');
-      // store empty string then treat null in display
       final cleared = AppBudget(
         id: _budget.id,
         title: _budget.title,
@@ -460,34 +1121,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
     );
   }
 
-  void _confirmDelete() {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Hapus Goal?',
-            style: TextStyle(color: AppTheme.onSurface)),
-        content: Text(
-          'Goal "${_budget.title}" dan semua setoran akan dihapus permanen.',
-          style: const TextStyle(color: AppTheme.onSurfaceVariant),
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(ctx);
-              await context.read<BudgetProvider>().deleteBudget(_budget.id!);
-              if (mounted) Navigator.pop(context);
-            },
-            child: const Text('Hapus', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-  }
-
+  // ─── BUILD ────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     final progress = _budget.progress;
@@ -514,6 +1148,12 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
             ),
             actions: [
               IconButton(
+                icon: const Icon(Icons.share_rounded),
+                color: AppTheme.onSurface,
+                tooltip: 'Bagikan',
+                onPressed: _showShareCard,
+              ),
+              IconButton(
                 icon: const Icon(Icons.add_photo_alternate_outlined),
                 color: AppTheme.onSurface,
                 tooltip: 'Ganti foto',
@@ -536,6 +1176,10 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                         .read<BudgetProvider>()
                         .removePriority(_budget.id!);
                     await _loadDeposits();
+                  } else if (v == 'auto_deduct') {
+                    _showAutoDeductSchedule();
+                  } else if (v == 'archive') {
+                    _confirmArchive();
                   } else if (v == 'delete') {
                     _confirmDelete();
                   }
@@ -559,6 +1203,46 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                         Text('Hapus dari Prioritas'),
                       ]),
                     ),
+                  PopupMenuItem(
+                    value: 'auto_deduct',
+                    child: Row(children: [
+                      Icon(
+                        Icons.autorenew_rounded,
+                        color: _budget.autoDeductEnabled
+                            ? AppTheme.primary
+                            : AppTheme.onSurfaceVariant,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 8),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text('Auto-Deduct'),
+                          Text(
+                            _budget.autoDeductEnabled
+                                ? 'Aktif · tgl ${_budget.autoDeductDay}'
+                                : 'Belum diatur',
+                            style: TextStyle(
+                              color: _budget.autoDeductEnabled
+                                  ? AppTheme.primary
+                                  : AppTheme.onSurfaceVariant,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ]),
+                  ),
+                  const PopupMenuItem(
+                    value: 'archive',
+                    child: Row(children: [
+                      Icon(Icons.archive_rounded, color: Colors.grey, size: 18),
+                      SizedBox(width: 8),
+                      Text('Arsipkan Goal'),
+                    ]),
+                  ),
+                  const PopupMenuDivider(),
                   const PopupMenuItem(
                     value: 'delete',
                     child: Row(children: [
@@ -575,12 +1259,8 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
               background: Stack(
                 fit: StackFit.expand,
                 children: [
-                  // Foto atau warna+emoji
                   if (_budget.imagePath != null)
-                    Image.file(
-                      File(_budget.imagePath!),
-                      fit: BoxFit.cover,
-                    )
+                    Image.file(File(_budget.imagePath!), fit: BoxFit.cover)
                   else
                     Container(
                       decoration: BoxDecoration(
@@ -630,7 +1310,6 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                         ),
                       ),
                     ),
-                  // Gradient overlay bottom
                   Positioned(
                     bottom: 0,
                     left: 0,
@@ -649,7 +1328,6 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                       ),
                     ),
                   ),
-                  // Vision Board label (kalau sudah ada foto)
                   if (_budget.imagePath != null)
                     Positioned(
                       bottom: 12,
@@ -682,7 +1360,6 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
         ],
         body: Column(
           children: [
-            // Header info
             Container(
               color: AppTheme.surface,
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -698,7 +1375,37 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                                 fontSize: 24,
                                 fontWeight: FontWeight.w800)),
                       ),
-                      if (_budget.isPriority)
+                      if (_budget.autoDeductEnabled) ...[
+                        const SizedBox(width: 6),
+                        GestureDetector(
+                          onTap: _showAutoDeductSchedule,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.teal.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                  color: Colors.teal.withOpacity(0.3)),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.autorenew_rounded,
+                                    color: Colors.teal, size: 12),
+                                SizedBox(width: 3),
+                                Text('Auto',
+                                    style: TextStyle(
+                                        color: Colors.teal,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w700)),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                      if (_budget.isPriority) ...[
+                        const SizedBox(width: 6),
                         Container(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 10, vertical: 4),
@@ -719,6 +1426,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                             ],
                           ),
                         ),
+                      ],
                     ],
                   ),
                   if (_budget.description != null) ...[
@@ -728,8 +1436,6 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                             color: AppTheme.onSurfaceVariant, fontSize: 13)),
                   ],
                   const SizedBox(height: 16),
-
-                  // Progress
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -759,8 +1465,6 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                     ),
                   ),
                   const SizedBox(height: 12),
-
-                  // Stats row
                   Row(
                     children: [
                       _statChip(Icons.flag_rounded, 'Target',
@@ -780,12 +1484,9 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                 ],
               ),
             ),
-
-            // Monthly suggestion banner
             if (_budget.deadline != null && !_budget.isCompleted)
               _monthlySuggestionBanner(),
-
-            // Tabs
+            if (_budget.autoDeductEnabled) _autoDeductBanner(),
             Container(
               color: AppTheme.surface,
               child: TabBar(
@@ -802,8 +1503,6 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                 ],
               ),
             ),
-
-            // Tab content
             Expanded(
               child: TabBarView(
                 controller: _tabController,
@@ -828,6 +1527,39 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                   style: TextStyle(
                       color: Colors.white, fontWeight: FontWeight.w700)),
             ),
+    );
+  }
+
+  // ─── AUTO-DEDUCT ACTIVE BANNER ────────────────────────────────────────────
+  Widget _autoDeductBanner() {
+    return GestureDetector(
+      onTap: _showAutoDeductSchedule,
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.teal.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.teal.withOpacity(0.25)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.autorenew_rounded, color: Colors.teal, size: 16),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Auto-deduct aktif · ${_fmt.format(_budget.autoDeductAmount ?? 0)}/bln setiap tgl ${_budget.autoDeductDay}',
+                style: const TextStyle(
+                    color: Colors.teal,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600),
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded,
+                color: Colors.teal, size: 16),
+          ],
+        ),
+      ),
     );
   }
 
@@ -894,6 +1626,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
     );
   }
 
+  // ─── HISTORY TAB ──────────────────────────────────────────────────────────
   Widget _buildHistoryTab() {
     if (_loading) {
       return const Center(child: CircularProgressIndicator());
@@ -1058,54 +1791,122 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
     );
   }
 
+  // ─── MILESTONE TAB ────────────────────────────────────────────────────────
   Widget _buildMilestoneTab(
       List<double> milestones, List<String> labels, List<String> icons) {
+    final streak = _calculateStreak();
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 100),
       children: [
-        // Streak
         Container(
           padding: const EdgeInsets.all(16),
           margin: const EdgeInsets.only(bottom: 16),
           decoration: BoxDecoration(
             color: AppTheme.surface,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppTheme.outline),
+            border: Border.all(
+              color: streak >= 3
+                  ? Colors.orange.withOpacity(0.4)
+                  : AppTheme.outline,
+            ),
           ),
-          child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.orange.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Text('🔥', style: TextStyle(fontSize: 24)),
-              ),
-              const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              Row(
                 children: [
-                  const Text('Streak Setoran',
-                      style: TextStyle(
-                          color: AppTheme.onSurface,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 14)),
-                  Text('${_deposits.length} total setoran dilakukan',
-                      style: const TextStyle(
-                          color: AppTheme.onSurfaceVariant, fontSize: 12)),
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: streak >= 1
+                          ? Colors.orange.withOpacity(0.1)
+                          : AppTheme.surfaceContainer,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      streak >= 6
+                          ? '🔥'
+                          : streak >= 3
+                              ? '⚡'
+                              : streak >= 1
+                                  ? '✨'
+                                  : '💤',
+                      style: const TextStyle(fontSize: 24),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Streak Nabung',
+                            style: TextStyle(
+                                color: AppTheme.onSurface,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 14)),
+                        Text(
+                          streak == 0
+                              ? 'Belum ada setoran bulan ini'
+                              : streak == 1
+                                  ? 'Baru mulai, terus nabung!'
+                                  : 'Nabung $streak bulan berturut-turut!',
+                          style: const TextStyle(
+                              color: AppTheme.onSurfaceVariant, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        '$streak',
+                        style: TextStyle(
+                            color: streak >= 1
+                                ? Colors.orange
+                                : AppTheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 28),
+                      ),
+                      Text(
+                        streak == 1 ? 'bulan' : 'bulan 🔥',
+                        style: const TextStyle(
+                            color: AppTheme.onSurfaceVariant, fontSize: 11),
+                      ),
+                    ],
+                  ),
                 ],
               ),
-              const Spacer(),
-              Text('${_deposits.length}x',
-                  style: const TextStyle(
-                      color: Colors.orange,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 22)),
+              if (_deposits.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                _buildStreakDots(),
+              ],
+              const SizedBox(height: 8),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppTheme.surfaceContainer,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.receipt_long_rounded,
+                        size: 13, color: AppTheme.onSurfaceVariant),
+                    const SizedBox(width: 6),
+                    Text(
+                      '${_deposits.length}x total setoran · ${_fmt.format(_budget.currentAmount)} terkumpul',
+                      style: const TextStyle(
+                          color: AppTheme.onSurfaceVariant, fontSize: 11),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
-
         const Text('PENCAPAIAN',
             style: TextStyle(
                 color: AppTheme.onSurfaceVariant,
@@ -1113,7 +1914,6 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                 fontWeight: FontWeight.w700,
                 letterSpacing: 0.8)),
         const SizedBox(height: 12),
-
         ...List.generate(milestones.length, (i) {
           final reached = _budget.progress >= milestones[i];
           final isCurrent =
@@ -1181,7 +1981,6 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
             ),
           );
         }),
-
         if (_budget.isCompleted) ...[
           const SizedBox(height: 16),
           Container(
@@ -1218,6 +2017,67 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
     );
   }
 
+  Widget _buildStreakDots() {
+    final now = DateTime.now();
+    final monthsWithDeposit = _deposits
+        .map((d) => '${d.date.year}-${d.date.month.toString().padLeft(2, '0')}')
+        .toSet();
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(6, (i) {
+        final month = DateTime(now.year, now.month - (5 - i));
+        final key = '${month.year}-${month.month.toString().padLeft(2, '0')}';
+        final hasDeposit = monthsWithDeposit.contains(key);
+        final isCurrentMonth =
+            month.year == now.year && month.month == now.month;
+        return Tooltip(
+          message: DateFormat('MMM yyyy', 'id').format(month),
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 4),
+            child: Column(
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: hasDeposit
+                        ? Colors.orange
+                        : isCurrentMonth
+                            ? AppTheme.primary.withOpacity(0.15)
+                            : AppTheme.surfaceContainer,
+                    shape: BoxShape.circle,
+                    border: isCurrentMonth
+                        ? Border.all(color: AppTheme.primary, width: 1.5)
+                        : null,
+                  ),
+                  child: Center(
+                    child: Text(
+                      hasDeposit ? '🔥' : (isCurrentMonth ? '?' : '○'),
+                      style: TextStyle(
+                        fontSize: hasDeposit ? 14 : 11,
+                        color: hasDeposit
+                            ? Colors.white
+                            : AppTheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  DateFormat('MMM', 'id').format(month),
+                  style: const TextStyle(
+                      color: AppTheme.onSurfaceVariant, fontSize: 9),
+                ),
+              ],
+            ),
+          ),
+        );
+      }),
+    );
+  }
+
+  // ─── INFO TAB ─────────────────────────────────────────────────────────────
   Widget _buildInfoTab() {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 100),
@@ -1249,6 +2109,14 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
             AppTheme.primary),
         _infoRow(Icons.receipt_long_rounded, 'Total Setoran',
             '${_deposits.length}x', Colors.indigo),
+        _infoRow(Icons.local_fire_department_rounded, 'Streak Nabung',
+            '${_calculateStreak()} bulan berturut-turut', Colors.orange),
+        if (_budget.autoDeductEnabled)
+          _infoRow(
+              Icons.autorenew_rounded,
+              'Auto-Deduct',
+              '${_fmt.format(_budget.autoDeductAmount ?? 0)}/bln · tgl ${_budget.autoDeductDay}',
+              Colors.teal),
         if (_deposits.isNotEmpty)
           _infoRow(
               Icons.calendar_month_rounded,
@@ -1285,11 +2153,14 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
               style: const TextStyle(
                   color: AppTheme.onSurfaceVariant, fontSize: 13)),
           const Spacer(),
-          Text(value,
-              style: const TextStyle(
-                  color: AppTheme.onSurface,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 13)),
+          Flexible(
+            child: Text(value,
+                style: const TextStyle(
+                    color: AppTheme.onSurface,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13),
+                textAlign: TextAlign.right),
+          ),
         ],
       ),
     );

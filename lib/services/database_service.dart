@@ -20,7 +20,7 @@ class DatabaseService {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
     return await openDatabase(path,
-        version: 5, onCreate: _createDB, onUpgrade: _onUpgrade);
+        version: 7, onCreate: _createDB, onUpgrade: _onUpgrade);
   }
 
   Future _createDB(Database db, int version) async {
@@ -54,7 +54,16 @@ class DatabaseService {
       imagePath TEXT,
       description TEXT,
       category TEXT NOT NULL DEFAULT 'other',
-      isPriority INTEGER NOT NULL DEFAULT 0)''');
+      isPriority INTEGER NOT NULL DEFAULT 0,
+      isArchived INTEGER NOT NULL DEFAULT 0,
+      archivedAt TEXT,
+      streakMonths INTEGER NOT NULL DEFAULT 0,
+      lastDepositMonth TEXT,
+      tags TEXT NOT NULL DEFAULT '',
+      autoDeductEnabled INTEGER NOT NULL DEFAULT 0,
+      autoDeductAmount REAL,
+      autoDeductDay INTEGER,
+      autoDeductAccountId TEXT)''');
 
     await db.execute('''CREATE TABLE goal_deposits (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -76,6 +85,7 @@ class DatabaseService {
       hasReminder INTEGER NOT NULL DEFAULT 0,
       reminderDate TEXT)''');
 
+    // seed default accounts
     await db.insert('accounts', {
       'name': 'Cash',
       'grp': 'Cash',
@@ -116,7 +126,6 @@ class DatabaseService {
           "ALTER TABLE accounts ADD COLUMN grp TEXT NOT NULL DEFAULT 'Others'");
     }
     if (oldVersion < 4) {
-      // Upgrade budgets table
       try {
         await db.execute('ALTER TABLE budgets ADD COLUMN imagePath TEXT');
       } catch (_) {}
@@ -133,7 +142,6 @@ class DatabaseService {
       } catch (_) {}
     }
     if (oldVersion < 5) {
-      // Create goal_deposits table
       await db.execute('''CREATE TABLE IF NOT EXISTS goal_deposits (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         budgetId INTEGER NOT NULL,
@@ -144,6 +152,46 @@ class DatabaseService {
         attachmentPath TEXT,
         date TEXT NOT NULL,
         FOREIGN KEY (budgetId) REFERENCES budgets (id) ON DELETE CASCADE)''');
+    }
+    if (oldVersion < 6) {
+      try {
+        await db.execute(
+            'ALTER TABLE budgets ADD COLUMN isArchived INTEGER NOT NULL DEFAULT 0');
+      } catch (_) {}
+      try {
+        await db.execute('ALTER TABLE budgets ADD COLUMN archivedAt TEXT');
+      } catch (_) {}
+      try {
+        await db.execute(
+            'ALTER TABLE budgets ADD COLUMN streakMonths INTEGER NOT NULL DEFAULT 0');
+      } catch (_) {}
+      try {
+        await db
+            .execute('ALTER TABLE budgets ADD COLUMN lastDepositMonth TEXT');
+      } catch (_) {}
+      try {
+        await db.execute(
+            "ALTER TABLE budgets ADD COLUMN tags TEXT NOT NULL DEFAULT ''");
+      } catch (_) {}
+    }
+    if (oldVersion < 7) {
+      // Auto-deduct columns
+      try {
+        await db.execute(
+            'ALTER TABLE budgets ADD COLUMN autoDeductEnabled INTEGER NOT NULL DEFAULT 0');
+      } catch (_) {}
+      try {
+        await db
+            .execute('ALTER TABLE budgets ADD COLUMN autoDeductAmount REAL');
+      } catch (_) {}
+      try {
+        await db
+            .execute('ALTER TABLE budgets ADD COLUMN autoDeductDay INTEGER');
+      } catch (_) {}
+      try {
+        await db
+            .execute('ALTER TABLE budgets ADD COLUMN autoDeductAccountId TEXT');
+      } catch (_) {}
     }
   }
 
@@ -212,7 +260,15 @@ class DatabaseService {
 
   Future<List<AppBudget>> getBudgets() async {
     final db = await database;
-    final maps = await db.query('budgets', orderBy: 'isPriority DESC, id ASC');
+    final maps = await db.query('budgets',
+        where: 'isArchived = 0', orderBy: 'isPriority DESC, id ASC');
+    return maps.map((e) => AppBudget.fromMap(e)).toList();
+  }
+
+  Future<List<AppBudget>> getArchivedBudgets() async {
+    final db = await database;
+    final maps = await db.query('budgets',
+        where: 'isArchived = 1', orderBy: 'archivedAt DESC');
     return maps.map((e) => AppBudget.fromMap(e)).toList();
   }
 
@@ -234,11 +290,46 @@ class DatabaseService {
         where: 'id = ?', whereArgs: [id]);
   }
 
-  Future setPriorityBudget(int id) async {
+  Future togglePriorityBudget(int id, bool isPriority) async {
     final db = await database;
-    await db.update('budgets', {'isPriority': 0});
-    await db.update('budgets', {'isPriority': 1},
+    await db.update('budgets', {'isPriority': isPriority ? 1 : 0},
         where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future setPriorityBudget(int id) async {
+    await togglePriorityBudget(id, true);
+  }
+
+  Future archiveBudget(int id) async {
+    final db = await database;
+    await db.update(
+        'budgets',
+        {
+          'isArchived': 1,
+          'archivedAt': DateTime.now().toIso8601String(),
+          'isPriority': 0,
+        },
+        where: 'id = ?',
+        whereArgs: [id]);
+  }
+
+  Future unarchiveBudget(int id) async {
+    final db = await database;
+    await db.update('budgets', {'isArchived': 0, 'archivedAt': null},
+        where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future updateStreakData(
+      int id, int streakMonths, String lastDepositMonth) async {
+    final db = await database;
+    await db.update(
+        'budgets',
+        {
+          'streakMonths': streakMonths,
+          'lastDepositMonth': lastDepositMonth,
+        },
+        where: 'id = ?',
+        whereArgs: [id]);
   }
 
   Future deleteBudget(int id) async {

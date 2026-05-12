@@ -7,11 +7,21 @@ class AppBudget {
   final String currency;
   final DateTime? deadline;
   final String color;
-  final String? imagePath; // vision board photo
-  final String? description; // motivasi / catatan
-  final String?
-      category; // 'vehicle', 'property', 'education', 'travel', 'gadget', 'other'
+  final String? imagePath;
+  final String? description;
+  final String? category;
   final bool isPriority;
+  final bool isArchived;
+  final DateTime? archivedAt;
+  final int streakMonths;
+  final String? lastDepositMonth; // format 'yyyy-MM'
+  final List<String> tags;
+
+  // ── AUTO-DEDUCT ──────────────────────────────────────────────────────────
+  final bool autoDeductEnabled;
+  final double? autoDeductAmount;
+  final int? autoDeductDay;
+  final String? autoDeductAccountId;
 
   AppBudget({
     this.id,
@@ -26,6 +36,16 @@ class AppBudget {
     this.description,
     this.category,
     this.isPriority = false,
+    this.isArchived = false,
+    this.archivedAt,
+    this.streakMonths = 0,
+    this.lastDepositMonth,
+    this.tags = const [],
+    // auto-deduct
+    this.autoDeductEnabled = false,
+    this.autoDeductAmount,
+    this.autoDeductDay,
+    this.autoDeductAccountId,
   });
 
   double get progress =>
@@ -48,6 +68,16 @@ class AppBudget {
         'description': description,
         'category': category ?? 'other',
         'isPriority': isPriority ? 1 : 0,
+        'isArchived': isArchived ? 1 : 0,
+        'archivedAt': archivedAt?.toIso8601String(),
+        'streakMonths': streakMonths,
+        'lastDepositMonth': lastDepositMonth,
+        'tags': tags.join(','),
+        // auto-deduct
+        'autoDeductEnabled': autoDeductEnabled ? 1 : 0,
+        'autoDeductAmount': autoDeductAmount,
+        'autoDeductDay': autoDeductDay,
+        'autoDeductAccountId': autoDeductAccountId,
       };
 
   factory AppBudget.fromMap(Map<String, dynamic> map) => AppBudget(
@@ -64,6 +94,22 @@ class AppBudget {
         description: map['description'],
         category: map['category'] ?? 'other',
         isPriority: (map['isPriority'] ?? 0) == 1,
+        isArchived: (map['isArchived'] ?? 0) == 1,
+        archivedAt: map['archivedAt'] != null
+            ? DateTime.tryParse(map['archivedAt'])
+            : null,
+        streakMonths: (map['streakMonths'] ?? 0) as int,
+        lastDepositMonth: map['lastDepositMonth'],
+        tags: map['tags'] != null && (map['tags'] as String).isNotEmpty
+            ? (map['tags'] as String).split(',')
+            : [],
+        // auto-deduct
+        autoDeductEnabled: (map['autoDeductEnabled'] ?? 0) == 1,
+        autoDeductAmount: map['autoDeductAmount'] != null
+            ? (map['autoDeductAmount'] as num).toDouble()
+            : null,
+        autoDeductDay: map['autoDeductDay'],
+        autoDeductAccountId: map['autoDeductAccountId'],
       );
 
   AppBudget copyWith({
@@ -79,6 +125,16 @@ class AppBudget {
     String? description,
     String? category,
     bool? isPriority,
+    bool? isArchived,
+    DateTime? archivedAt,
+    int? streakMonths,
+    String? lastDepositMonth,
+    List<String>? tags,
+    // auto-deduct
+    bool? autoDeductEnabled,
+    double? autoDeductAmount,
+    int? autoDeductDay,
+    String? autoDeductAccountId,
   }) =>
       AppBudget(
         id: id ?? this.id,
@@ -93,6 +149,16 @@ class AppBudget {
         description: description ?? this.description,
         category: category ?? this.category,
         isPriority: isPriority ?? this.isPriority,
+        isArchived: isArchived ?? this.isArchived,
+        archivedAt: archivedAt ?? this.archivedAt,
+        streakMonths: streakMonths ?? this.streakMonths,
+        lastDepositMonth: lastDepositMonth ?? this.lastDepositMonth,
+        tags: tags ?? this.tags,
+        // auto-deduct
+        autoDeductEnabled: autoDeductEnabled ?? this.autoDeductEnabled,
+        autoDeductAmount: autoDeductAmount ?? this.autoDeductAmount,
+        autoDeductDay: autoDeductDay ?? this.autoDeductDay,
+        autoDeductAccountId: autoDeductAccountId ?? this.autoDeductAccountId,
       );
 }
 
@@ -100,7 +166,7 @@ class GoalDeposit {
   final int? id;
   final int budgetId;
   final double amount;
-  final String? sourceAccountId; // wallet source
+  final String? sourceAccountId;
   final String? sourceAccountName;
   final String? note;
   final String? attachmentPath;
