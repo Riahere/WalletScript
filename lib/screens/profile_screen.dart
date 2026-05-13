@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/account_provider.dart';
+import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import 'settings_screen.dart';
 import 'wallet_all_screen.dart';
@@ -12,9 +13,14 @@ class ProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final accountProvider = context.watch<AccountProvider>();
+    final auth = AuthService();
     final formatter =
         NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
     final byGroup = accountProvider.accountsByGroup;
+
+    final name = auth.userName ?? 'Pengguna WalletScript';
+    final email = auth.userEmail ?? '-';
+    final avatar = auth.userAvatar;
 
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -34,50 +40,63 @@ class ProfileScreen extends StatelessWidget {
         child: Column(
           children: [
             const SizedBox(height: 20),
-            // Avatar
             Center(
-                child: Column(children: [
-              Container(
-                width: 90,
-                height: 90,
-                decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: AppTheme.primary, width: 3),
-                    color: AppTheme.surfaceContainer),
-                child: const Icon(Icons.person_rounded,
-                    color: AppTheme.primary, size: 50),
+              child: Column(
+                children: [
+                  Container(
+                    width: 90,
+                    height: 90,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: AppTheme.primary, width: 3),
+                      color: AppTheme.surfaceContainer,
+                    ),
+                    child: ClipOval(
+                      child: avatar != null
+                          ? Image.network(avatar,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const Icon(
+                                  Icons.person_rounded,
+                                  color: AppTheme.primary,
+                                  size: 50))
+                          : const Icon(Icons.person_rounded,
+                              color: AppTheme.primary, size: 50),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Text(name,
+                      style: const TextStyle(
+                          color: AppTheme.onSurface,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 4),
+                  Text(email,
+                      style: const TextStyle(
+                          color: AppTheme.onSurfaceVariant, fontSize: 14)),
+                  const SizedBox(height: 16),
+                  OutlinedButton.icon(
+                    onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const SettingsScreen())),
+                    icon: const Icon(Icons.edit_rounded,
+                        size: 16, color: AppTheme.primary),
+                    label: const Text('Edit Profile',
+                        style: TextStyle(
+                            color: AppTheme.primary,
+                            fontWeight: FontWeight.w700)),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: AppTheme.primary),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30)),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 10),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 14),
-              const Text('Pengguna WalletScript',
-                  style: TextStyle(
-                      color: AppTheme.onSurface,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800)),
-              const SizedBox(height: 4),
-              const Text('walletscript@email.com',
-                  style: TextStyle(
-                      color: AppTheme.onSurfaceVariant, fontSize: 14)),
-              const SizedBox(height: 16),
-              OutlinedButton.icon(
-                onPressed: () => Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const SettingsScreen())),
-                icon: const Icon(Icons.edit_rounded,
-                    size: 16, color: AppTheme.primary),
-                label: const Text('Edit Profile',
-                    style: TextStyle(
-                        color: AppTheme.primary, fontWeight: FontWeight.w700)),
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: AppTheme.primary),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30)),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-                ),
-              ),
-            ])),
+            ),
             const SizedBox(height: 28),
-
-            // Stats
             Row(children: [
               _statCard('Total\nAkun', '${accountProvider.accounts.length}',
                   Icons.account_balance_wallet_rounded),
@@ -91,8 +110,6 @@ class ProfileScreen extends StatelessWidget {
                   'Group\nAktif', '${byGroup.length}', Icons.folder_rounded),
             ]),
             const SizedBox(height: 20),
-
-            // Info akun
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(20),
@@ -109,22 +126,15 @@ class ProfileScreen extends StatelessWidget {
                             fontWeight: FontWeight.w700,
                             fontSize: 16)),
                     const SizedBox(height: 16),
-                    _infoRow(Icons.person_outline_rounded, 'Nama',
-                        'Pengguna WalletScript'),
+                    _infoRow(Icons.person_outline_rounded, 'Nama', name),
                     const Divider(height: 24, color: AppTheme.outline),
-                    _infoRow(Icons.email_outlined, 'Email',
-                        'walletscript@email.com'),
-                    const Divider(height: 24, color: AppTheme.outline),
-                    _infoRow(
-                        Icons.phone_outlined, 'No. HP', '+62 812-xxxx-xxxx'),
+                    _infoRow(Icons.email_outlined, 'Email', email),
                     const Divider(height: 24, color: AppTheme.outline),
                     _infoRow(
                         Icons.calendar_month_outlined, 'Bergabung', 'Mei 2026'),
                   ]),
             ),
             const SizedBox(height: 20),
-
-            // My Accounts/Wallets — terhubung ke WalletAllScreen
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(20),

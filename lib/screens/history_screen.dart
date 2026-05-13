@@ -935,7 +935,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
             ),
             onPressed: () async {
               Navigator.pop(ctx);
-              await tp.deleteTransaction(t.id!, ap);
+              await tp.deleteTransaction(t.id!);
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(

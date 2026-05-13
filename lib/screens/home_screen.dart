@@ -75,6 +75,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final Map<String, double> dailyBalance = {};
     double running = 0;
     for (final t in txs) {
+      // FIX 1: Transfer tidak mengubah total balance — skip
+      if (t.type == 'transfer') continue;
       final key = DateFormat('dd/MM').format(t.date);
       running += t.type == 'income' ? t.amount : -t.amount;
       dailyBalance[key] = running;
@@ -205,12 +207,15 @@ class _HomeScreenState extends State<HomeScreen> {
   String _balanceTrend(List<AppTransaction> txs) {
     final now = DateTime.now();
     final cutoff = now.subtract(const Duration(days: 30));
-    final recent = txs.where((t) => t.date.isAfter(cutoff)).toList();
+    // FIX 1: Exclude transfer dari trend calculation juga
+    final recent = txs
+        .where((t) => t.date.isAfter(cutoff) && t.type != 'transfer')
+        .toList();
     if (recent.isEmpty) return '';
     double net = 0;
     double prevBalance = 0;
     for (final t in txs) {
-      if (t.date.isBefore(cutoff)) {
+      if (t.date.isBefore(cutoff) && t.type != 'transfer') {
         prevBalance += t.type == 'income' ? t.amount : -t.amount;
       }
     }
@@ -227,7 +232,9 @@ class _HomeScreenState extends State<HomeScreen> {
     final now = DateTime.now();
     final cutoff = now.subtract(const Duration(days: 30));
     double net = 0;
-    for (final t in txs.where((t) => t.date.isAfter(cutoff))) {
+    // FIX 1: Exclude transfer dari trend juga
+    for (final t
+        in txs.where((t) => t.date.isAfter(cutoff) && t.type != 'transfer')) {
       net += t.type == 'income' ? t.amount : -t.amount;
     }
     return net >= 0;
@@ -1029,6 +1036,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildTxTile(AppTransaction t, NumberFormat formatter) {
     final isIncome = t.type == 'income';
+    final isTransfer = t.type == 'transfer'; // FIX 2: detect transfer
+
     final Map<String, Map<String, dynamic>> categoryIcons = {
       'Makanan': {
         'icon': Icons.restaurant_rounded,
@@ -1058,8 +1067,16 @@ class _HomeScreenState extends State<HomeScreen> {
         'icon': Icons.flight_takeoff_rounded,
         'color': const Color(0xFFE0F2FE)
       },
+      // FIX 2: Icon khusus untuk transfer
+      'Transfer': {
+        'icon': Icons.swap_horiz_rounded,
+        'color': const Color(0xFFE0F2FE)
+      },
     };
-    final cat = categoryIcons[t.category] ??
+
+    // FIX 2: Kalau transfer, gunakan icon transfer
+    final catKey = isTransfer ? 'Transfer' : t.category;
+    final cat = categoryIcons[catKey] ??
         {'icon': Icons.receipt_rounded, 'color': AppTheme.surfaceContainer};
 
     return Container(
@@ -1082,17 +1099,31 @@ class _HomeScreenState extends State<HomeScreen> {
                   color: AppTheme.onSurface,
                   fontWeight: FontWeight.w600,
                   fontSize: 14)),
-          Text('${t.category.toUpperCase()} · ${_timeAgo(t.date)}',
-              style: const TextStyle(
-                  color: AppTheme.onSurfaceVariant,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500)),
+          Text(
+            // FIX 2: Label transfer berbeda
+            isTransfer
+                ? 'TRANSFER · ${_timeAgo(t.date)}'
+                : '${t.category.toUpperCase()} · ${_timeAgo(t.date)}',
+            style: const TextStyle(
+                color: AppTheme.onSurfaceVariant,
+                fontSize: 11,
+                fontWeight: FontWeight.w500),
+          ),
         ])),
-        Text('${isIncome ? '+' : '-'}${formatter.format(t.amount)}',
-            style: TextStyle(
-                color: isIncome ? AppTheme.primary : AppTheme.error,
-                fontWeight: FontWeight.w700,
-                fontSize: 14)),
+        // FIX 2: Transfer tidak pakai + atau -, warna netral
+        Text(
+          isTransfer
+              ? formatter.format(t.amount)
+              : '${isIncome ? '+' : '-'}${formatter.format(t.amount)}',
+          style: TextStyle(
+              color: isTransfer
+                  ? AppTheme.onSurfaceVariant
+                  : isIncome
+                      ? AppTheme.primary
+                      : AppTheme.error,
+              fontWeight: FontWeight.w700,
+              fontSize: 14),
+        ),
       ]),
     );
   }

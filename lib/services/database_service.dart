@@ -175,7 +175,6 @@ class DatabaseService {
       } catch (_) {}
     }
     if (oldVersion < 7) {
-      // Auto-deduct columns
       try {
         await db.execute(
             'ALTER TABLE budgets ADD COLUMN autoDeductEnabled INTEGER NOT NULL DEFAULT 0');
@@ -249,6 +248,17 @@ class DatabaseService {
         date: tx.date,
         note: tx.note,
         attachmentPath: tx.attachmentPath);
+  }
+
+  // ── TAMBAHAN: update transaksi ────────────────────────────────
+  Future updateTransaction(AppTransaction tx) async {
+    final db = await database;
+    await db.update(
+      'transactions',
+      tx.toMap(),
+      where: 'id = ?',
+      whereArgs: [tx.id],
+    );
   }
 
   Future deleteTransaction(int id) async {

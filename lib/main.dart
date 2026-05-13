@@ -15,6 +15,7 @@ import 'screens/budget_screen.dart';
 import 'screens/insights_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/add_transaction_screen.dart';
+import 'screens/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,6 +30,7 @@ void main() async {
 
 class WalletScriptApp extends StatelessWidget {
   const WalletScriptApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
@@ -43,7 +45,11 @@ class WalletScriptApp extends StatelessWidget {
         title: 'WalletScript',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.light,
-        home: const MainShell(),
+        // Start from SplashScreen — it handles routing to onboarding/login/home
+        home: const SplashScreen(),
+        routes: {
+          '/home': (_) => const MainShell(),
+        },
       ),
     );
   }
@@ -53,7 +59,8 @@ class WalletScriptApp extends StatelessWidget {
 final mainShellKey = GlobalKey<MainShellState>();
 
 class MainShell extends StatefulWidget {
-  const MainShell({super.key}) : super();
+  const MainShell({super.key});
+
   @override
   State<MainShell> createState() => MainShellState();
 }
