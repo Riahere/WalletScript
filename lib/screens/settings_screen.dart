@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import 'app_top_bar.dart';
@@ -15,7 +16,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _notificationsOn = true;
   String _theme = 'Light';
   Color _accent = AppTheme.primary;
-  final _auth = AuthService();
+
+  // ── Lazy auth — hanya diakses saat Supabase sudah siap ───────────────────
+  AuthService? _auth;
+  bool _supabaseReady = false;
 
   final List<Color> _accents = [
     AppTheme.primary,
@@ -24,7 +28,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
     const Color(0xFF8B5CF6),
   ];
 
+  @override
+  void initState() {
+    super.initState();
+    _initAuth();
+  }
+
+  void _initAuth() {
+    try {
+      // Cek apakah Supabase sudah diinit
+      Supabase.instance.client; // throws jika belum init
+      _auth = AuthService();
+      if (mounted) setState(() => _supabaseReady = true);
+    } catch (_) {
+      // Supabase belum siap, coba lagi setelah frame selesai
+      WidgetsBinding.instance.addPostFrameCallback((_) => _initAuth());
+    }
+  }
+
   Future<void> _logout() async {
+    if (_auth == null) return;
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
@@ -41,7 +64,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
     if (confirm != true) return;
-    await _auth.signOut();
+    await _auth!.signOut();
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('is_logged_in');
     if (mounted) {
@@ -55,9 +78,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final name = _auth.userName ?? 'Pengguna WalletScript';
-    final email = _auth.userEmail ?? '-';
-    final avatar = _auth.userAvatar;
+    // Ambil info user hanya kalau Supabase sudah siap
+    final name = _supabaseReady
+        ? (_auth?.userName ?? 'Pengguna WalletScript')
+        : 'Pengguna WalletScript';
+    final email = _supabaseReady ? (_auth?.userEmail ?? '-') : '-';
+    final avatar = _supabaseReady ? _auth?.userAvatar : null;
 
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -293,7 +319,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ]),
               const SizedBox(height: 16),
 
-              // Logout button
               _settingsCard([
                 _settingsRow(Icons.logout_rounded, 'Keluar',
                     textColor: Colors.red,

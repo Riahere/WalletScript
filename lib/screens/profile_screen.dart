@@ -1,26 +1,52 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../providers/account_provider.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import 'settings_screen.dart';
 import 'wallet_all_screen.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  AuthService? _auth;
+  bool _supabaseReady = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initAuth();
+  }
+
+  void _initAuth() {
+    try {
+      Supabase.instance.client; // throws jika belum init
+      _auth = AuthService();
+      if (mounted) setState(() => _supabaseReady = true);
+    } catch (_) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _initAuth());
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final accountProvider = context.watch<AccountProvider>();
-    final auth = AuthService();
     final formatter =
         NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
     final byGroup = accountProvider.accountsByGroup;
 
-    final name = auth.userName ?? 'Pengguna WalletScript';
-    final email = auth.userEmail ?? '-';
-    final avatar = auth.userAvatar;
+    final name = _supabaseReady
+        ? (_auth?.userName ?? 'Pengguna WalletScript')
+        : 'Pengguna WalletScript';
+    final email = _supabaseReady ? (_auth?.userEmail ?? '-') : '-';
+    final avatar = _supabaseReady ? _auth?.userAvatar : null;
 
     return Scaffold(
       backgroundColor: AppTheme.background,

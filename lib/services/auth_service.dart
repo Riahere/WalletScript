@@ -9,13 +9,13 @@ class AuthService {
   factory AuthService() => _instance;
   AuthService._internal();
 
-  final _supabase = Supabase.instance.client;
+  // ── LAZY getter — tidak dipanggil saat class diload, hanya saat dipakai ──
+  SupabaseClient get _supabase => Supabase.instance.client;
 
   // ─── Google Sign-In ───────────────────────────────────────────────────────
 
   Future<AuthResponse?> signInWithGoogle() async {
     try {
-      // Web Client ID dari Google Cloud Console (tipe Web application)
       const webClientId =
           '933976545522-vqspnkrrnu5jkhmfddbq6ohc242tvs4b.apps.googleusercontent.com';
 
@@ -24,7 +24,7 @@ class AuthService {
       );
 
       final googleUser = await googleSignIn.signIn();
-      if (googleUser == null) return null; // user batal
+      if (googleUser == null) return null;
 
       final googleAuth = await googleUser.authentication;
       final idToken = googleAuth.idToken;
