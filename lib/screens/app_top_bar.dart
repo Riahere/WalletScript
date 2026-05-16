@@ -1,22 +1,30 @@
+// lib/screens/app_top_bar.dart
+
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../main.dart';
+import '../services/auth_service.dart';
 import 'profile_screen.dart';
 import 'notes_screen.dart';
 import 'calendar_screen.dart';
 import 'notification_screen.dart';
 
-const _cPrimary = Color(0xFF10B981);
-const _cSurface = Color(0xFFF8FAFC);
-const _cBorder = Color(0xFFE2E8F0);
-const _cText = Color(0xFF1E293B);
+const _navy = Color(0xFF0D1B3E);
+const _yellow = Color(0xFFF5C842);
 
 class AppTopBar extends StatelessWidget {
   const AppTopBar({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final user = AuthService().currentUser;
+    final name = AuthService().userName ?? 'User';
+    final avatar = AuthService().userAvatar;
+    final initial = name.isNotEmpty ? name[0].toUpperCase() : 'U';
+
     return Row(
       children: [
+        // Avatar / profile button
         GestureDetector(
           onTap: () => Navigator.push(context,
               MaterialPageRoute(builder: (_) => const ProfileScreen())),
@@ -25,13 +33,33 @@ class AppTopBar extends StatelessWidget {
             height: 44,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              border: Border.all(color: _cPrimary, width: 2),
-              color: _cSurface,
+              border: Border.all(color: _yellow, width: 2),
+              color: _navy,
             ),
-            child: Icon(Icons.person_rounded, color: _cPrimary, size: 26),
+            child: avatar != null
+                ? ClipOval(
+                    child: Image.network(avatar,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Center(
+                              child: Text(initial,
+                                  style: GoogleFonts.dmSans(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 16)),
+                            )),
+                  )
+                : Center(
+                    child: Text(initial,
+                        style: GoogleFonts.dmSans(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 16)),
+                  ),
           ),
         ),
         const SizedBox(width: 10),
+
+        // App name
         GestureDetector(
           onTap: () {
             final shell = context.findAncestorStateOfType<MainShellState>();
@@ -41,34 +69,57 @@ class AppTopBar extends StatelessWidget {
               Navigator.popUntil(context, (route) => route.isFirst);
             }
           },
-          child: Text('WalletScript',
-              style: TextStyle(
-                  color: _cPrimary, fontSize: 20, fontWeight: FontWeight.w800)),
+          child: Text(
+            'WalletScript',
+            style: GoogleFonts.dmSans(
+              color: _navy,
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.3,
+            ),
+          ),
         ),
+
         const Spacer(),
-        _iconBtn(context, Icons.sticky_note_2_outlined,
-            onTap: () => Navigator.push(context,
-                MaterialPageRoute(builder: (_) => const NotesScreen()))),
+
+        // Notes
+        _iconBtn(
+          icon: Icons.sticky_note_2_outlined,
+          onTap: () => Navigator.push(
+              context, MaterialPageRoute(builder: (_) => const NotesScreen())),
+        ),
         const SizedBox(width: 6),
-        _iconBtn(context, Icons.calendar_month_outlined,
-            onTap: () => Navigator.push(context,
-                MaterialPageRoute(builder: (_) => const CalendarScreen()))),
+
+        // Calendar
+        _iconBtn(
+          icon: Icons.calendar_month_outlined,
+          onTap: () => Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const CalendarScreen())),
+        ),
         const SizedBox(width: 6),
+
+        // Notification with badge
         Stack(
+          clipBehavior: Clip.none,
           children: [
-            _iconBtn(context, Icons.notifications_outlined,
-                onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => const NotificationScreen()))),
+            _iconBtn(
+              icon: Icons.notifications_outlined,
+              onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const NotificationScreen())),
+            ),
             Positioned(
-              top: 6,
-              right: 6,
+              top: 4,
+              right: 4,
               child: Container(
                 width: 8,
                 height: 8,
-                decoration: const BoxDecoration(
-                    color: Colors.red, shape: BoxShape.circle),
+                decoration: BoxDecoration(
+                  color: Colors.red,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 1.5),
+                ),
               ),
             ),
           ],
@@ -77,19 +128,21 @@ class AppTopBar extends StatelessWidget {
     );
   }
 
-  static Widget _iconBtn(BuildContext context, IconData icon,
-      {required VoidCallback onTap}) {
+  static Widget _iconBtn({
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
         width: 38,
         height: 38,
         decoration: BoxDecoration(
-          color: _cSurface,
+          color: _navy.withOpacity(0.06),
           borderRadius: BorderRadius.circular(11),
-          border: Border.all(color: _cBorder),
+          border: Border.all(color: _navy.withOpacity(0.1)),
         ),
-        child: Icon(icon, color: _cText, size: 19),
+        child: Icon(icon, color: _navy, size: 19),
       ),
     );
   }

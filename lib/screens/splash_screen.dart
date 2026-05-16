@@ -1,3 +1,5 @@
+// lib/screens/splash_screen.dart
+
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -5,15 +7,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'onboarding_screen.dart';
 import 'login_screen.dart';
-
-// ─────────────────────────────────────────────────────────────────────────────
-//  WalletScript — Splash Screen (Simple White, Logo Animation)
-//  Animasi:
-//    1. Icon group (wallet + coin + brace) slide masuk dari kanan
-//    2. Teks "WalletScript" reveal/wipe keluar setelah icon berhenti
-//    3. Tagline fade up
-//    4. Coin float loop setelah masuk
-// ─────────────────────────────────────────────────────────────────────────────
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -24,29 +17,24 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen>
     with TickerProviderStateMixin {
-  // ── Icon slide-in ───────────────────────────────────────────────────────────
   late AnimationController _iconCtrl;
   late Animation<Offset> _iconSlide;
   late Animation<double> _iconFade;
 
-  // ── Text reveal (width wipe) ────────────────────────────────────────────────
   late AnimationController _textCtrl;
   late Animation<double> _textReveal;
   late Animation<double> _textFade;
 
-  // ── Tagline ─────────────────────────────────────────────────────────────────
   late AnimationController _tagCtrl;
   late Animation<double> _tagFade;
   late Animation<Offset> _tagSlide;
 
-  // ── Coin float loop ─────────────────────────────────────────────────────────
   late AnimationController _floatCtrl;
   late Animation<double> _floatY;
 
   bool _navDone = false;
 
   static const _navy = Color(0xFF0D1B4B);
-  static const _navyMid = Color(0xFF1A2D6E);
   static const _gold = Color(0xFFF5C842);
   static const _goldLight = Color(0xFFFFE066);
 
@@ -63,7 +51,6 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   void _setupAnimations() {
-    // Icon slide-in (elastic, from right)
     _iconCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 750),
@@ -79,7 +66,6 @@ class _SplashScreenState extends State<SplashScreen>
       ),
     );
 
-    // Text wipe reveal
     _textCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 550),
@@ -94,7 +80,6 @@ class _SplashScreenState extends State<SplashScreen>
       ),
     );
 
-    // Tagline
     _tagCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 450),
@@ -107,7 +92,6 @@ class _SplashScreenState extends State<SplashScreen>
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _tagCtrl, curve: Curves.easeOutCubic));
 
-    // Coin float (continuous after everything settles)
     _floatCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2500),
@@ -120,27 +104,23 @@ class _SplashScreenState extends State<SplashScreen>
   Future<void> _startSequence() async {
     await Future.delayed(const Duration(milliseconds: 300));
     if (!mounted) return;
-
-    // 1. Icon slides in
     _iconCtrl.forward();
 
-    // 2. Text reveals after icon arrives (~900ms total from start)
     await Future.delayed(const Duration(milliseconds: 950));
     if (!mounted) return;
     _textCtrl.forward();
 
-    // 3. Tagline fades up
     await Future.delayed(const Duration(milliseconds: 600));
     if (!mounted) return;
     _tagCtrl.forward();
 
-    // 4. Coin starts floating
     await Future.delayed(const Duration(milliseconds: 300));
     if (!mounted) return;
     _floatCtrl.repeat(reverse: true);
   }
 
   Future<void> _checkAuthAndNavigate() async {
+    // Tunggu animasi selesai
     await Future.delayed(const Duration(milliseconds: 2800));
     if (!mounted || _navDone) return;
     _navDone = true;
@@ -151,15 +131,29 @@ class _SplashScreenState extends State<SplashScreen>
 
     Widget destination;
     try {
-      final session = Supabase.instance.client.auth.currentSession;
-      destination = session != null
-          ? const LoginScreen()
-          : (onboardingDone ? const LoginScreen() : const OnboardingScreen());
-    } catch (_) {
+      // Pastikan Supabase sudah init sebelum akses
+      final isInit = Supabase.instance.isInitialized;
+      if (isInit) {
+        final session = Supabase.instance.client.auth.currentSession;
+        if (session != null) {
+          // Sudah login → ke home
+          destination =
+              const LoginScreen(); // TODO: ganti ke HomeScreen kalau mau auto-login
+        } else {
+          destination =
+              onboardingDone ? const LoginScreen() : const OnboardingScreen();
+        }
+      } else {
+        destination =
+            onboardingDone ? const LoginScreen() : const OnboardingScreen();
+      }
+    } catch (e) {
+      debugPrint('Splash nav error: $e');
       destination =
           onboardingDone ? const LoginScreen() : const OnboardingScreen();
     }
 
+    if (!mounted) return;
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
         pageBuilder: (_, __, ___) => destination,
@@ -190,7 +184,6 @@ class _SplashScreenState extends State<SplashScreen>
           return Stack(
             alignment: Alignment.center,
             children: [
-              // ── Logo row ──────────────────────────────────────────────────
               Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -206,8 +199,6 @@ class _SplashScreenState extends State<SplashScreen>
                   ],
                 ),
               ),
-
-              // ── Tagline ───────────────────────────────────────────────────
               Positioned(
                 bottom: 72,
                 child: FadeTransition(
@@ -278,12 +269,11 @@ class _SplashScreenState extends State<SplashScreen>
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  Logo Icon Painter — Wallet + Coin + Curly Brace }
+//  Logo Icon Painter
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _LogoIconPainter extends CustomPainter {
   final double coinFloatY;
-
   const _LogoIconPainter({required this.coinFloatY});
 
   static const _navy = Color(0xFF0D1B4B);
@@ -303,7 +293,6 @@ class _LogoIconPainter extends CustomPainter {
     final cx = size.width * 0.37;
     final cy = size.height * 0.68;
 
-    // Shadow
     canvas.drawRRect(
       RRect.fromRectAndRadius(
         Rect.fromCenter(center: Offset(cx + 3, cy + 6), width: 72, height: 50),
@@ -314,14 +303,14 @@ class _LogoIconPainter extends CustomPainter {
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10),
     );
 
-    // Wallet body
-    final bodyRect = RRect.fromRectAndRadius(
-      Rect.fromCenter(center: Offset(cx, cy), width: 72, height: 50),
-      const Radius.circular(8),
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(center: Offset(cx, cy), width: 72, height: 50),
+        const Radius.circular(8),
+      ),
+      Paint()..color = _navy,
     );
-    canvas.drawRRect(bodyRect, Paint()..color = _navy);
 
-    // Flap top
     canvas.drawRRect(
       RRect.fromRectAndRadius(
         Rect.fromCenter(center: Offset(cx, cy - 14), width: 72, height: 24),
@@ -330,11 +319,9 @@ class _LogoIconPainter extends CustomPainter {
       Paint()..color = _navyMid,
     );
 
-    // Snap button
     canvas.drawCircle(Offset(cx + 30, cy), 5, Paint()..color = _navyMid);
     canvas.drawCircle(Offset(cx + 30, cy), 3, Paint()..color = _navy);
 
-    // Card slots
     canvas.drawRRect(
       RRect.fromRectAndRadius(
         Rect.fromCenter(center: Offset(cx - 4, cy + 7), width: 44, height: 3),
@@ -350,7 +337,6 @@ class _LogoIconPainter extends CustomPainter {
       Paint()..color = Colors.white.withOpacity(0.10),
     );
 
-    // Coin slot opening
     canvas.drawRRect(
       RRect.fromRectAndRadius(
         Rect.fromCenter(center: Offset(cx - 10, cy - 25), width: 20, height: 7),
@@ -365,7 +351,6 @@ class _LogoIconPainter extends CustomPainter {
     final cy = size.height * 0.22 + coinFloatY;
     const r = 17.0;
 
-    // Glow
     canvas.drawCircle(
       Offset(cx, cy),
       r + 4,
@@ -374,13 +359,8 @@ class _LogoIconPainter extends CustomPainter {
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
     );
 
-    // Outer coin
     canvas.drawCircle(Offset(cx, cy), r, Paint()..color = _gold);
-
-    // Inner highlight
     canvas.drawCircle(Offset(cx, cy), r - 5, Paint()..color = _goldLight);
-
-    // Border
     canvas.drawCircle(
       Offset(cx, cy),
       r,
@@ -390,7 +370,6 @@ class _LogoIconPainter extends CustomPainter {
         ..strokeWidth = 1.5,
     );
 
-    // "Rp" text
     final tp = TextPainter(
       text: const TextSpan(
         text: 'Rp',
@@ -407,7 +386,6 @@ class _LogoIconPainter extends CustomPainter {
   }
 
   void _drawBrace(Canvas canvas, Size size) {
-    // Curly brace "}" using TextPainter for clean rendering
     final tp = TextPainter(
       text: const TextSpan(
         text: '}',
@@ -421,10 +399,7 @@ class _LogoIconPainter extends CustomPainter {
       ),
       textDirection: TextDirection.ltr,
     )..layout();
-    tp.paint(
-      canvas,
-      Offset(size.width * 0.70, size.height * 0.28),
-    );
+    tp.paint(canvas, Offset(size.width * 0.70, size.height * 0.28));
   }
 
   @override

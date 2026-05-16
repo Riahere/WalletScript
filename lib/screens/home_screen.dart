@@ -1,4 +1,8 @@
+// lib/screens/home_screen.dart
+
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/transaction_provider.dart';
@@ -8,11 +12,16 @@ import '../theme/app_theme.dart';
 import '../models/transaction_model.dart';
 import '../models/note_model.dart';
 import '../models/account_model.dart';
+import '../services/sync_service.dart';
+import '../services/auth_service.dart';
 import '../main.dart';
 import 'app_top_bar.dart';
 import 'spending_detail_screen.dart';
 import 'notification_screen.dart';
 import 'wallet_all_screen.dart';
+
+const _navy = Color(0xFF0D1B3E);
+const _yellow = Color(0xFFF5C842);
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -20,30 +29,88 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   bool _balanceHidden = false;
   String _chartFilter = '30D';
   String _txFilter = 'All';
   String _searchQuery = '';
   bool _searchActive = false;
+  bool _syncing = false;
   final TextEditingController _searchCtrl = TextEditingController();
 
-  @override
-  void dispose() {
-    _searchCtrl.dispose();
-    super.dispose();
-  }
+  // ── Animation controllers ──────────────────────────────────────────────────
+  late AnimationController _floatCtrl;
+  late AnimationController _staggerCtrl;
+  late AnimationController _balanceCtrl;
+  late Animation<double> _balanceAnim;
+
+  double _lastBalance = 0;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+
+    _floatCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 5000))
+      ..repeat(reverse: true);
+
+    _staggerCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 900));
+
+    _balanceCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 1200));
+    _balanceAnim =
+        CurvedAnimation(parent: _balanceCtrl, curve: Curves.easeOutCubic);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       context.read<TransactionProvider>().loadTransactions();
       context.read<NoteProvider>().loadNotes();
       context.read<AccountProvider>().loadAccounts();
+
+      // Pull from Supabase if logged in
+      final userId = AuthService().userId;
+      if (userId != null) {
+        setState(() => _syncing = true);
+        try {
+          final result = await SyncService().pullFromCloud();
+          if (mounted && !result.hasError) {
+            if (result.accounts.isNotEmpty) {
+              context.read<AccountProvider>().loadAccounts();
+            }
+            if (result.transactions.isNotEmpty) {
+              context.read<TransactionProvider>().loadTransactions();
+            }
+          }
+        } catch (_) {}
+        if (mounted) setState(() => _syncing = false);
+      }
+
+      _staggerCtrl.forward();
+      await Future.delayed(const Duration(milliseconds: 300));
+      if (mounted) _balanceCtrl.forward();
     });
   }
 
+  @override
+  void dispose() {
+    _floatCtrl.dispose();
+    _staggerCtrl.dispose();
+    _balanceCtrl.dispose();
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  // ── Stagger helper ─────────────────────────────────────────────────────────
+  Animation<double> _stagger(int index, {int total = 8}) {
+    final start = index / (total + 2);
+    final end = (index + 2) / (total + 2);
+    return CurvedAnimation(
+      parent: _staggerCtrl,
+      curve: Interval(start, end.clamp(0, 1), curve: Curves.easeOutCubic),
+    );
+  }
+
+  // ── Data helpers ───────────────────────────────────────────────────────────
   List<AppTransaction> _filteredTx(List<AppTransaction> all) {
     if (_chartFilter == 'ALL') return all;
     final cutoff = DateTime.now().subtract(const Duration(days: 30));
@@ -58,7 +125,6 @@ class _HomeScreenState extends State<HomeScreen> {
       result = result.where((t) => t.type == 'expense').toList();
     else if (_txFilter != 'All')
       result = result.where((t) => t.category == _txFilter).toList();
-
     if (_searchQuery.isNotEmpty) {
       result = result
           .where((t) =>
@@ -75,7 +141,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final Map<String, double> dailyBalance = {};
     double running = 0;
     for (final t in txs) {
-      // FIX 1: Transfer tidak mengubah total balance — skip
       if (t.type == 'transfer') continue;
       final key = DateFormat('dd/MM').format(t.date);
       running += t.type == 'income' ? t.amount : -t.amount;
@@ -104,35 +169,37 @@ class _HomeScreenState extends State<HomeScreen> {
         left: 0,
         right: 0,
         child: Center(
-            child: Material(
-          color: Colors.transparent,
-          child: GestureDetector(
-            onTap: () => entry.remove(),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              decoration: BoxDecoration(
-                color: AppTheme.surfaceContainer,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppTheme.outline),
-                boxShadow: [
-                  BoxShadow(
-                      color: Colors.black.withOpacity(0.12), blurRadius: 16)
-                ],
+          child: Material(
+            color: Colors.transparent,
+            child: GestureDetector(
+              onTap: () => entry.remove(),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  color: _navy,
+                  borderRadius: BorderRadius.circular(14),
+                  border:
+                      Border.all(color: _yellow.withOpacity(0.4), width: 1.5),
+                  boxShadow: [
+                    BoxShadow(color: _navy.withOpacity(0.3), blurRadius: 20)
+                  ],
+                ),
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  Text(point.label,
+                      style: GoogleFonts.dmMono(
+                          color: Colors.white.withOpacity(0.6), fontSize: 11)),
+                  const SizedBox(height: 4),
+                  Text(fmt.format(point.value),
+                      style: GoogleFonts.dmSans(
+                          color: _yellow,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 16)),
+                ]),
               ),
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                Text(point.label,
-                    style: const TextStyle(
-                        color: AppTheme.onSurfaceVariant, fontSize: 11)),
-                const SizedBox(height: 4),
-                Text(fmt.format(point.value),
-                    style: const TextStyle(
-                        color: AppTheme.onSurface,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 16)),
-              ]),
             ),
           ),
-        )),
+        ),
       ),
     );
     overlay.insert(entry);
@@ -196,18 +263,9 @@ class _HomeScreenState extends State<HomeScreen> {
     return 'Terbesar: ${top.key} $topPct% dari pengeluaran bulan ini.';
   }
 
-  Color _insightColor(TransactionProvider tx) {
-    if (tx.totalIncome == 0) return const Color(0xFF1E293B);
-    final ratio = tx.totalExpense / tx.totalIncome;
-    if (ratio >= 0.9) return AppTheme.error;
-    if (ratio >= 0.7) return Colors.orange;
-    return const Color(0xFF1E293B);
-  }
-
   String _balanceTrend(List<AppTransaction> txs) {
     final now = DateTime.now();
     final cutoff = now.subtract(const Duration(days: 30));
-    // FIX 1: Exclude transfer dari trend calculation juga
     final recent = txs
         .where((t) => t.date.isAfter(cutoff) && t.type != 'transfer')
         .toList();
@@ -232,12 +290,57 @@ class _HomeScreenState extends State<HomeScreen> {
     final now = DateTime.now();
     final cutoff = now.subtract(const Duration(days: 30));
     double net = 0;
-    // FIX 1: Exclude transfer dari trend juga
     for (final t
         in txs.where((t) => t.date.isAfter(cutoff) && t.type != 'transfer')) {
       net += t.type == 'income' ? t.amount : -t.amount;
     }
     return net >= 0;
+  }
+
+  // ── Finance background icons ───────────────────────────────────────────────
+  List<Widget> _buildBgIcons(Size size) {
+    final items = [
+      [Icons.bar_chart_rounded, 0.05, 0.02, 28.0, 0.0],
+      [Icons.savings_outlined, 0.80, 0.04, 22.0, 0.5],
+      [Icons.trending_up_rounded, 0.90, 0.12, 26.0, 0.2],
+      [Icons.monetization_on_outlined, 0.02, 0.20, 20.0, 0.8],
+      [Icons.credit_card_rounded, 0.88, 0.35, 20.0, 0.3],
+      [Icons.show_chart_rounded, 0.03, 0.50, 24.0, 0.9],
+      [Icons.pie_chart_outline_rounded, 0.88, 0.58, 20.0, 0.7],
+      [Icons.account_balance_outlined, 0.04, 0.72, 22.0, 0.4],
+      [Icons.currency_exchange_rounded, 0.80, 0.80, 18.0, 0.65],
+      [Icons.receipt_long_outlined, 0.45, 0.95, 20.0, 0.35],
+      [Icons.wallet_outlined, 0.92, 0.90, 18.0, 0.55],
+    ];
+    return items.map((d) {
+      final dy =
+          math.sin((_floatCtrl.value + (d[4] as double)) * math.pi * 2) * 6;
+      return Positioned(
+        left: (d[1] as double) * size.width,
+        top: (d[2] as double) * size.height + dy,
+        child: Icon(d[0] as IconData,
+            size: d[3] as double, color: _navy.withOpacity(0.045)),
+      );
+    }).toList();
+  }
+
+  // ── Slide+fade wrapper ─────────────────────────────────────────────────────
+  Widget _animated(Widget child, Animation<double> anim) {
+    return FadeTransition(
+      opacity: anim,
+      child: SlideTransition(
+        position: Tween<Offset>(
+          begin: const Offset(0, 0.06),
+          end: Offset.zero,
+        ).animate(anim),
+        child: child,
+      ),
+    );
+  }
+
+  // ── Press effect wrapper ───────────────────────────────────────────────────
+  Widget _pressable({required Widget child, required VoidCallback onTap}) {
+    return _PressableWidget(onTap: onTap, child: child);
   }
 
   @override
@@ -260,553 +363,695 @@ class _HomeScreenState extends State<HomeScreen> {
       ..sort((a, b) => b.value.compareTo(a.value));
 
     final nextReminder = _nextReminder(noteProvider.notes);
-    final insightColor = _insightColor(txProvider);
     final dashboardTxs = _filteredDashboardTx(txProvider.transactions);
     final allCategories =
         txProvider.transactions.map((t) => t.category).toSet().toList();
     final byGroup = accountProvider.accountsByGroup;
-
     final trendText = _balanceTrend(txProvider.transactions);
     final trendPositive = _isTrendPositive(txProvider.transactions);
 
-    void goToNotif() => Navigator.push(
-        context, MaterialPageRoute(builder: (_) => const NotificationScreen()));
-
     return Scaffold(
-      backgroundColor: AppTheme.background,
-      body: SafeArea(
-        bottom: false,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+      backgroundColor: Colors.white,
+      body: AnimatedBuilder(
+        animation: _floatCtrl,
+        builder: (_, __) {
+          final size = MediaQuery.of(context).size;
+          return Stack(
             children: [
-              const AppTopBar(),
-              const SizedBox(height: 16),
+              // ── Floating background finance icons
+              ..._buildBgIcons(size),
 
-              // ── REMINDER CARD
-              _tappableInfoCard(
-                color: AppTheme.primary,
-                icon: Icons.notifications_active_rounded,
-                title: 'Reminder',
-                subtitle: _reminderSubtitle(nextReminder),
-                onTap: goToNotif,
-                badge: nextReminder != null,
-              ),
-              const SizedBox(height: 10),
-
-              // ── INSIGHT CARD
-              _tappableInfoCard(
-                color: insightColor,
-                icon: Icons.bar_chart_rounded,
-                title: 'Insight',
-                subtitle: _insightSubtitle(txProvider),
-                onTap: goToNotif,
-              ),
-              const SizedBox(height: 16),
-
-              // ── TOTAL SALDO
-              GestureDetector(
-                onTap: () => Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const WalletAllScreen())),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: AppTheme.surface,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppTheme.outline),
-                    boxShadow: [
-                      BoxShadow(
-                          color: AppTheme.onSurface.withOpacity(0.05),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4))
-                    ],
-                  ),
+              SafeArea(
+                bottom: false,
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
                   child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // ── TOP BAR
+                      _animated(
                         Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text('Total Saldo',
-                                  style: TextStyle(
-                                      color: AppTheme.onSurfaceVariant,
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500)),
-                              Row(children: [
-                                GestureDetector(
-                                  onTap: () => setState(
-                                      () => _balanceHidden = !_balanceHidden),
-                                  child: AnimatedSwitcher(
-                                    duration: const Duration(milliseconds: 200),
-                                    child: Icon(
-                                      _balanceHidden
-                                          ? Icons.visibility_off_outlined
-                                          : Icons.visibility_outlined,
-                                      key: ValueKey(_balanceHidden),
-                                      color: AppTheme.onSurfaceVariant,
-                                      size: 20,
-                                    ),
+                          children: [
+                            const Expanded(child: AppTopBar()),
+                            if (_syncing)
+                              Padding(
+                                padding: const EdgeInsets.only(left: 8),
+                                child: SizedBox(
+                                  width: 14,
+                                  height: 14,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: _navy.withOpacity(0.4),
                                   ),
                                 ),
-                                const SizedBox(width: 6),
-                                const Icon(Icons.chevron_right_rounded,
-                                    color: AppTheme.onSurfaceVariant, size: 18),
-                              ]),
-                            ]),
-                        const SizedBox(height: 6),
-                        AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 200),
-                          child: Text(
-                            _balanceHidden
-                                ? '••••••••••'
-                                : formatter.format(totalBalance),
-                            key: ValueKey(_balanceHidden),
-                            style: const TextStyle(
-                                color: AppTheme.onSurface,
-                                fontSize: 32,
-                                fontWeight: FontWeight.w800),
+                              ),
+                          ],
+                        ),
+                        _stagger(0),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // ── REMINDER CARD
+                      _animated(
+                        _tappableInfoCard(
+                          icon: Icons.notifications_active_rounded,
+                          title: 'Reminder',
+                          subtitle: _reminderSubtitle(nextReminder),
+                          onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => const NotificationScreen())),
+                          badge: nextReminder != null,
+                          accentColor: _yellow,
+                        ),
+                        _stagger(1),
+                      ),
+                      const SizedBox(height: 10),
+
+                      // ── INSIGHT CARD
+                      _animated(
+                        _tappableInfoCard(
+                          icon: Icons.bar_chart_rounded,
+                          title: 'Insight',
+                          subtitle: _insightSubtitle(txProvider),
+                          onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => const NotificationScreen())),
+                          accentColor: _yellow,
+                        ),
+                        _stagger(2),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // ── TOTAL SALDO
+                      _animated(
+                        _pressable(
+                          onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => const WalletAllScreen())),
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(22),
+                            decoration: BoxDecoration(
+                              color: _navy,
+                              borderRadius: BorderRadius.circular(24),
+                              boxShadow: [
+                                BoxShadow(
+                                    color: _navy.withOpacity(0.25),
+                                    blurRadius: 32,
+                                    offset: const Offset(0, 10)),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text('Total Saldo',
+                                        style: GoogleFonts.dmSans(
+                                            color:
+                                                Colors.white.withOpacity(0.55),
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w500)),
+                                    Row(children: [
+                                      GestureDetector(
+                                        onTap: () => setState(() =>
+                                            _balanceHidden = !_balanceHidden),
+                                        child: AnimatedSwitcher(
+                                          duration:
+                                              const Duration(milliseconds: 200),
+                                          child: Icon(
+                                            _balanceHidden
+                                                ? Icons.visibility_off_outlined
+                                                : Icons.visibility_outlined,
+                                            key: ValueKey(_balanceHidden),
+                                            color:
+                                                Colors.white.withOpacity(0.55),
+                                            size: 20,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Icon(Icons.chevron_right_rounded,
+                                          color: Colors.white.withOpacity(0.4),
+                                          size: 18),
+                                    ]),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 200),
+                                  child: _balanceHidden
+                                      ? Text('••••••••••',
+                                          key: const ValueKey('hidden'),
+                                          style: GoogleFonts.dmSans(
+                                              color: Colors.white,
+                                              fontSize: 32,
+                                              fontWeight: FontWeight.w800))
+                                      : AnimatedBuilder(
+                                          key: const ValueKey('shown'),
+                                          animation: _balanceAnim,
+                                          builder: (_, __) => Text(
+                                            formatter.format(totalBalance *
+                                                _balanceAnim.value),
+                                            style: GoogleFonts.dmSans(
+                                                color: Colors.white,
+                                                fontSize: 32,
+                                                fontWeight: FontWeight.w800),
+                                          ),
+                                        ),
+                                ),
+                                const SizedBox(height: 12),
+                                // Trend badge
+                                if (trendText.isNotEmpty)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 10, vertical: 5),
+                                    decoration: BoxDecoration(
+                                        color: trendPositive
+                                            ? _yellow.withOpacity(0.15)
+                                            : Colors.red.withOpacity(0.15),
+                                        borderRadius:
+                                            BorderRadius.circular(20)),
+                                    child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                              trendPositive
+                                                  ? Icons.trending_up_rounded
+                                                  : Icons.trending_down_rounded,
+                                              color: trendPositive
+                                                  ? _yellow
+                                                  : Colors.redAccent,
+                                              size: 14),
+                                          const SizedBox(width: 4),
+                                          Text(trendText,
+                                              style: GoogleFonts.dmSans(
+                                                  color: trendPositive
+                                                      ? _yellow
+                                                      : Colors.redAccent,
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w600)),
+                                        ]),
+                                  )
+                                else
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 10, vertical: 5),
+                                    decoration: BoxDecoration(
+                                        color: _yellow.withOpacity(0.12),
+                                        borderRadius:
+                                            BorderRadius.circular(20)),
+                                    child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(Icons.trending_up_rounded,
+                                              color: _yellow, size: 14),
+                                          const SizedBox(width: 4),
+                                          Text('Tap untuk lihat detail wallet',
+                                              style: GoogleFonts.dmSans(
+                                                  color: _yellow,
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w600)),
+                                        ]),
+                                  ),
+                              ],
+                            ),
                           ),
                         ),
-                        const SizedBox(height: 10),
-                        if (trendText.isNotEmpty)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 5),
-                            decoration: BoxDecoration(
-                                color: trendPositive
-                                    ? AppTheme.primary.withOpacity(0.1)
-                                    : AppTheme.error.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(20)),
-                            child:
-                                Row(mainAxisSize: MainAxisSize.min, children: [
-                              Icon(
-                                  trendPositive
-                                      ? Icons.trending_up_rounded
-                                      : Icons.trending_down_rounded,
-                                  color: trendPositive
-                                      ? AppTheme.primary
-                                      : AppTheme.error,
-                                  size: 14),
-                              const SizedBox(width: 4),
-                              Text(trendText,
-                                  style: TextStyle(
-                                      color: trendPositive
-                                          ? AppTheme.primary
-                                          : AppTheme.error,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600)),
-                            ]),
-                          )
-                        else
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 5),
-                            decoration: BoxDecoration(
-                                color: AppTheme.primary.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(20)),
-                            child: const Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.trending_up_rounded,
-                                      color: AppTheme.primary, size: 14),
-                                  SizedBox(width: 4),
-                                  Text('Tap untuk lihat detail wallet',
-                                      style: TextStyle(
-                                          color: AppTheme.primary,
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600)),
-                                ]),
-                          ),
-                      ]),
-                ),
-              ),
-              const SizedBox(height: 16),
+                        _stagger(3),
+                      ),
+                      const SizedBox(height: 14),
 
-              // ── BALANCE TREND
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: AppTheme.surface,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AppTheme.outline),
-                ),
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                      // ── BALANCE TREND
+                      _animated(
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                                color: _navy.withOpacity(0.1), width: 1),
+                            boxShadow: [
+                              BoxShadow(
+                                  color: _navy.withOpacity(0.06),
+                                  blurRadius: 16,
+                                  offset: const Offset(0, 4))
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
-                                  const Text('Balance Trend',
-                                      style: TextStyle(
-                                          color: AppTheme.onSurface,
+                                  Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text('Balance Trend',
+                                          style: GoogleFonts.dmSans(
+                                              color: _navy,
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 15)),
+                                      Text(
+                                          _chartFilter == '30D'
+                                              ? 'Past 30 days activity'
+                                              : 'All time activity',
+                                          style: GoogleFonts.dmSans(
+                                              color: _navy.withOpacity(0.45),
+                                              fontSize: 12)),
+                                    ],
+                                  ),
+                                  Row(children: [
+                                    _chipBtn(
+                                        'ALL',
+                                        _chartFilter == 'ALL',
+                                        () => setState(
+                                            () => _chartFilter = 'ALL')),
+                                    const SizedBox(width: 6),
+                                    _chipBtn(
+                                        '30D',
+                                        _chartFilter == '30D',
+                                        () => setState(
+                                            () => _chartFilter = '30D')),
+                                  ]),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              series.isEmpty
+                                  ? SizedBox(
+                                      height: 90,
+                                      child: Center(
+                                          child: Text(
+                                              'Belum ada data transaksi',
+                                              style: GoogleFonts.dmSans(
+                                                  color: _navy.withOpacity(0.4),
+                                                  fontSize: 12))))
+                                  : GestureDetector(
+                                      onTapDown: (details) {
+                                        if (series.isEmpty) return;
+                                        final box = context.findRenderObject()
+                                            as RenderBox?;
+                                        if (box == null) return;
+                                        final localX = details.localPosition.dx;
+                                        final width = box.size.width - 40;
+                                        final idx = ((localX / width) *
+                                                (series.length - 1))
+                                            .round()
+                                            .clamp(0, series.length - 1);
+                                        _showChartPopup(
+                                            context, series[idx], formatter);
+                                      },
+                                      child: SizedBox(
+                                          height: 90,
+                                          child: CustomPaint(
+                                              size: const Size(
+                                                  double.infinity, 90),
+                                              painter:
+                                                  _MiniChartPainter(series))),
+                                    ),
+                              const SizedBox(height: 8),
+                              if (series.isNotEmpty)
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(series.first.label,
+                                        style: GoogleFonts.dmMono(
+                                            color: _navy.withOpacity(0.4),
+                                            fontSize: 10)),
+                                    if (series.length > 2)
+                                      Text(series[series.length ~/ 2].label,
+                                          style: GoogleFonts.dmMono(
+                                              color: _navy.withOpacity(0.4),
+                                              fontSize: 10)),
+                                    Text(series.last.label,
+                                        style: GoogleFonts.dmMono(
+                                            color: _navy.withOpacity(0.4),
+                                            fontSize: 10)),
+                                  ],
+                                ),
+                            ],
+                          ),
+                        ),
+                        _stagger(4),
+                      ),
+                      const SizedBox(height: 14),
+
+                      // ── SPENDING OVERVIEW
+                      _animated(
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                                color: _navy.withOpacity(0.1), width: 1),
+                            boxShadow: [
+                              BoxShadow(
+                                  color: _navy.withOpacity(0.06),
+                                  blurRadius: 16,
+                                  offset: const Offset(0, 4))
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text('Spending Overview',
+                                      style: GoogleFonts.dmSans(
+                                          color: _navy,
                                           fontWeight: FontWeight.w700,
                                           fontSize: 15)),
-                                  Text(
-                                      _chartFilter == '30D'
-                                          ? 'Past 30 days activity'
-                                          : 'All time activity',
-                                      style: const TextStyle(
-                                          color: AppTheme.onSurfaceVariant,
-                                          fontSize: 12)),
-                                ]),
-                            Row(children: [
-                              _chipBtn('ALL', _chartFilter == 'ALL',
-                                  () => setState(() => _chartFilter = 'ALL')),
-                              const SizedBox(width: 6),
-                              _chipBtn('30D', _chartFilter == '30D',
-                                  () => setState(() => _chartFilter = '30D')),
-                            ]),
-                          ]),
-                      const SizedBox(height: 16),
-                      series.isEmpty
-                          ? const SizedBox(
-                              height: 90,
-                              child: Center(
-                                  child: Text('Belum ada data transaksi',
-                                      style: TextStyle(
-                                          color: AppTheme.onSurfaceVariant,
-                                          fontSize: 12))))
-                          : GestureDetector(
-                              onTapDown: (details) {
-                                if (series.isEmpty) return;
-                                final box =
-                                    context.findRenderObject() as RenderBox?;
-                                if (box == null) return;
-                                final localX = details.localPosition.dx;
-                                final width = box.size.width - 40;
-                                final idx =
-                                    ((localX / width) * (series.length - 1))
-                                        .round()
-                                        .clamp(0, series.length - 1);
-                                _showChartPopup(
-                                    context, series[idx], formatter);
-                              },
-                              child: SizedBox(
-                                  height: 90,
-                                  child: CustomPaint(
-                                      size: const Size(double.infinity, 90),
-                                      painter: _MiniChartPainter(series))),
-                            ),
-                      const SizedBox(height: 8),
-                      if (series.isNotEmpty)
-                        Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(series.first.label,
-                                  style: const TextStyle(
-                                      color: AppTheme.onSurfaceVariant,
-                                      fontSize: 10)),
-                              if (series.length > 2)
-                                Text(series[series.length ~/ 2].label,
-                                    style: const TextStyle(
-                                        color: AppTheme.onSurfaceVariant,
-                                        fontSize: 10)),
-                              Text(series.last.label,
-                                  style: const TextStyle(
-                                      color: AppTheme.onSurfaceVariant,
-                                      fontSize: 10)),
-                            ]),
-                    ]),
-              ),
-              const SizedBox(height: 16),
+                                  GestureDetector(
+                                    onTap: () => Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                            builder: (_) =>
+                                                SpendingDetailScreen())),
+                                    child: Icon(Icons.more_vert,
+                                        color: _navy.withOpacity(0.4),
+                                        size: 20),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 20),
+                              Row(children: [
+                                SizedBox(
+                                  width: 110,
+                                  height: 110,
+                                  child: totalExpense == 0
+                                      ? CustomPaint(
+                                          painter: _DonutPainter(
+                                              const [], 0, const []),
+                                          child: Center(
+                                              child: Text('No data',
+                                                  style: GoogleFonts.dmSans(
+                                                      color: _navy
+                                                          .withOpacity(0.3),
+                                                      fontSize: 10))))
+                                      : Stack(
+                                          alignment: Alignment.center,
+                                          children: [
+                                            CustomPaint(
+                                              size: const Size(110, 110),
+                                              painter: _DonutPainter(
+                                                catList
+                                                    .map((e) => e.value)
+                                                    .toList(),
+                                                totalExpense,
+                                                List.generate(catList.length,
+                                                    (i) => _colorForIndex(i)),
+                                              ),
+                                            ),
+                                            Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Text('SPENT',
+                                                    style: GoogleFonts.dmMono(
+                                                        fontSize: 9,
+                                                        color: _navy
+                                                            .withOpacity(0.45),
+                                                        fontWeight:
+                                                            FontWeight.w700,
+                                                        letterSpacing: 0.5)),
+                                                const SizedBox(height: 2),
+                                                Text(
+                                                    formatter
+                                                        .format(totalExpense),
+                                                    style: GoogleFonts.dmSans(
+                                                        fontSize: 11,
+                                                        color: _navy,
+                                                        fontWeight:
+                                                            FontWeight.w800),
+                                                    textAlign:
+                                                        TextAlign.center),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                ),
+                                const SizedBox(width: 24),
+                                Expanded(
+                                  child: catList.isEmpty
+                                      ? Center(
+                                          child: Text('Belum ada pengeluaran',
+                                              style: GoogleFonts.dmSans(
+                                                  color: _navy.withOpacity(0.4),
+                                                  fontSize: 12)))
+                                      : Column(children: [
+                                          for (int i = 0;
+                                              i < catList.take(3).length;
+                                              i++) ...[
+                                            if (i > 0)
+                                              Divider(
+                                                  height: 16,
+                                                  color:
+                                                      _navy.withOpacity(0.08)),
+                                            _spendingRowTappable(
+                                              context: context,
+                                              label: catList[i].key,
+                                              color: _colorForIndex(i),
+                                              percent: totalExpense > 0
+                                                  ? '${((catList[i].value / totalExpense) * 100).toStringAsFixed(0)}%'
+                                                  : '0%',
+                                              amount: formatter
+                                                  .format(catList[i].value),
+                                            ),
+                                          ],
+                                        ]),
+                                ),
+                              ]),
+                            ],
+                          ),
+                        ),
+                        _stagger(5),
+                      ),
+                      const SizedBox(height: 14),
 
-              // ── SPENDING OVERVIEW
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: AppTheme.surface,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AppTheme.outline),
-                ),
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
+                      // ── MY WALLETS header
+                      _animated(
+                        Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text('Spending Overview',
-                                style: TextStyle(
-                                    color: AppTheme.onSurface,
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 15)),
+                            Text('My Wallets',
+                                style: GoogleFonts.dmSans(
+                                    color: _navy,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700)),
                             GestureDetector(
                               onTap: () => Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                      builder: (_) => SpendingDetailScreen())),
-                              child: const Icon(Icons.more_vert,
-                                  color: AppTheme.onSurfaceVariant, size: 20),
+                                      builder: (_) => const WalletAllScreen())),
+                              child: Row(children: [
+                                Text('View All',
+                                    style: GoogleFonts.dmSans(
+                                        color: _navy.withOpacity(0.5),
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600)),
+                                Icon(Icons.chevron_right_rounded,
+                                    color: _navy.withOpacity(0.5), size: 16),
+                              ]),
                             ),
-                          ]),
+                          ],
+                        ),
+                        _stagger(6),
+                      ),
+                      const SizedBox(height: 12),
+
+                      _animated(
+                        byGroup.isEmpty
+                            ? Container(
+                                padding: const EdgeInsets.all(20),
+                                decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                        color: _navy.withOpacity(0.1))),
+                                child: Center(
+                                    child: Text('Belum ada wallet',
+                                        style: GoogleFonts.dmSans(
+                                            color: _navy.withOpacity(0.4)))))
+                            : _FolderWalletCards(
+                                byGroup: byGroup, formatter: formatter),
+                        _stagger(6),
+                      ),
                       const SizedBox(height: 20),
-                      Row(children: [
-                        SizedBox(
-                          width: 110,
-                          height: 110,
-                          child: totalExpense == 0
-                              ? CustomPaint(
-                                  painter: _DonutPainter(const [], 0, const []),
-                                  child: const Center(
-                                      child: Text('No data',
-                                          style: TextStyle(
-                                              color: AppTheme.onSurfaceVariant,
-                                              fontSize: 10))))
-                              : Stack(alignment: Alignment.center, children: [
-                                  CustomPaint(
-                                    size: const Size(110, 110),
-                                    painter: _DonutPainter(
-                                      catList.map((e) => e.value).toList(),
-                                      totalExpense,
-                                      List.generate(catList.length,
-                                          (i) => _colorForIndex(i)),
-                                    ),
+
+                      // ── FLOW HISTORY header
+                      _animated(
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Flow History',
+                                style: GoogleFonts.dmSans(
+                                    color: _navy,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700)),
+                            Row(children: [
+                              GestureDetector(
+                                onTap: () =>
+                                    _showFilterSheet(context, allCategories),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 10, vertical: 5),
+                                  decoration: BoxDecoration(
+                                    color: _txFilter != 'All'
+                                        ? _navy.withOpacity(0.08)
+                                        : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                        color: _txFilter != 'All'
+                                            ? _navy
+                                            : _navy.withOpacity(0.15)),
                                   ),
-                                  Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        const Text('SPENT',
-                                            style: TextStyle(
-                                                fontSize: 9,
-                                                color:
-                                                    AppTheme.onSurfaceVariant,
-                                                fontWeight: FontWeight.w700,
-                                                letterSpacing: 0.5)),
-                                        const SizedBox(height: 2),
-                                        Text(formatter.format(totalExpense),
-                                            style: const TextStyle(
-                                                fontSize: 11,
-                                                color: AppTheme.onSurface,
-                                                fontWeight: FontWeight.w800),
-                                            textAlign: TextAlign.center),
-                                      ]),
-                                ]),
+                                  child: Row(children: [
+                                    Icon(Icons.tune_rounded,
+                                        color: _txFilter != 'All'
+                                            ? _navy
+                                            : _navy.withOpacity(0.4),
+                                        size: 16),
+                                    if (_txFilter != 'All') ...[
+                                      const SizedBox(width: 4),
+                                      Text(_txFilter,
+                                          style: GoogleFonts.dmSans(
+                                              color: _navy,
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w600)),
+                                    ]
+                                  ]),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              GestureDetector(
+                                onTap: () {
+                                  setState(
+                                      () => _searchActive = !_searchActive);
+                                  if (!_searchActive) {
+                                    _searchCtrl.clear();
+                                    _searchQuery = '';
+                                  }
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.all(5),
+                                  decoration: BoxDecoration(
+                                    color: _searchActive
+                                        ? _navy.withOpacity(0.08)
+                                        : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                        color: _searchActive
+                                            ? _navy
+                                            : Colors.transparent),
+                                  ),
+                                  child: Icon(Icons.search_rounded,
+                                      color: _searchActive
+                                          ? _navy
+                                          : _navy.withOpacity(0.4),
+                                      size: 20),
+                                ),
+                              ),
+                            ]),
+                          ],
                         ),
-                        const SizedBox(width: 24),
-                        Expanded(
-                          child: catList.isEmpty
-                              ? const Center(
-                                  child: Text('Belum ada pengeluaran',
-                                      style: TextStyle(
-                                          color: AppTheme.onSurfaceVariant,
-                                          fontSize: 12)))
-                              : Column(children: [
-                                  for (int i = 0;
-                                      i < catList.take(3).length;
-                                      i++) ...[
-                                    if (i > 0)
-                                      const Divider(
-                                          height: 16, color: AppTheme.outline),
-                                    _spendingRowTappable(
-                                      context: context,
-                                      label: catList[i].key,
-                                      color: _colorForIndex(i),
-                                      percent: totalExpense > 0
-                                          ? '${((catList[i].value / totalExpense) * 100).toStringAsFixed(0)}%'
-                                          : '0%',
-                                      amount:
-                                          formatter.format(catList[i].value),
-                                    ),
-                                  ],
-                                ]),
+                        _stagger(7),
+                      ),
+
+                      if (_searchActive) ...[
+                        const SizedBox(height: 10),
+                        TextField(
+                          controller: _searchCtrl,
+                          autofocus: true,
+                          style: GoogleFonts.dmSans(color: _navy, fontSize: 14),
+                          onChanged: (v) => setState(() => _searchQuery = v),
+                          decoration: InputDecoration(
+                            hintText: 'Cari transaksi...',
+                            hintStyle: GoogleFonts.dmSans(
+                                color: _navy.withOpacity(0.4), fontSize: 14),
+                            prefixIcon: Icon(Icons.search_rounded,
+                                color: _navy.withOpacity(0.4), size: 18),
+                            suffixIcon: _searchQuery.isNotEmpty
+                                ? GestureDetector(
+                                    onTap: () => setState(() {
+                                      _searchCtrl.clear();
+                                      _searchQuery = '';
+                                    }),
+                                    child: Icon(Icons.close_rounded,
+                                        color: _navy.withOpacity(0.4),
+                                        size: 18),
+                                  )
+                                : null,
+                            filled: true,
+                            fillColor: _navy.withOpacity(0.05),
+                            contentPadding:
+                                const EdgeInsets.symmetric(vertical: 10),
+                            border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide.none),
+                          ),
                         ),
-                      ]),
-                    ]),
+                      ],
+                      const SizedBox(height: 12),
+
+                      if (dashboardTxs.isEmpty)
+                        Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(32),
+                            child: Column(children: [
+                              Icon(Icons.receipt_long_outlined,
+                                  size: 48, color: _navy.withOpacity(0.2)),
+                              const SizedBox(height: 12),
+                              Text('Belum ada transaksi',
+                                  style: GoogleFonts.dmSans(
+                                      color: _navy.withOpacity(0.4))),
+                            ]),
+                          ),
+                        )
+                      else
+                        ...dashboardTxs
+                            .take(5)
+                            .map((t) => _buildTxTile(t, formatter)),
+
+                      if (txProvider.transactions.length > 5)
+                        Center(
+                          child: TextButton(
+                            onPressed: () {
+                              final shell = context
+                                  .findAncestorStateOfType<MainShellState>();
+                              shell?.goTo(1);
+                            },
+                            child: Text('LIHAT SEMUA TRANSAKSI',
+                                style: GoogleFonts.dmMono(
+                                    color: _navy.withOpacity(0.4),
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 0.5)),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
               ),
-              const SizedBox(height: 16),
-
-              // ── MY WALLETS
-              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                const Text('My Wallets',
-                    style: TextStyle(
-                        color: AppTheme.onSurface,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700)),
-                GestureDetector(
-                  onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const WalletAllScreen())),
-                  child: const Row(children: [
-                    Text('View All',
-                        style: TextStyle(
-                            color: AppTheme.primary,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600)),
-                    Icon(Icons.chevron_right_rounded,
-                        color: AppTheme.primary, size: 16),
-                  ]),
-                ),
-              ]),
-              const SizedBox(height: 12),
-
-              if (byGroup.isEmpty)
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                      color: AppTheme.surface,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: AppTheme.outline)),
-                  child: const Center(
-                      child: Text('Belum ada wallet',
-                          style: TextStyle(color: AppTheme.onSurfaceVariant))),
-                )
-              else
-                _FolderWalletCards(byGroup: byGroup, formatter: formatter),
-
-              const SizedBox(height: 20),
-
-              // ── FLOW HISTORY
-              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                const Text('Flow History',
-                    style: TextStyle(
-                        color: AppTheme.onSurface,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700)),
-                Row(children: [
-                  GestureDetector(
-                    onTap: () => _showFilterSheet(context, allCategories),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: _txFilter != 'All'
-                            ? AppTheme.primary.withOpacity(0.1)
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                            color: _txFilter != 'All'
-                                ? AppTheme.primary
-                                : AppTheme.outline),
-                      ),
-                      child: Row(children: [
-                        Icon(Icons.tune_rounded,
-                            color: _txFilter != 'All'
-                                ? AppTheme.primary
-                                : AppTheme.onSurfaceVariant,
-                            size: 16),
-                        if (_txFilter != 'All') ...[
-                          const SizedBox(width: 4),
-                          Text(_txFilter,
-                              style: const TextStyle(
-                                  color: AppTheme.primary,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600)),
-                        ]
-                      ]),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  GestureDetector(
-                    onTap: () {
-                      setState(() => _searchActive = !_searchActive);
-                      if (!_searchActive) {
-                        _searchCtrl.clear();
-                        _searchQuery = '';
-                      }
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(5),
-                      decoration: BoxDecoration(
-                        color: _searchActive
-                            ? AppTheme.primary.withOpacity(0.1)
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                            color: _searchActive
-                                ? AppTheme.primary
-                                : Colors.transparent),
-                      ),
-                      child: Icon(Icons.search_rounded,
-                          color: _searchActive
-                              ? AppTheme.primary
-                              : AppTheme.onSurfaceVariant,
-                          size: 20),
-                    ),
-                  ),
-                ]),
-              ]),
-
-              if (_searchActive) ...[
-                const SizedBox(height: 10),
-                TextField(
-                  controller: _searchCtrl,
-                  autofocus: true,
-                  style:
-                      const TextStyle(color: AppTheme.onSurface, fontSize: 14),
-                  onChanged: (v) => setState(() => _searchQuery = v),
-                  decoration: InputDecoration(
-                    hintText: 'Cari transaksi...',
-                    hintStyle: const TextStyle(
-                        color: AppTheme.onSurfaceVariant, fontSize: 14),
-                    prefixIcon: const Icon(Icons.search_rounded,
-                        color: AppTheme.onSurfaceVariant, size: 18),
-                    suffixIcon: _searchQuery.isNotEmpty
-                        ? GestureDetector(
-                            onTap: () => setState(() {
-                              _searchCtrl.clear();
-                              _searchQuery = '';
-                            }),
-                            child: const Icon(Icons.close_rounded,
-                                color: AppTheme.onSurfaceVariant, size: 18),
-                          )
-                        : null,
-                    filled: true,
-                    fillColor: AppTheme.surfaceContainer,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 10),
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none),
-                  ),
-                ),
-              ],
-              const SizedBox(height: 12),
-
-              if (dashboardTxs.isEmpty)
-                Center(
-                    child: Padding(
-                  padding: const EdgeInsets.all(32),
-                  child: Column(children: const [
-                    Icon(Icons.receipt_long_outlined,
-                        size: 48, color: AppTheme.onSurfaceVariant),
-                    SizedBox(height: 12),
-                    Text('Belum ada transaksi',
-                        style: TextStyle(color: AppTheme.onSurfaceVariant)),
-                  ]),
-                ))
-              else
-                ...dashboardTxs.take(5).map((t) => _buildTxTile(t, formatter)),
-
-              // ── LIHAT SEMUA TRANSAKSI → navigate ke History tab
-              if (txProvider.transactions.length > 5)
-                Center(
-                  child: TextButton(
-                    onPressed: () {
-                      final shell =
-                          context.findAncestorStateOfType<MainShellState>();
-                      shell?.goTo(1);
-                    },
-                    child: const Text('LIHAT SEMUA TRANSAKSI',
-                        style: TextStyle(
-                            color: AppTheme.onSurfaceVariant,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.5)),
-                  ),
-                ),
             ],
-          ),
-        ),
+          );
+        },
       ),
     );
   }
 
+  // ── Filter bottom sheet ────────────────────────────────────────────────────
   void _showFilterSheet(BuildContext ctx, List<String> categories) {
     showModalBottomSheet(
       context: ctx,
@@ -815,82 +1060,85 @@ class _HomeScreenState extends State<HomeScreen> {
         margin: const EdgeInsets.all(12),
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-            color: AppTheme.surface, borderRadius: BorderRadius.circular(24)),
+            color: Colors.white, borderRadius: BorderRadius.circular(24)),
         child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                  child: Container(
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                          color: AppTheme.outline,
-                          borderRadius: BorderRadius.circular(2)))),
-              const SizedBox(height: 20),
-              const Text('Filter Transaksi',
-                  style: TextStyle(
-                      color: AppTheme.onSurface,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 16)),
-              const SizedBox(height: 16),
-              Wrap(spacing: 8, runSpacing: 8, children: [
-                for (final f in ['All', 'Income', 'Expense', ...categories])
-                  GestureDetector(
-                    onTap: () {
-                      setState(() => _txFilter = f);
-                      Navigator.pop(ctx);
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: _txFilter == f
-                            ? AppTheme.primary
-                            : AppTheme.surfaceContainer,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(f,
-                          style: TextStyle(
-                            color: _txFilter == f
-                                ? Colors.white
-                                : AppTheme.onSurface,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13,
-                          )),
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+                child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                        color: _navy.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(2)))),
+            const SizedBox(height: 20),
+            Text('Filter Transaksi',
+                style: GoogleFonts.dmSans(
+                    color: _navy, fontWeight: FontWeight.w800, fontSize: 16)),
+            const SizedBox(height: 16),
+            Wrap(spacing: 8, runSpacing: 8, children: [
+              for (final f in ['All', 'Income', 'Expense', ...categories])
+                GestureDetector(
+                  onTap: () {
+                    setState(() => _txFilter = f);
+                    Navigator.pop(ctx);
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: _txFilter == f ? _navy : _navy.withOpacity(0.06),
+                      borderRadius: BorderRadius.circular(20),
                     ),
+                    child: Text(f,
+                        style: GoogleFonts.dmSans(
+                          color: _txFilter == f ? Colors.white : _navy,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        )),
                   ),
-              ]),
-              const SizedBox(height: 24),
+                ),
             ]),
+            const SizedBox(height: 24),
+          ],
+        ),
       ),
     );
   }
 
+  // ── Info card (Reminder / Insight) ─────────────────────────────────────────
   static Widget _tappableInfoCard({
-    required Color color,
     required IconData icon,
     required String title,
     required String subtitle,
     required VoidCallback onTap,
+    required Color accentColor,
     bool badge = false,
   }) {
-    return GestureDetector(
+    return _PressableWidget(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-            color: AppTheme.surface,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppTheme.outline)),
+            color: _navy,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                  color: _navy.withOpacity(0.18),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4))
+            ]),
         child: Row(children: [
           Stack(children: [
             Container(
                 width: 38,
                 height: 38,
                 decoration: BoxDecoration(
-                    color: color, borderRadius: BorderRadius.circular(10)),
-                child: Icon(icon, color: Colors.white, size: 20)),
+                    color: accentColor.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(10)),
+                child: Icon(icon, color: accentColor, size: 20)),
             if (badge)
               Positioned(
                   top: 0,
@@ -903,27 +1151,30 @@ class _HomeScreenState extends State<HomeScreen> {
           ]),
           const SizedBox(width: 12),
           Expanded(
-              child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
                 Text(title,
-                    style: const TextStyle(
-                        color: AppTheme.onSurface,
+                    style: GoogleFonts.dmSans(
+                        color: Colors.white,
                         fontWeight: FontWeight.w700,
                         fontSize: 13)),
                 Text(subtitle,
-                    style: const TextStyle(
-                        color: AppTheme.onSurfaceVariant, fontSize: 12),
+                    style: GoogleFonts.dmSans(
+                        color: Colors.white.withOpacity(0.5), fontSize: 12),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis),
-              ])),
-          const Icon(Icons.chevron_right_rounded,
-              color: AppTheme.onSurfaceVariant, size: 16),
+              ],
+            ),
+          ),
+          Icon(Icons.chevron_right_rounded,
+              color: Colors.white.withOpacity(0.3), size: 16),
         ]),
       ),
     );
   }
 
+  // ── Chip button ────────────────────────────────────────────────────────────
   static Widget _chipBtn(String label, bool isSelected, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
@@ -931,20 +1182,21 @@ class _HomeScreenState extends State<HomeScreen> {
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
         decoration: BoxDecoration(
-          color: isSelected ? AppTheme.primary : Colors.transparent,
+          color: isSelected ? _navy : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-              color: isSelected ? AppTheme.primary : AppTheme.outline),
+          border:
+              Border.all(color: isSelected ? _navy : _navy.withOpacity(0.2)),
         ),
         child: Text(label,
-            style: TextStyle(
-                color: isSelected ? Colors.white : AppTheme.onSurfaceVariant,
+            style: GoogleFonts.dmSans(
+                color: isSelected ? Colors.white : _navy.withOpacity(0.5),
                 fontSize: 12,
                 fontWeight: FontWeight.w600)),
       ),
     );
   }
 
+  // ── Spending row ───────────────────────────────────────────────────────────
   static Widget _spendingRowTappable({
     required BuildContext context,
     required String label,
@@ -962,16 +1214,15 @@ class _HomeScreenState extends State<HomeScreen> {
         const SizedBox(width: 10),
         Expanded(
             child: Text(label,
-                style:
-                    const TextStyle(color: AppTheme.onSurface, fontSize: 13))),
+                style: GoogleFonts.dmSans(color: _navy, fontSize: 13))),
         Text(percent,
-            style: const TextStyle(
-                color: AppTheme.onSurfaceVariant,
+            style: GoogleFonts.dmSans(
+                color: _navy.withOpacity(0.5),
                 fontSize: 13,
                 fontWeight: FontWeight.w600)),
         const SizedBox(width: 4),
-        const Icon(Icons.chevron_right_rounded,
-            size: 14, color: AppTheme.onSurfaceVariant),
+        Icon(Icons.chevron_right_rounded,
+            size: 14, color: _navy.withOpacity(0.3)),
       ]),
     );
   }
@@ -985,14 +1236,14 @@ class _HomeScreenState extends State<HomeScreen> {
         margin: const EdgeInsets.all(12),
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-            color: AppTheme.surface, borderRadius: BorderRadius.circular(24)),
+            color: Colors.white, borderRadius: BorderRadius.circular(24)),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Center(
               child: Container(
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                      color: AppTheme.outline,
+                      color: _navy.withOpacity(0.12),
                       borderRadius: BorderRadius.circular(2)))),
           const SizedBox(height: 20),
           Row(children: [
@@ -1000,7 +1251,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                    color: color.withOpacity(0.15),
+                    color: color.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(14)),
                 child: Icon(Icons.category_outlined, color: color, size: 24)),
             const SizedBox(width: 14),
@@ -1009,23 +1260,23 @@ class _HomeScreenState extends State<HomeScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                   Text(label,
-                      style: const TextStyle(
-                          color: AppTheme.onSurface,
+                      style: GoogleFonts.dmSans(
+                          color: _navy,
                           fontWeight: FontWeight.w800,
                           fontSize: 16)),
                   Text('$percent dari total pengeluaran',
-                      style: const TextStyle(
-                          color: AppTheme.onSurfaceVariant, fontSize: 12)),
+                      style: GoogleFonts.dmSans(
+                          color: _navy.withOpacity(0.45), fontSize: 12)),
                 ])),
           ]),
           const SizedBox(height: 20),
-          const Divider(color: AppTheme.outline),
+          Divider(color: _navy.withOpacity(0.08)),
           const SizedBox(height: 16),
           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            const Text('Total',
-                style: TextStyle(color: AppTheme.onSurfaceVariant)),
+            Text('Total',
+                style: GoogleFonts.dmSans(color: _navy.withOpacity(0.45))),
             Text(amount,
-                style: TextStyle(
+                style: GoogleFonts.dmSans(
                     color: color, fontWeight: FontWeight.w800, fontSize: 16)),
           ]),
           const SizedBox(height: 24),
@@ -1034,10 +1285,10 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // ── Transaction tile ───────────────────────────────────────────────────────
   Widget _buildTxTile(AppTransaction t, NumberFormat formatter) {
     final isIncome = t.type == 'income';
-    final isTransfer = t.type == 'transfer'; // FIX 2: detect transfer
-
+    final isTransfer = t.type == 'transfer';
     final Map<String, Map<String, dynamic>> categoryIcons = {
       'Makanan': {
         'icon': Icons.restaurant_rounded,
@@ -1067,17 +1318,14 @@ class _HomeScreenState extends State<HomeScreen> {
         'icon': Icons.flight_takeoff_rounded,
         'color': const Color(0xFFE0F2FE)
       },
-      // FIX 2: Icon khusus untuk transfer
       'Transfer': {
         'icon': Icons.swap_horiz_rounded,
         'color': const Color(0xFFE0F2FE)
       },
     };
-
-    // FIX 2: Kalau transfer, gunakan icon transfer
     final catKey = isTransfer ? 'Transfer' : t.category;
     final cat = categoryIcons[catKey] ??
-        {'icon': Icons.receipt_rounded, 'color': AppTheme.surfaceContainer};
+        {'icon': Icons.receipt_rounded, 'color': _navy.withOpacity(0.06)};
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -1088,39 +1336,34 @@ class _HomeScreenState extends State<HomeScreen> {
             decoration: BoxDecoration(
                 color: cat['color'] as Color,
                 borderRadius: BorderRadius.circular(14)),
-            child: Icon(cat['icon'] as IconData,
-                color: AppTheme.onSurface, size: 22)),
+            child: Icon(cat['icon'] as IconData, color: _navy, size: 22)),
         const SizedBox(width: 12),
         Expanded(
             child:
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(t.title,
-              style: const TextStyle(
-                  color: AppTheme.onSurface,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14)),
+              style: GoogleFonts.dmSans(
+                  color: _navy, fontWeight: FontWeight.w600, fontSize: 14)),
           Text(
-            // FIX 2: Label transfer berbeda
             isTransfer
                 ? 'TRANSFER · ${_timeAgo(t.date)}'
                 : '${t.category.toUpperCase()} · ${_timeAgo(t.date)}',
-            style: const TextStyle(
-                color: AppTheme.onSurfaceVariant,
+            style: GoogleFonts.dmMono(
+                color: _navy.withOpacity(0.4),
                 fontSize: 11,
                 fontWeight: FontWeight.w500),
           ),
         ])),
-        // FIX 2: Transfer tidak pakai + atau -, warna netral
         Text(
           isTransfer
               ? formatter.format(t.amount)
               : '${isIncome ? '+' : '-'}${formatter.format(t.amount)}',
-          style: TextStyle(
+          style: GoogleFonts.dmSans(
               color: isTransfer
-                  ? AppTheme.onSurfaceVariant
+                  ? _navy.withOpacity(0.45)
                   : isIncome
-                      ? AppTheme.primary
-                      : AppTheme.error,
+                      ? const Color(0xFF10B981)
+                      : const Color(0xFFEF4444),
               fontWeight: FontWeight.w700,
               fontSize: 14),
         ),
@@ -1137,8 +1380,50 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-// ── FOLDER WALLET CARDS ───────────────────────────────────────────────────────
+// ── Press effect widget ────────────────────────────────────────────────────────
+class _PressableWidget extends StatefulWidget {
+  final Widget child;
+  final VoidCallback onTap;
+  const _PressableWidget({required this.child, required this.onTap});
+  @override
+  State<_PressableWidget> createState() => _PressableWidgetState();
+}
 
+class _PressableWidgetState extends State<_PressableWidget>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 120));
+    _scale = Tween<double>(begin: 1.0, end: 0.97)
+        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => _ctrl.forward(),
+      onTapUp: (_) {
+        _ctrl.reverse();
+        widget.onTap();
+      },
+      onTapCancel: () => _ctrl.reverse(),
+      child: ScaleTransition(scale: _scale, child: widget.child),
+    );
+  }
+}
+
+// ── Folder Wallet Cards ────────────────────────────────────────────────────────
 class _FolderWalletCards extends StatefulWidget {
   final Map<String, List<AppAccount>> byGroup;
   final NumberFormat formatter;
@@ -1152,31 +1437,23 @@ class _FolderWalletCardsState extends State<_FolderWalletCards> {
   final Map<String, bool> _hidden = {};
 
   static const List<List<Color>> _cardGradients = [
-    [Color(0xFF6366F1), Color(0xFF4F46E5)],
+    [Color(0xFF0D1B3E), Color(0xFF1a2f5e)],
     [Color(0xFF10B981), Color(0xFF059669)],
     [Color(0xFFF59E0B), Color(0xFFD97706)],
     [Color(0xFFEF4444), Color(0xFFDC2626)],
     [Color(0xFF0EA5E9), Color(0xFF0284C7)],
     [Color(0xFFEC4899), Color(0xFFDB2777)],
     [Color(0xFF8B5CF6), Color(0xFF7C3AED)],
-    [Color(0xFF14B8A6), Color(0xFF0D9488)],
-    [Color(0xFFF97316), Color(0xFFEA580C)],
-    [Color(0xFF06B6D4), Color(0xFF0891B2)],
-    [Color(0xFF84CC16), Color(0xFF65A30D)],
   ];
 
   static const List<Color> _tabColors = [
-    Color(0xFF6366F1),
+    Color(0xFF0D1B3E),
     Color(0xFF10B981),
     Color(0xFFF59E0B),
     Color(0xFFEF4444),
     Color(0xFF0EA5E9),
     Color(0xFFEC4899),
     Color(0xFF8B5CF6),
-    Color(0xFF14B8A6),
-    Color(0xFFF97316),
-    Color(0xFF06B6D4),
-    Color(0xFF84CC16),
   ];
 
   static const Map<String, IconData> _groupIcons = {
@@ -1197,7 +1474,6 @@ class _FolderWalletCardsState extends State<_FolderWalletCards> {
   Widget build(BuildContext context) {
     final groups = widget.byGroup.entries.toList();
     if (_selectedIndex >= groups.length) _selectedIndex = 0;
-
     final selected = groups[_selectedIndex];
     final gradColors = _cardGradients[_selectedIndex % _cardGradients.length];
     final groupTotal = selected.value.fold(0.0, (s, a) => s + a.balance);
@@ -1223,20 +1499,11 @@ class _FolderWalletCardsState extends State<_FolderWalletCards> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   decoration: BoxDecoration(
-                    color: isSelected ? color : AppTheme.surfaceContainer,
+                    color: isSelected ? color : _navy.withOpacity(0.05),
                     borderRadius: const BorderRadius.only(
                       topLeft: Radius.circular(12),
                       topRight: Radius.circular(12),
                     ),
-                    boxShadow: isSelected
-                        ? [
-                            BoxShadow(
-                              color: color.withOpacity(0.4),
-                              blurRadius: 8,
-                              offset: const Offset(0, -2),
-                            )
-                          ]
-                        : [],
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -1251,10 +1518,10 @@ class _FolderWalletCardsState extends State<_FolderWalletCards> {
                       ],
                       Text(
                         groups[i].key,
-                        style: TextStyle(
+                        style: GoogleFonts.dmSans(
                           color: isSelected
                               ? Colors.white
-                              : AppTheme.onSurfaceVariant,
+                              : _navy.withOpacity(0.5),
                           fontSize: 12,
                           fontWeight:
                               isSelected ? FontWeight.w700 : FontWeight.w500,
@@ -1275,10 +1542,8 @@ class _FolderWalletCardsState extends State<_FolderWalletCards> {
               position: Tween<Offset>(
                 begin: const Offset(0.05, 0),
                 end: Offset.zero,
-              ).animate(CurvedAnimation(
-                parent: animation,
-                curve: Curves.easeOut,
-              )),
+              ).animate(
+                  CurvedAnimation(parent: animation, curve: Curves.easeOut)),
               child: child,
             ),
           ),
@@ -1299,7 +1564,7 @@ class _FolderWalletCardsState extends State<_FolderWalletCards> {
               ),
               boxShadow: [
                 BoxShadow(
-                    color: gradColors[0].withOpacity(0.4),
+                    color: gradColors[0].withOpacity(0.35),
                     blurRadius: 20,
                     offset: const Offset(0, 8))
               ],
@@ -1311,7 +1576,7 @@ class _FolderWalletCardsState extends State<_FolderWalletCards> {
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(14)),
                   child: Icon(icon, color: Colors.white, size: 22),
                 ),
@@ -1321,13 +1586,13 @@ class _FolderWalletCardsState extends State<_FolderWalletCards> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                       Text(selected.key,
-                          style: const TextStyle(
+                          style: GoogleFonts.dmSans(
                               color: Colors.white,
                               fontSize: 16,
                               fontWeight: FontWeight.w700)),
                       Text('${selected.value.length} akun',
-                          style: TextStyle(
-                              color: Colors.white.withOpacity(0.7),
+                          style: GoogleFonts.dmSans(
+                              color: Colors.white.withOpacity(0.6),
                               fontSize: 12)),
                     ])),
                 GestureDetector(
@@ -1336,7 +1601,7 @@ class _FolderWalletCardsState extends State<_FolderWalletCards> {
                   child: Container(
                     padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.15),
+                      color: Colors.white.withOpacity(0.12),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Icon(
@@ -1349,55 +1614,23 @@ class _FolderWalletCardsState extends State<_FolderWalletCards> {
                 ),
               ]),
               const SizedBox(height: 20),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Total Saldo',
-                            style: TextStyle(
-                                color: Colors.white.withOpacity(0.7),
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500)),
-                        const SizedBox(height: 4),
-                        Text(
-                          isHidden
-                              ? '••••••••'
-                              : widget.formatter.format(groupTotal),
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 28,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: -0.5),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    width: 60,
-                    height: 60,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white.withOpacity(0.08),
-                    ),
-                    child: Center(
-                      child: Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.white.withOpacity(0.08),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+              Text('Total Saldo',
+                  style: GoogleFonts.dmSans(
+                      color: Colors.white.withOpacity(0.6),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500)),
+              const SizedBox(height: 4),
+              Text(
+                isHidden ? '••••••••' : widget.formatter.format(groupTotal),
+                style: GoogleFonts.dmSans(
+                    color: Colors.white,
+                    fontSize: 28,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.5),
               ),
               if (selected.value.isNotEmpty) ...[
                 const SizedBox(height: 16),
-                Container(height: 1, color: Colors.white.withOpacity(0.15)),
+                Container(height: 1, color: Colors.white.withOpacity(0.12)),
                 const SizedBox(height: 12),
                 ...selected.value.take(3).map((acc) => Padding(
                       padding: const EdgeInsets.only(bottom: 8),
@@ -1406,21 +1639,21 @@ class _FolderWalletCardsState extends State<_FolderWalletCards> {
                           width: 6,
                           height: 6,
                           decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.6),
+                              color: _yellow.withOpacity(0.7),
                               shape: BoxShape.circle),
                         ),
                         const SizedBox(width: 10),
                         Expanded(
                             child: Text(acc.name,
-                                style: TextStyle(
-                                    color: Colors.white.withOpacity(0.85),
+                                style: GoogleFonts.dmSans(
+                                    color: Colors.white.withOpacity(0.8),
                                     fontSize: 13,
                                     fontWeight: FontWeight.w500))),
                         Text(
                           isHidden
                               ? '••••'
                               : widget.formatter.format(acc.balance),
-                          style: const TextStyle(
+                          style: GoogleFonts.dmSans(
                               color: Colors.white,
                               fontSize: 13,
                               fontWeight: FontWeight.w700),
@@ -1428,13 +1661,9 @@ class _FolderWalletCardsState extends State<_FolderWalletCards> {
                       ]),
                     )),
                 if (selected.value.length > 3)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: Text('+${selected.value.length - 3} akun lainnya',
-                        style: TextStyle(
-                            color: Colors.white.withOpacity(0.5),
-                            fontSize: 11)),
-                  ),
+                  Text('+${selected.value.length - 3} akun lainnya',
+                      style: GoogleFonts.dmSans(
+                          color: Colors.white.withOpacity(0.45), fontSize: 11)),
               ],
             ]),
           ),
@@ -1444,8 +1673,7 @@ class _FolderWalletCardsState extends State<_FolderWalletCards> {
   }
 }
 
-// ── Painters & Models ─────────────────────────────────────────────────────────
-
+// ── Chart painters ─────────────────────────────────────────────────────────────
 class _ChartPoint {
   final String label;
   final double value;
@@ -1476,18 +1704,17 @@ class _MiniChartPainter extends CustomPainter {
     }
 
     final linePaint = Paint()
-      ..color = AppTheme.primary
+      ..color = _navy
       ..strokeWidth = 2.5
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
+
     final fillPaint = Paint()
       ..shader = LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            AppTheme.primary.withOpacity(0.25),
-            AppTheme.primary.withOpacity(0.0)
-          ]).createShader(Rect.fromLTWH(0, 0, size.width, size.height))
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [_navy.withOpacity(0.15), _navy.withOpacity(0.0)])
+          .createShader(Rect.fromLTWH(0, 0, size.width, size.height))
       ..style = PaintingStyle.fill;
 
     final path = Path()..moveTo(toOffset(0).dx, toOffset(0).dy);
@@ -1504,19 +1731,20 @@ class _MiniChartPainter extends CustomPainter {
       ..close();
     canvas.drawPath(fillPath, fillPaint);
     canvas.drawPath(path, linePaint);
+    // Dot at end
     canvas.drawCircle(
         last,
         4,
         Paint()
-          ..color = AppTheme.primary
+          ..color = _navy
           ..style = PaintingStyle.fill);
     canvas.drawCircle(
         last,
         4,
         Paint()
-          ..color = Colors.white
+          ..color = _yellow
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.5);
+          ..strokeWidth = 2);
   }
 
   @override
