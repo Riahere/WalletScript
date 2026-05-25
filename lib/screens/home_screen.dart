@@ -17,6 +17,8 @@ import 'app_top_bar.dart';
 import 'spending_detail_screen.dart';
 import 'notification_screen.dart';
 import 'wallet_all_screen.dart';
+import 'add_transaction_screen.dart';
+import 'history_screen.dart'; // ← history page
 
 const _navy = Color(0xFF0D1B3E);
 const _yellow = Color(0xFFF5C842);
@@ -24,8 +26,8 @@ const _green = Color(0xFF1DB87A);
 const _greenDark = Color(0xFF18a06a);
 const _bgWhite = Color(0xFFF4F6F9);
 
-const double _gcHeight = 240.0;
-const double _gcHalfAbove = 120.0;
+// Green card height (dikecilin dari 240 → 210)
+const double _gcHeight = 210.0;
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -252,55 +254,107 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     return net >= 0;
   }
 
+  // ─── NAVY BG ICONS — now FULL WIDTH using screenWidth ───────────────────
+  // Format: [IconData, xFraction(0–1), yFraction(0–1), size, phaseOffset]
   static const _navyIconData = [
-    [Icons.bar_chart_rounded, 0.03, 0.06, 22.0, 0.0],
-    [Icons.monetization_on_outlined, 0.82, 0.04, 20.0, 0.5],
-    [Icons.trending_up_rounded, 0.48, 0.34, 18.0, 0.2],
-    [Icons.credit_card_rounded, 0.78, 0.32, 18.0, 0.3],
-    [Icons.savings_outlined, 0.05, 0.68, 20.0, 0.8],
-    [Icons.account_balance_outlined, 0.80, 0.60, 18.0, 0.9],
-    [Icons.receipt_long_outlined, 0.38, 0.12, 16.0, 0.6],
-    [Icons.currency_exchange_rounded, 0.60, 0.16, 16.0, 0.4],
-    [Icons.pie_chart_outline_rounded, 0.12, 0.20, 17.0, 0.7],
-    [Icons.wallet_outlined, 0.72, 0.42, 17.0, 0.55],
-    [Icons.show_chart_rounded, 0.42, 0.58, 18.0, 0.35],
-    [Icons.percent_rounded, 0.25, 0.56, 15.0, 0.65],
-    [Icons.swap_horiz_rounded, 0.28, 0.80, 16.0, 0.45],
-    [Icons.arrow_upward_rounded, 0.64, 0.34, 14.0, 0.75],
+    // Left cluster
+    [Icons.bar_chart_rounded, 0.03, 0.08, 22.0, 0.0],
+    [Icons.pie_chart_outline_rounded, 0.08, 0.55, 18.0, 0.7],
+    [Icons.savings_outlined, 0.05, 0.75, 20.0, 0.8],
+    [Icons.receipt_long_outlined, 0.12, 0.35, 16.0, 0.6],
+    // Left-center cluster
+    [Icons.trending_up_rounded, 0.22, 0.15, 18.0, 0.2],
+    [Icons.percent_rounded, 0.28, 0.62, 15.0, 0.65],
+    [Icons.swap_horiz_rounded, 0.18, 0.85, 16.0, 0.45],
+    // Center cluster
+    [Icons.currency_exchange_rounded, 0.42, 0.20, 16.0, 0.4],
+    [Icons.show_chart_rounded, 0.38, 0.70, 18.0, 0.35],
+    [Icons.wallet_outlined, 0.50, 0.45, 17.0, 0.55],
+    [Icons.account_balance_outlined, 0.45, 0.88, 18.0, 0.9],
+    // Right-center cluster
+    [Icons.credit_card_rounded, 0.62, 0.30, 18.0, 0.3],
+    [Icons.arrow_upward_rounded, 0.58, 0.60, 14.0, 0.75],
+    [Icons.monetization_on_outlined, 0.68, 0.12, 20.0, 0.5],
+    [Icons.payments_rounded, 0.72, 0.78, 16.0, 0.25],
+    // Right cluster
+    [Icons.account_balance_wallet_outlined, 0.82, 0.25, 19.0, 0.15],
+    [Icons.trending_down_rounded, 0.88, 0.55, 17.0, 0.6],
+    [Icons.receipt_rounded, 0.78, 0.90, 15.0, 0.85],
+    [Icons.attach_money_rounded, 0.94, 0.10, 18.0, 0.35],
+    [Icons.account_balance_rounded, 0.92, 0.70, 20.0, 0.5],
   ];
 
-  List<Widget> _navyBgIcons(double heroH) {
+  List<Widget> _navyBgIcons(double screenWidth, double heroH) {
     return _navyIconData.map((d) {
       final yo =
-          math.sin((_floatCtrl.value + (d[4] as double)) * math.pi * 2) * 6;
+          math.sin((_floatCtrl.value + (d[4] as double)) * math.pi * 2) * 7;
       return Positioned(
-        left: (d[1] as double) * 300,
+        left: (d[1] as double) * screenWidth,
         top: (d[2] as double) * heroH + yo,
         child: Icon(d[0] as IconData,
-            size: d[3] as double, color: Colors.white.withOpacity(0.07)),
+            size: d[3] as double, color: Colors.white.withOpacity(0.08)),
       );
     }).toList();
   }
 
+  // ─── WHITE SECTION BG ICONS — full page spread, 5 columns ──────────────
+  // Format: [IconData, xFraction(0–1), yOffset(px), size, phaseOffset]
   static const _whiteIconData = [
-    [Icons.bar_chart_rounded, 0.03, 10.0, 26.0, 0.0],
-    [Icons.monetization_on_outlined, 0.88, 14.0, 22.0, 0.5],
-    [Icons.trending_up_rounded, 0.44, 8.0, 20.0, 0.2],
-    [Icons.credit_card_rounded, 0.03, 80.0, 20.0, 0.3],
-    [Icons.account_balance_outlined, 0.88, 78.0, 22.0, 0.9],
-    [Icons.percent_rounded, 0.36, 84.0, 18.0, 0.6],
-    [Icons.receipt_long_outlined, 0.05, 160.0, 20.0, 0.8],
-    [Icons.savings_outlined, 0.88, 166.0, 22.0, 0.4],
-    [Icons.swap_horiz_rounded, 0.42, 170.0, 18.0, 0.7],
-    [Icons.monetization_on_outlined, 0.04, 250.0, 20.0, 0.35],
-    [Icons.wallet_outlined, 0.88, 256.0, 22.0, 0.55],
-    [Icons.show_chart_rounded, 0.38, 262.0, 19.0, 0.65],
-    [Icons.pie_chart_outline_rounded, 0.03, 340.0, 20.0, 0.1],
-    [Icons.bar_chart_rounded, 0.88, 346.0, 22.0, 0.8],
-    [Icons.arrow_upward_rounded, 0.44, 352.0, 18.0, 0.45],
-    [Icons.currency_exchange_rounded, 0.04, 440.0, 22.0, 0.2],
-    [Icons.trending_up_rounded, 0.88, 446.0, 20.0, 0.6],
-    [Icons.account_balance_wallet_outlined, 0.40, 452.0, 18.0, 0.75],
+    // ── Column 1: far left (x≈0.02–0.06) ──────────────────────────────
+    [Icons.bar_chart_rounded, 0.02, 14.0, 26.0, 0.00],
+    [Icons.pie_chart_outline_rounded, 0.04, 95.0, 20.0, 0.70],
+    [Icons.receipt_long_outlined, 0.03, 185.0, 18.0, 0.80],
+    [Icons.savings_outlined, 0.05, 275.0, 22.0, 0.40],
+    [Icons.currency_exchange_rounded, 0.02, 365.0, 18.0, 0.60],
+    [Icons.account_balance_rounded, 0.04, 455.0, 20.0, 0.15],
+    [Icons.trending_up_rounded, 0.03, 545.0, 18.0, 0.90],
+    [Icons.wallet_outlined, 0.05, 635.0, 20.0, 0.35],
+    [Icons.attach_money_rounded, 0.02, 720.0, 18.0, 0.55],
+    [Icons.receipt_rounded, 0.04, 810.0, 17.0, 0.75],
+    // ── Column 2: left-center (x≈0.20–0.28) ───────────────────────────
+    [Icons.trending_up_rounded, 0.20, 20.0, 22.0, 0.20],
+    [Icons.percent_rounded, 0.24, 105.0, 17.0, 0.65],
+    [Icons.swap_horiz_rounded, 0.22, 200.0, 20.0, 0.45],
+    [Icons.monetization_on_outlined, 0.26, 290.0, 18.0, 0.30],
+    [Icons.show_chart_rounded, 0.20, 385.0, 22.0, 0.85],
+    [Icons.credit_card_rounded, 0.25, 475.0, 18.0, 0.10],
+    [Icons.bar_chart_rounded, 0.22, 560.0, 20.0, 0.50],
+    [Icons.savings_outlined, 0.27, 650.0, 18.0, 0.70],
+    [Icons.pie_chart_outline_rounded, 0.21, 740.0, 19.0, 0.25],
+    [Icons.arrow_upward_rounded, 0.24, 825.0, 16.0, 0.60],
+    // ── Column 3: center (x≈0.42–0.52) ────────────────────────────────
+    [Icons.wallet_outlined, 0.44, 12.0, 24.0, 0.55],
+    [Icons.account_balance_wallet_outlined, 0.48, 100.0, 20.0, 0.35],
+    [Icons.show_chart_rounded, 0.42, 195.0, 21.0, 0.75],
+    [Icons.currency_exchange_rounded, 0.50, 285.0, 18.0, 0.20],
+    [Icons.receipt_long_outlined, 0.44, 378.0, 20.0, 0.40],
+    [Icons.trending_down_rounded, 0.48, 468.0, 18.0, 0.80],
+    [Icons.payments_rounded, 0.42, 555.0, 22.0, 0.15],
+    [Icons.percent_rounded, 0.50, 645.0, 17.0, 0.60],
+    [Icons.attach_money_rounded, 0.46, 730.0, 20.0, 0.90],
+    [Icons.swap_horiz_rounded, 0.44, 820.0, 18.0, 0.30],
+    // ── Column 4: right-center (x≈0.62–0.72) ──────────────────────────
+    [Icons.monetization_on_outlined, 0.64, 18.0, 22.0, 0.50],
+    [Icons.account_balance_outlined, 0.68, 108.0, 20.0, 0.90],
+    [Icons.credit_card_rounded, 0.62, 200.0, 18.0, 0.30],
+    [Icons.trending_up_rounded, 0.70, 290.0, 20.0, 0.65],
+    [Icons.receipt_rounded, 0.65, 382.0, 18.0, 0.15],
+    [Icons.wallet_outlined, 0.72, 470.0, 22.0, 0.45],
+    [Icons.bar_chart_rounded, 0.62, 558.0, 20.0, 0.80],
+    [Icons.savings_outlined, 0.68, 645.0, 18.0, 0.25],
+    [Icons.show_chart_rounded, 0.66, 735.0, 20.0, 0.55],
+    [Icons.pie_chart_outline_rounded, 0.70, 820.0, 17.0, 0.70],
+    // ── Column 5: far right (x≈0.82–0.92) ─────────────────────────────
+    [Icons.payments_rounded, 0.84, 10.0, 24.0, 0.80],
+    [Icons.trending_down_rounded, 0.88, 100.0, 20.0, 0.40],
+    [Icons.account_balance_rounded, 0.82, 192.0, 18.0, 0.60],
+    [Icons.monetization_on_outlined, 0.90, 282.0, 22.0, 0.20],
+    [Icons.arrow_upward_rounded, 0.86, 375.0, 18.0, 0.85],
+    [Icons.receipt_long_outlined, 0.84, 465.0, 20.0, 0.10],
+    [Icons.currency_exchange_rounded, 0.90, 552.0, 18.0, 0.50],
+    [Icons.account_balance_wallet_outlined, 0.82, 642.0, 22.0, 0.75],
+    [Icons.trending_up_rounded, 0.88, 730.0, 20.0, 0.30],
+    [Icons.savings_outlined, 0.86, 820.0, 18.0, 0.95],
   ];
 
   List<Widget> _whiteBgIcons(double width) {
@@ -376,97 +430,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  void _showAddTransaction(BuildContext ctx) {
-    showModalBottomSheet(
-      context: ctx,
-      backgroundColor: Colors.transparent,
-      builder: (_) => Container(
-        margin: const EdgeInsets.all(12),
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-            color: Colors.white, borderRadius: BorderRadius.circular(24)),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Center(
-              child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                      color: _navy.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(2)))),
-          const SizedBox(height: 20),
-          Text('Add Transaction',
-              style: GoogleFonts.dmSans(
-                  color: _navy, fontWeight: FontWeight.w800, fontSize: 16)),
-          const SizedBox(height: 20),
-          Row(children: [
-            Expanded(
-              child: _addTxOption(
-                icon: Icons.arrow_downward_rounded,
-                label: 'Income',
-                color: _green,
-                onTap: () {
-                  Navigator.pop(ctx);
-                },
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _addTxOption(
-                icon: Icons.arrow_upward_rounded,
-                label: 'Expense',
-                color: const Color(0xFFEF4444),
-                onTap: () {
-                  Navigator.pop(ctx);
-                },
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _addTxOption(
-                icon: Icons.swap_horiz_rounded,
-                label: 'Transfer',
-                color: const Color(0xFF6C63FF),
-                onTap: () {
-                  Navigator.pop(ctx);
-                },
-              ),
-            ),
-          ]),
-          const SizedBox(height: 24),
-        ]),
+  // ─── Navigate to AddTransactionScreen with correct initialType ────────────
+  void _navigateToAddTransaction(BuildContext ctx, String type) {
+    Navigator.push(
+      ctx,
+      MaterialPageRoute(
+        builder: (_) => AddTransactionScreen(initialType: type),
       ),
     );
   }
-
-  static Widget _addTxOption({
-    required IconData icon,
-    required String label,
-    required Color color,
-    required VoidCallback onTap,
-  }) =>
-      GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.08),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: color.withOpacity(0.2)),
-          ),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-              child: Icon(icon, color: Colors.white, size: 20),
-            ),
-            const SizedBox(height: 8),
-            Text(label,
-                style: GoogleFonts.dmSans(
-                    color: color, fontWeight: FontWeight.w700, fontSize: 12)),
-          ]),
-        ),
-      );
 
   // ═══════════════════════════════════════════════════════════════════════════
   @override
@@ -498,6 +470,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         builder: (_, __) {
           return LayoutBuilder(builder: (ctx, constraints) {
             final w = constraints.maxWidth;
+
+            // Navy hero height: enough for greeting + half card overlap
+            // SafeArea top + greeting rows + half of green card
+            const navyContentH = 130.0; // greeting area height
+            final navyH = navyContentH + _gcHeight / 2 + 24;
+
             return CustomScrollView(
               physics: const BouncingScrollPhysics(),
               slivers: [
@@ -509,97 +487,108 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Container(
-                            color: _navy,
-                            child: SafeArea(
-                              bottom: false,
-                              child: Stack(children: [
-                                Positioned.fill(
-                                  child: OverflowBox(
-                                    alignment: Alignment.topLeft,
-                                    maxHeight: 260,
-                                    child: SizedBox(
-                                      height: 260,
-                                      width: w,
-                                      child: Stack(children: _navyBgIcons(260)),
+                          // ── NAVY HEADER — curved bottom so white section shows ──
+                          // Key fix: ClipRRect on navy with bottomLeft/bottomRight radius
+                          // creates the AlimBank-style wave where white peeks through
+                          ClipRRect(
+                            borderRadius: const BorderRadius.only(
+                              bottomLeft: Radius.circular(44),
+                              bottomRight: Radius.circular(44),
+                            ),
+                            child: Container(
+                              color: _navy,
+                              child: SafeArea(
+                                bottom: false,
+                                child: Stack(children: [
+                                  // Full-width floating icons
+                                  Positioned.fill(
+                                    child: OverflowBox(
+                                      alignment: Alignment.topLeft,
+                                      maxWidth: w,
+                                      maxHeight: navyH,
+                                      child: SizedBox(
+                                        height: navyH,
+                                        width: w,
+                                        child: Stack(
+                                            children: _navyBgIcons(w, navyH)),
+                                      ),
                                     ),
                                   ),
-                                ),
-                                Padding(
-                                  padding:
-                                      const EdgeInsets.fromLTRB(16, 10, 16, 0),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      _anim(
-                                        Row(children: [
-                                          const Expanded(child: AppTopBar()),
-                                          if (_syncing)
-                                            Padding(
-                                              padding: const EdgeInsets.only(
-                                                  left: 8),
-                                              child: SizedBox(
-                                                width: 14,
-                                                height: 14,
-                                                child:
-                                                    CircularProgressIndicator(
-                                                        strokeWidth: 2,
-                                                        color: Colors.white
-                                                            .withOpacity(0.4)),
+                                  Padding(
+                                    padding: const EdgeInsets.fromLTRB(
+                                        16, 10, 16, 0),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        _anim(
+                                          Row(children: [
+                                            const Expanded(child: AppTopBar()),
+                                            if (_syncing)
+                                              Padding(
+                                                padding: const EdgeInsets.only(
+                                                    left: 8),
+                                                child: SizedBox(
+                                                  width: 14,
+                                                  height: 14,
+                                                  child:
+                                                      CircularProgressIndicator(
+                                                          strokeWidth: 2,
+                                                          color: Colors.white
+                                                              .withOpacity(
+                                                                  0.4)),
+                                                ),
                                               ),
-                                            ),
-                                        ]),
-                                        _stagger(0),
-                                      ),
-                                      const SizedBox(height: 10),
-                                      _anim(
-                                        Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(_greeting(),
-                                                  style: GoogleFonts.dmSans(
-                                                      color: Colors.white
-                                                          .withOpacity(0.5),
-                                                      fontSize: 12,
-                                                      fontWeight:
-                                                          FontWeight.w500)),
-                                              const SizedBox(height: 3),
-                                              Text('WalletScript User',
-                                                  style: GoogleFonts.dmSans(
-                                                      color: Colors.white,
-                                                      fontSize: 18,
-                                                      fontWeight:
-                                                          FontWeight.w700)),
-                                            ]),
-                                        _stagger(1),
-                                      ),
-                                      const SizedBox(
-                                          height: 16 + _gcHeight / 2),
-                                    ],
+                                          ]),
+                                          _stagger(0),
+                                        ),
+                                        const SizedBox(height: 10),
+                                        _anim(
+                                          Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(_greeting(),
+                                                    style: GoogleFonts.dmSans(
+                                                        color: Colors.white
+                                                            .withOpacity(0.5),
+                                                        fontSize: 12,
+                                                        fontWeight:
+                                                            FontWeight.w500)),
+                                                const SizedBox(height: 3),
+                                                Text('WalletScript User',
+                                                    style: GoogleFonts.dmSans(
+                                                        color: Colors.white,
+                                                        fontSize: 18,
+                                                        fontWeight:
+                                                            FontWeight.w700)),
+                                              ]),
+                                          _stagger(1),
+                                        ),
+                                        // Extra bottom padding — curved area + half card
+                                        SizedBox(height: 28 + _gcHeight / 2),
+                                      ],
+                                    ),
                                   ),
-                                ),
-                              ]),
-                            ),
-                          ),
-                          Container(
-                            height: _gcHeight / 2 + 16,
-                            width: double.infinity,
-                            decoration: const BoxDecoration(
-                              color: _bgWhite,
-                              borderRadius: BorderRadius.only(
-                                topLeft: Radius.circular(56),
-                                topRight: Radius.circular(56),
+                                ]),
                               ),
                             ),
                           ),
+
+                          // ── WHITE SECTION — sits behind green card bottom half ──
+                          Container(
+                            height: _gcHeight / 2 + 20,
+                            width: double.infinity,
+                            color: _bgWhite,
+                          ),
                         ],
                       ),
+
+                      // ── GREEN CARD — centered over the navy/white boundary ─
                       Positioned(
-                        bottom: 16,
-                        left: 24,
-                        right: 24,
+                        bottom: 20,
+                        left: 20,
+                        right: 20,
                         child: _anim(
                           _buildGreenCard(
                               ctx, fmt, totalBalance, txP, trendTxt, trendUp),
@@ -610,17 +599,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   ),
                 ),
 
-                // ── WHITE SECTION ─────────────────────────────────────────
+                // ── WHITE CONTENT SECTION ─────────────────────────────────
                 SliverToBoxAdapter(
                   child: Container(
                     color: _bgWhite,
                     child: Stack(children: [
                       Positioned.fill(
                         child: OverflowBox(
-                          maxHeight: 1200,
+                          maxHeight: 1600,
                           alignment: Alignment.topLeft,
                           child: SizedBox(
-                            height: 1200,
+                            height: 1600,
                             width: w,
                             child: Stack(children: _whiteBgIcons(w)),
                           ),
@@ -671,7 +660,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             _anim(_buildBarChart(bars), _stagger(4)),
                             const SizedBox(height: 10),
 
-                            // ── SPENDING OVERVIEW ──────────────────────────
+                            // ── SPENDING OVERVIEW ─────────────────────────
                             _anim(
                               _buildSpendingOverview(
                                   catList, totalExp, fmt, context),
@@ -679,13 +668,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             ),
                             const SizedBox(height: 14),
 
-                            // ── WALLETS header ─────────────────────────────
+                            // ── WALLETS header ────────────────────────────
                             _anim(
                               Row(
                                   mainAxisAlignment:
                                       MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Text('WALLETS',
+                                    Text('MY WALLETS',
                                         style: GoogleFonts.dmSans(
                                             color: _navy,
                                             fontSize: 13,
@@ -712,7 +701,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             ),
                             const SizedBox(height: 10),
 
-                            // ── PEEK STACK WALLET CARDS ────────────────────
+                            // ── PEEK STACK WALLET CARDS ───────────────────
                             _anim(
                               byGroup.isEmpty
                                   ? Container(
@@ -741,7 +730,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             ),
                             const SizedBox(height: 20),
 
-                            // ── HISTORY header ─────────────────────────────
+                            // ── HISTORY header ────────────────────────────
                             _anim(
                               _buildHistoryHeader(context, allCats),
                               _stagger(7),
@@ -785,12 +774,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             ],
                             const SizedBox(height: 10),
 
-                            // ── HISTORY CARD ────────────────────────────────
+                            // ── HISTORY CARD ──────────────────────────────
                             _anim(
                               _buildHistoryCard(dashTxs, txP, fmt, context),
                               _stagger(7),
                             ),
-                            // Extra bottom padding so history card is never cut off
                             const SizedBox(height: 120),
                           ],
                         ),
@@ -814,210 +802,266 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     return _PressableWidget(
       onTap: () => Navigator.push(
           context, MaterialPageRoute(builder: (_) => const WalletAllScreen())),
-      child: Container(
-        height: _gcHeight,
-        width: double.infinity,
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [_green, _greenDark],
-          ),
-          borderRadius: BorderRadius.circular(28),
-          boxShadow: [
-            BoxShadow(
-                color: _green.withOpacity(0.40),
-                blurRadius: 32,
-                offset: const Offset(0, 12)),
-          ],
-        ),
-        child: Stack(children: [
-          Positioned(
-              right: -14,
-              top: -18,
-              child: Container(
-                  width: 100,
-                  height: 100,
-                  decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.1),
-                      shape: BoxShape.circle))),
-          Positioned(
-              right: 30,
-              bottom: 50,
-              child: Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.07),
-                      shape: BoxShape.circle))),
-          Positioned(
-              left: 8,
-              bottom: 60,
-              child: Icon(Icons.pie_chart_outline_rounded,
-                  size: 18, color: Colors.white.withOpacity(0.1))),
-          Positioned(
-              right: 52,
-              top: 8,
-              child: Icon(Icons.payments_rounded,
-                  size: 14, color: Colors.white.withOpacity(0.1))),
-          Positioned(
-              left: 26,
-              top: 10,
-              child: Icon(Icons.trending_up_rounded,
-                  size: 13, color: Colors.white.withOpacity(0.1))),
-          Positioned(
-              right: 14,
-              bottom: 60,
-              child: Icon(Icons.monetization_on_outlined,
-                  size: 13, color: Colors.white.withOpacity(0.1))),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(children: [
-                Text('Account Balance',
-                    style: GoogleFonts.dmSans(
-                        color: Colors.white.withOpacity(0.65),
-                        fontSize: 10,
-                        fontWeight: FontWeight.w500)),
-                const Spacer(),
-                GestureDetector(
-                  onTap: () => setState(() => _balanceHidden = !_balanceHidden),
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 200),
-                    child: Icon(
-                      _balanceHidden
-                          ? Icons.visibility_off_outlined
-                          : Icons.visibility_outlined,
-                      key: ValueKey(_balanceHidden),
-                      color: Colors.white.withOpacity(0.45),
-                      size: 15,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  width: 26,
-                  height: 26,
-                  decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.18),
-                      shape: BoxShape.circle),
-                  child: const Icon(Icons.arrow_forward_rounded,
-                      color: Colors.white, size: 13),
-                ),
-              ]),
-              const SizedBox(height: 6),
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 200),
-                child: _balanceHidden
-                    ? Text('••••••••••',
-                        key: const ValueKey('h'),
-                        style: GoogleFonts.dmSans(
-                            color: Colors.white,
-                            fontSize: 28,
-                            fontWeight: FontWeight.w800))
-                    : AnimatedBuilder(
-                        key: const ValueKey('s'),
-                        animation: _balanceAnim,
-                        builder: (_, __) {
-                          final raw = fmt.format(balance * _balanceAnim.value);
-                          final parts = raw.split(' ');
-                          final symbol = parts.isNotEmpty ? parts[0] : 'Rp';
-                          final number = parts.length > 1
-                              ? parts.sublist(1).join(' ')
-                              : '0';
-                          return Row(
-                            crossAxisAlignment: CrossAxisAlignment.baseline,
-                            textBaseline: TextBaseline.alphabetic,
-                            children: [
-                              Text(symbol,
-                                  style: GoogleFonts.dmSans(
-                                      color: Colors.white,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w700)),
-                              const SizedBox(width: 3),
-                              Text(number,
-                                  style: GoogleFonts.dmSans(
-                                      color: Colors.white,
-                                      fontSize: 28,
-                                      fontWeight: FontWeight.w800,
-                                      letterSpacing: -0.5)),
-                            ],
-                          );
-                        }),
-              ),
-              const SizedBox(height: 8),
-              Row(children: [
-                _gcSub('Income', '+${fmt.format(txP.totalIncome)}'),
-                const SizedBox(width: 16),
-                _gcSub('Expenses', '-${fmt.format(txP.totalExpense)}'),
-                const Spacer(),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(20)),
-                  child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    Icon(
-                        trendTxt.isNotEmpty
-                            ? (trendUp
-                                ? Icons.trending_up_rounded
-                                : Icons.trending_down_rounded)
-                            : Icons.info_outline_rounded,
-                        color: Colors.white,
-                        size: 10),
-                    const SizedBox(width: 3),
-                    Text(trendTxt.isNotEmpty ? trendTxt : 'View wallets',
-                        style: GoogleFonts.dmSans(
-                            color: Colors.white,
-                            fontSize: 8,
-                            fontWeight: FontWeight.w600)),
-                  ]),
-                ),
-              ]),
-              const Spacer(),
-              Container(
-                padding: const EdgeInsets.only(top: 4, bottom: 16),
-                child: Row(
-                  children: [
-                    _gcActionBtn(
-                      icon: Icons.swap_horiz_rounded,
-                      label: 'Transfer',
-                      onTap: () {},
-                    ),
-                    _gcDivider(),
-                    _gcActionBtn(
-                      icon: Icons.arrow_downward_rounded,
-                      label: 'Income',
-                      onTap: () {},
-                    ),
-                    _gcDivider(),
-                    _gcActionBtn(
-                      icon: Icons.arrow_upward_rounded,
-                      label: 'Expense',
-                      onTap: () {},
-                    ),
-                    _gcDivider(),
-                    _gcActionBtn(
-                      icon: Icons.add_rounded,
-                      label: 'Add',
-                      isAccent: true,
-                      onTap: () => _showAddTransaction(ctx),
-                    ),
-                  ],
-                ),
-              ),
+      child: LayoutBuilder(builder: (_, bc) {
+        final cw = bc.maxWidth; // actual card width
+        return Container(
+          height: _gcHeight,
+          width: double.infinity,
+          clipBehavior: Clip.hardEdge,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [_green, _greenDark],
+            ),
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                  color: _green.withOpacity(0.38),
+                  blurRadius: 28,
+                  offset: const Offset(0, 10)),
             ],
           ),
-        ]),
-      ),
-    );
+          child: Stack(children: [
+            // ── Circles sized relative to card width ─────────────────────
+            // Giant top-right — bleeds off edge
+            Positioned(
+                right: -(cw * 0.20),
+                top: -(cw * 0.22),
+                child: Container(
+                    width: cw * 0.90,
+                    height: cw * 0.90,
+                    decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.08),
+                        shape: BoxShape.circle))),
+            // Large bottom-left — bleeds off edge
+            Positioned(
+                left: -(cw * 0.22),
+                bottom: -(cw * 0.20),
+                child: Container(
+                    width: cw * 0.80,
+                    height: cw * 0.80,
+                    decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.06),
+                        shape: BoxShape.circle))),
+            // Medium bottom-right
+            Positioned(
+                right: cw * 0.06,
+                bottom: -(cw * 0.08),
+                child: Container(
+                    width: cw * 0.44,
+                    height: cw * 0.44,
+                    decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.05),
+                        shape: BoxShape.circle))),
+            // Small center accent
+            Positioned(
+                left: cw * 0.28,
+                top: _gcHeight * 0.18,
+                child: Container(
+                    width: cw * 0.22,
+                    height: cw * 0.22,
+                    decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.04),
+                        shape: BoxShape.circle))),
+
+            // ── Floating finance icons ─────────────────────────────────
+            Positioned(
+                right: cw * 0.10,
+                top: 14,
+                child: Icon(Icons.payments_rounded,
+                    size: 22, color: Colors.white.withOpacity(0.11))),
+            Positioned(
+                left: cw * 0.08,
+                top: 14,
+                child: Icon(Icons.trending_up_rounded,
+                    size: 20, color: Colors.white.withOpacity(0.10))),
+            Positioned(
+                right: cw * 0.06,
+                top: _gcHeight * 0.38,
+                child: Icon(Icons.monetization_on_outlined,
+                    size: 18, color: Colors.white.withOpacity(0.09))),
+            Positioned(
+                left: cw * 0.06,
+                bottom: _gcHeight * 0.28,
+                child: Icon(Icons.pie_chart_outline_rounded,
+                    size: 20, color: Colors.white.withOpacity(0.09))),
+            Positioned(
+                left: cw * 0.40,
+                top: 10,
+                child: Icon(Icons.show_chart_rounded,
+                    size: 16, color: Colors.white.withOpacity(0.07))),
+
+            // ── Card content (padded, on top of circles) ──────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Top row: label + eye + arrow
+                  Row(children: [
+                    Text('Account Balance',
+                        style: GoogleFonts.dmSans(
+                            color: Colors.white.withOpacity(0.65),
+                            fontSize: 10,
+                            fontWeight: FontWeight.w500)),
+                    const Spacer(),
+                    GestureDetector(
+                      onTap: () =>
+                          setState(() => _balanceHidden = !_balanceHidden),
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 200),
+                        child: Icon(
+                          _balanceHidden
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
+                          key: ValueKey(_balanceHidden),
+                          color: Colors.white.withOpacity(0.45),
+                          size: 15,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      width: 24,
+                      height: 24,
+                      decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.18),
+                          shape: BoxShape.circle),
+                      child: const Icon(Icons.arrow_forward_rounded,
+                          color: Colors.white, size: 12),
+                    ),
+                  ]),
+                  const SizedBox(height: 5),
+
+                  // Balance amount
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 200),
+                    child: _balanceHidden
+                        ? Text('••••••••••',
+                            key: const ValueKey('h'),
+                            style: GoogleFonts.dmSans(
+                                color: Colors.white,
+                                fontSize: 26,
+                                fontWeight: FontWeight.w800))
+                        : AnimatedBuilder(
+                            key: const ValueKey('s'),
+                            animation: _balanceAnim,
+                            builder: (_, __) {
+                              final raw =
+                                  fmt.format(balance * _balanceAnim.value);
+                              final parts = raw.split(' ');
+                              final symbol = parts.isNotEmpty ? parts[0] : 'Rp';
+                              final number = parts.length > 1
+                                  ? parts.sublist(1).join(' ')
+                                  : '0';
+                              return Row(
+                                crossAxisAlignment: CrossAxisAlignment.baseline,
+                                textBaseline: TextBaseline.alphabetic,
+                                children: [
+                                  Text(symbol,
+                                      style: GoogleFonts.dmSans(
+                                          color: Colors.white,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w700)),
+                                  const SizedBox(width: 3),
+                                  Text(number,
+                                      style: GoogleFonts.dmSans(
+                                          color: Colors.white,
+                                          fontSize: 26,
+                                          fontWeight: FontWeight.w800,
+                                          letterSpacing: -0.5)),
+                                ],
+                              );
+                            }),
+                  ),
+                  const SizedBox(height: 6),
+
+                  // Income / Expense sub + trend badge
+                  Row(children: [
+                    _gcSub('Income', '+${fmt.format(txP.totalIncome)}'),
+                    const SizedBox(width: 14),
+                    _gcSub('Expenses', '-${fmt.format(txP.totalExpense)}'),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 7, vertical: 3),
+                      decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(20)),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        Icon(
+                            trendTxt.isNotEmpty
+                                ? (trendUp
+                                    ? Icons.trending_up_rounded
+                                    : Icons.trending_down_rounded)
+                                : Icons.info_outline_rounded,
+                            color: Colors.white,
+                            size: 10),
+                        const SizedBox(width: 3),
+                        Text(trendTxt.isNotEmpty ? trendTxt : 'View wallets',
+                            style: GoogleFonts.dmSans(
+                                color: Colors.white,
+                                fontSize: 8,
+                                fontWeight: FontWeight.w600)),
+                      ]),
+                    ),
+                  ]),
+
+                  const Spacer(),
+
+                  // ── ACTION BUTTONS — each navigates to correct AddTransactionScreen ──
+                  Container(
+                    padding: const EdgeInsets.only(top: 4, bottom: 14),
+                    child: Row(
+                      children: [
+                        // Transfer button
+                        _gcActionBtn(
+                          icon: Icons.swap_horiz_rounded,
+                          label: 'Transfer',
+                          onTap: () =>
+                              _navigateToAddTransaction(ctx, 'transfer'),
+                        ),
+                        _gcDivider(),
+                        // Income button
+                        _gcActionBtn(
+                          icon: Icons.arrow_downward_rounded,
+                          label: 'Income',
+                          onTap: () => _navigateToAddTransaction(ctx, 'income'),
+                        ),
+                        _gcDivider(),
+                        // Expense button
+                        _gcActionBtn(
+                          icon: Icons.arrow_upward_rounded,
+                          label: 'Expense',
+                          onTap: () =>
+                              _navigateToAddTransaction(ctx, 'expense'),
+                        ),
+                        _gcDivider(),
+                        // Add button — opens AddTransactionScreen default (expense)
+                        // and lets user switch type from inside the page
+                        _gcActionBtn(
+                          icon: Icons.add_rounded,
+                          label: 'Add',
+                          isAccent: true,
+                          onTap: () =>
+                              _navigateToAddTransaction(ctx, 'expense'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ), // Padding
+          ]), // Stack
+        ); // Container
+      }), // LayoutBuilder
+    ); // _PressableWidget
   }
 
   static Widget _gcDivider() => Container(
         width: 1,
-        height: 28,
+        height: 26,
         color: Colors.white.withOpacity(0.15),
       );
 
@@ -1035,8 +1079,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 32,
-                height: 32,
+                width: 30,
+                height: 30,
                 decoration: BoxDecoration(
                   color: isAccent
                       ? Colors.white.withOpacity(0.30)
@@ -1048,13 +1092,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       : null,
                 ),
                 child:
-                    Icon(icon, color: Colors.white, size: isAccent ? 18 : 16),
+                    Icon(icon, color: Colors.white, size: isAccent ? 17 : 15),
               ),
               const SizedBox(height: 4),
               Text(label,
                   style: GoogleFonts.dmSans(
                       color: Colors.white.withOpacity(isAccent ? 1.0 : 0.85),
-                      fontSize: 10,
+                      fontSize: 9,
                       fontWeight:
                           isAccent ? FontWeight.w700 : FontWeight.w600)),
             ],
@@ -1254,15 +1298,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       );
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // SPENDING OVERVIEW
+  // SPENDING OVERVIEW — balanced layout: donut kiri, list kanan, card lebih tall
   // ═══════════════════════════════════════════════════════════════════════════
   Widget _buildSpendingOverview(List<MapEntry<String, double>> catList,
       double totalExp, NumberFormat fmt, BuildContext ctx) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
                 color: _navy.withOpacity(0.06),
@@ -1281,44 +1325,58 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 Icon(Icons.more_vert, color: _navy.withOpacity(0.4), size: 18),
           ),
         ]),
-        const SizedBox(height: 14),
-        Row(children: [
+        const SizedBox(height: 16),
+
+        // ── Donut + legend side by side, balanced ─────────────────────
+        Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+          // Donut: 72×72 — sedikit kecil supaya info tetap terbaca
           SizedBox(
-            width: 64,
-            height: 64,
+            width: 72,
+            height: 72,
             child: totalExp == 0
                 ? Container(
-                    width: 64,
-                    height: 64,
+                    width: 72,
+                    height: 72,
                     decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
-                            color: const Color(0xFFF0F2F5), width: 8)),
+                            color: const Color(0xFFF0F2F5), width: 9)),
                     child: Center(
                         child: Text('No\ndata',
                             style: GoogleFonts.dmSans(
                                 color: const Color(0xFFC8CBD6),
-                                fontSize: 9,
+                                fontSize: 8,
                                 height: 1.3),
                             textAlign: TextAlign.center)))
                 : Stack(alignment: Alignment.center, children: [
                     CustomPaint(
-                      size: const Size(64, 64),
+                      size: const Size(72, 72),
                       painter: _DonutPainter(
                         catList.map((e) => e.value).toList(),
                         totalExp,
                         List.generate(catList.length, (i) => _col(i)),
                       ),
                     ),
-                    Text(fmt.format(totalExp),
+                    Column(mainAxisSize: MainAxisSize.min, children: [
+                      Text('Total',
+                          style: GoogleFonts.dmSans(
+                              fontSize: 7,
+                              color: _navy.withOpacity(0.45),
+                              fontWeight: FontWeight.w500)),
+                      Text(
+                        fmt.format(totalExp).replaceFirst('Rp ', ''),
                         style: GoogleFonts.dmSans(
-                            fontSize: 8,
+                            fontSize: 8.5,
                             color: _navy,
                             fontWeight: FontWeight.w800),
-                        textAlign: TextAlign.center),
+                        textAlign: TextAlign.center,
+                      ),
+                    ]),
                   ]),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 16),
+
+          // ── Category list — fills remaining space ──────────────────
           Expanded(
             child: catList.isEmpty
                 ? Center(
@@ -1326,14 +1384,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         style: GoogleFonts.dmSans(
                             color: const Color(0xFFC8CBD6), fontSize: 12)))
                 : Column(children: [
-                    for (int i = 0; i < catList.take(3).length; i++) ...[
-                      if (i > 0)
-                        Divider(height: 12, color: _navy.withOpacity(0.07)),
+                    for (int i = 0; i < catList.take(4).length; i++) ...[
+                      if (i > 0) const SizedBox(height: 9),
                       _spendRow(
                         ctx: ctx,
                         label: catList[i].key,
                         color: _col(i),
-                        pct: totalExp > 0
+                        pct: totalExp > 0 ? catList[i].value / totalExp : 0.0,
+                        pctLabel: totalExp > 0
                             ? '${((catList[i].value / totalExp) * 100).toStringAsFixed(0)}%'
                             : '0%',
                         amt: fmt.format(catList[i].value),
@@ -1342,6 +1400,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   ]),
           ),
         ]),
+
+        // ── Extra bottom padding biar card lebih tall/square ──────────
+        const SizedBox(height: 8),
       ]),
     );
   }
@@ -1350,29 +1411,47 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     required BuildContext ctx,
     required String label,
     required Color color,
-    required String pct,
+    required double pct,
+    required String pctLabel,
     required String amt,
   }) =>
       GestureDetector(
-        onTap: () => _showCatDetail(ctx, label, color, pct, amt),
-        child: Row(children: [
-          Container(
-              width: 8,
-              height: 8,
-              decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-          const SizedBox(width: 8),
-          Expanded(
-              child: Text(label,
-                  style: GoogleFonts.dmSans(color: _navy, fontSize: 12))),
-          Text(pct,
-              style: GoogleFonts.dmSans(
-                  color: _navy.withOpacity(0.5),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600)),
-          const SizedBox(width: 4),
-          Icon(Icons.chevron_right_rounded,
-              size: 12, color: _navy.withOpacity(0.3)),
-        ]),
+        onTap: () => _showCatDetail(ctx, label, color, pctLabel, amt),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              Container(
+                  width: 8,
+                  height: 8,
+                  decoration:
+                      BoxDecoration(color: color, shape: BoxShape.circle)),
+              const SizedBox(width: 6),
+              Expanded(
+                  child: Text(label,
+                      style: GoogleFonts.dmSans(
+                          color: _navy,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600))),
+              Text(pctLabel,
+                  style: GoogleFonts.dmSans(
+                      color: _navy.withOpacity(0.5),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600)),
+            ]),
+            const SizedBox(height: 4),
+            // Thin progress bar
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: pct.clamp(0.0, 1.0),
+                minHeight: 3,
+                backgroundColor: color.withOpacity(0.12),
+                valueColor: AlwaysStoppedAnimation<Color>(color),
+              ),
+            ),
+          ],
+        ),
       );
 
   static void _showCatDetail(
@@ -1380,54 +1459,85 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     showModalBottomSheet(
       context: ctx,
       backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (_) => Container(
-        margin: const EdgeInsets.all(12),
-        padding: const EdgeInsets.all(24),
+        margin: const EdgeInsets.fromLTRB(12, 0, 12, 24),
         decoration: BoxDecoration(
-            color: Colors.white, borderRadius: BorderRadius.circular(24)),
+            color: Colors.white, borderRadius: BorderRadius.circular(28)),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Center(
-              child: Container(
-                  width: 40,
-                  height: 4,
+          // Drag handle
+          Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: Center(
+                child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                        color: _navy.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(2)))),
+          ),
+          const SizedBox(height: 20),
+          // Color accent header strip
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 20),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: color.withOpacity(0.15), width: 1),
+            ),
+            child: Row(children: [
+              Container(
+                  width: 44,
+                  height: 44,
                   decoration: BoxDecoration(
-                      color: _navy.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(2)))),
-          const SizedBox(height: 20),
-          Row(children: [
-            Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                    color: color.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(14)),
-                child: Icon(Icons.category_outlined, color: color, size: 24)),
-            const SizedBox(width: 14),
-            Expanded(
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                  Text(label,
-                      style: GoogleFonts.dmSans(
-                          color: _navy,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 16)),
-                  Text('$pct of total spending',
-                      style: GoogleFonts.dmSans(
-                          color: _navy.withOpacity(0.45), fontSize: 12)),
-                ])),
-          ]),
-          const SizedBox(height: 20),
-          Divider(color: _navy.withOpacity(0.08)),
+                      color: color.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(14)),
+                  child: Icon(Icons.category_rounded, color: color, size: 22)),
+              const SizedBox(width: 14),
+              Expanded(
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                    Text(label,
+                        style: GoogleFonts.dmSans(
+                            color: _navy,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 17)),
+                    const SizedBox(height: 2),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: color.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text('$pct of total spending',
+                          style: GoogleFonts.dmSans(
+                              color: color,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600)),
+                    ),
+                  ])),
+            ]),
+          ),
           const SizedBox(height: 16),
-          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            Text('Total',
-                style: GoogleFonts.dmSans(color: _navy.withOpacity(0.45))),
-            Text(amt,
-                style: GoogleFonts.dmSans(
-                    color: color, fontWeight: FontWeight.w800, fontSize: 16)),
-          ]),
-          const SizedBox(height: 24),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Total spent',
+                      style: GoogleFonts.dmSans(
+                          color: _navy.withOpacity(0.45), fontSize: 13)),
+                  Text(amt,
+                      style: GoogleFonts.dmSans(
+                          color: color,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 20)),
+                ]),
+          ),
+          const SizedBox(height: 28),
         ]),
       ),
     );
@@ -1497,7 +1607,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // HISTORY CARD — full width, never clipped
+  // HISTORY CARD
   // ═══════════════════════════════════════════════════════════════════════════
   Widget _buildHistoryCard(List<AppTransaction> txs, TransactionProvider txP,
       NumberFormat fmt, BuildContext ctx) {
@@ -1527,7 +1637,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           : Column(children: [
               ...txs.take(5).map((t) => _txTile(t, fmt)).toList(),
               GestureDetector(
-                onTap: () {},
+                onTap: () => Navigator.push(ctx,
+                    MaterialPageRoute(builder: (_) => const HistoryScreen())),
                 child: Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(vertical: 16),
@@ -1650,8 +1761,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PEEK STACK WALLET CARDS
-// Full rewrite: eye toggle, tap-to-front animation, tap-front → navigate,
-// AnimatedScale depth illusion, easeOutExpo curves
 // ─────────────────────────────────────────────────────────────────────────────
 class _PeekStackWallets extends StatefulWidget {
   final Map<String, List<AppAccount>> byGroup;
@@ -1674,8 +1783,7 @@ class _PeekStackWalletsState extends State<_PeekStackWallets>
   bool _hidden = false;
   int? _animatingCard;
 
-  // Card dimensions
-  static const double _cardH = 162.0;
+  static const double _cardH = 182.0;
   static const double _peek = 42.0;
   static const double _scaleStep = 0.038;
 
@@ -1706,19 +1814,39 @@ class _PeekStackWalletsState extends State<_PeekStackWallets>
   @override
   void initState() {
     super.initState();
+    _rebuildStackOrder();
+  }
+
+  @override
+  void didUpdateWidget(covariant _PeekStackWallets oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Rebuild stack order whenever the number of groups changes
+    // (e.g. user adds or deletes a wallet category)
+    if (oldWidget.byGroup.length != widget.byGroup.length) {
+      _animatingCard = null;
+      _rebuildStackOrder();
+    }
+  }
+
+  void _rebuildStackOrder() {
     final n = widget.byGroup.length;
     _stackOrder = List.generate(n, (i) => n - 1 - i);
   }
 
   Future<void> _peekBring(int cid) async {
     if (_animatingCard != null) return;
+    // Guard: cid must be valid in current stack
+    if (!_stackOrder.contains(cid)) return;
     setState(() => _animatingCard = cid);
     await Future.delayed(const Duration(milliseconds: 220));
     if (!mounted) return;
     setState(() {
-      final idx = _stackOrder.indexOf(cid);
-      _stackOrder.removeAt(idx);
-      _stackOrder.add(cid);
+      // Re-check after async gap — group may have changed
+      if (_stackOrder.contains(cid)) {
+        final idx = _stackOrder.indexOf(cid);
+        _stackOrder.removeAt(idx);
+        _stackOrder.add(cid);
+      }
       _animatingCard = null;
     });
   }
@@ -1728,6 +1856,13 @@ class _PeekStackWalletsState extends State<_PeekStackWallets>
     final groups = widget.byGroup.entries.toList();
     final n = groups.length;
     if (n == 0) return const SizedBox.shrink();
+
+    // Safety: if _stackOrder is out of sync (e.g. during hot reload or rapid
+    // widget updates), rebuild it immediately to prevent RangeError
+    if (_stackOrder.length != n ||
+        _stackOrder.any((idx) => idx < 0 || idx >= n)) {
+      _rebuildStackOrder();
+    }
 
     final stackH = (n - 1) * _peek + _cardH;
 
@@ -1828,13 +1963,11 @@ class _PeekStackWalletsState extends State<_PeekStackWallets>
       ),
       clipBehavior: Clip.hardEdge,
       child: Stack(children: [
-        // Large bg icon bottom-right
         Positioned(
           right: -16,
           bottom: -16,
           child: Icon(bgIcon, size: 110, color: Colors.white.withOpacity(0.06)),
         ),
-        // Deco circles
         Positioned(
           right: -24,
           top: -24,
@@ -1859,26 +1992,40 @@ class _PeekStackWalletsState extends State<_PeekStackWallets>
             ),
           ),
         ),
-
-        // ── FRONT CARD full content ──────────────────────────────────────
         if (isFront)
           Padding(
-            padding: const EdgeInsets.fromLTRB(18, 14, 18, 16),
+            padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Row: masked number | eye toggle | NFC icon
+                // ── Top row: category icon pill + eye toggle ────────────
                 Row(children: [
-                  Text(
-                    '•••• •••• ${_maskedNum(cid)}',
-                    style: GoogleFonts.dmMono(
-                      color: Colors.white.withOpacity(0.45),
-                      fontSize: 11,
-                      letterSpacing: 2.2,
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(20),
                     ),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      Icon(
+                        _bgIcons[group.key] ?? Icons.wallet_rounded,
+                        size: 12,
+                        color: Colors.white.withOpacity(0.85),
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        group.key,
+                        style: GoogleFonts.dmSans(
+                          color: Colors.white.withOpacity(0.9),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ]),
                   ),
                   const Spacer(),
-                  // 👁 Eye toggle
+                  // Eye toggle
                   GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onTap: () => setState(() => _hidden = !_hidden),
@@ -1901,117 +2048,58 @@ class _PeekStackWalletsState extends State<_PeekStackWallets>
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  // NFC chip icon
-                  Transform.rotate(
-                    angle: math.pi / 2,
-                    child: Icon(
-                      Icons.wifi_rounded,
-                      color: Colors.white.withOpacity(0.28),
-                      size: 19,
-                    ),
-                  ),
                 ]),
 
-                const SizedBox(height: 8),
+                const SizedBox(height: 12),
 
-                // Group name + account count
+                // ── Account count ───────────────────────────────────────
                 Text(
-                  group.key,
+                  '${group.value.length} akun',
                   style: GoogleFonts.dmSans(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.3,
+                    color: Colors.white.withOpacity(0.50),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
-                Text(
-                  '${group.value.length} account${group.value.length > 1 ? 's' : ''} · ${group.key}',
-                  style: GoogleFonts.dmSans(
-                    color: Colors.white.withOpacity(0.48),
-                    fontSize: 10.5,
-                  ),
-                ),
+                const SizedBox(height: 4),
 
                 const Spacer(),
 
-                // Balance row + "View all" pill
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Your Balance',
-                          style: GoogleFonts.dmSans(
-                            color: Colors.white.withOpacity(0.48),
-                            fontSize: 10,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 280),
-                          transitionBuilder: (child, anim) => FadeTransition(
-                            opacity: anim,
-                            child: SlideTransition(
-                              position: Tween(
-                                begin: const Offset(0, 0.2),
-                                end: Offset.zero,
-                              ).animate(anim),
-                              child: child,
-                            ),
-                          ),
-                          child: Text(
-                            _hidden
-                                ? '••••••••'
-                                : widget.formatter.format(groupTotal),
-                            key: ValueKey(_hidden),
-                            style: GoogleFonts.dmSans(
-                              color: Colors.white,
-                              fontSize: 22,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: -0.5,
-                            ),
-                          ),
-                        ),
-                      ],
+                // ── Balance ─────────────────────────────────────────────
+                Text(
+                  'Your Balance',
+                  style: GoogleFonts.dmSans(
+                    color: Colors.white.withOpacity(0.50),
+                    fontSize: 10,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 280),
+                  transitionBuilder: (child, anim) => FadeTransition(
+                    opacity: anim,
+                    child: SlideTransition(
+                      position: Tween(
+                        begin: const Offset(0, 0.2),
+                        end: Offset.zero,
+                      ).animate(anim),
+                      child: child,
                     ),
-                    const Spacer(),
-                    // "View all" pill — tap hint
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 11, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.14),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                            color: Colors.white.withOpacity(0.15), width: 1),
-                      ),
-                      child: Row(mainAxisSize: MainAxisSize.min, children: [
-                        Text(
-                          'View all',
-                          style: GoogleFonts.dmSans(
-                            color: Colors.white.withOpacity(0.85),
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        Icon(
-                          Icons.arrow_forward_rounded,
-                          color: Colors.white.withOpacity(0.85),
-                          size: 11,
-                        ),
-                      ]),
+                  ),
+                  child: Text(
+                    _hidden ? '••••••••' : widget.formatter.format(groupTotal),
+                    key: ValueKey(_hidden),
+                    style: GoogleFonts.dmSans(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.5,
                     ),
-                  ],
+                  ),
                 ),
               ],
             ),
           ),
-
-        // ── BACK CARD peek strip ────────────────────────────────────────
         if (!isFront)
           Padding(
             padding: const EdgeInsets.fromLTRB(18, 14, 18, 0),
@@ -2053,11 +2141,6 @@ class _PeekStackWalletsState extends State<_PeekStackWallets>
           ),
       ]),
     );
-  }
-
-  String _maskedNum(int cid) {
-    const nums = ['5115', '0336', '1018', '2244', '3377', '4488', '5599'];
-    return nums[cid % nums.length];
   }
 }
 

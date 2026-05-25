@@ -7,14 +7,24 @@ import 'package:intl/intl.dart';
 class AppColors {
   static const navy = Color(0xFF0D1B3E);
   static const navyLight = Color(0xFF1A2D5A);
-  static const navyMid = Color(0xFF243666);
   static const yellow = Color(0xFFF5C842);
   static const green = Color(0xFF1DB87A);
   static const white = Color(0xFFFFFFFF);
-  static const offWhite = Color(0xFFF4F6FA);
+  static const offWhite = Color(0xFFF0F2F7);
   static const textMuted = Color(0xFF8A96B0);
   static const divider = Color(0xFFE8ECF4);
 }
+
+// ─────────────────────────────────────────────
+//  CURRENCY FORMATTER
+// ─────────────────────────────────────────────
+final _rupiahFmt = NumberFormat.currency(
+  locale: 'id_ID',
+  symbol: 'Rp ',
+  decimalDigits: 0,
+);
+
+String rp(int amount) => _rupiahFmt.format(amount);
 
 // ─────────────────────────────────────────────
 //  MODEL
@@ -52,6 +62,15 @@ extension NotifCategoryExt on NotifCategory {
     }
   }
 
+  Color get onColor {
+    switch (this) {
+      case NotifCategory.reminder:
+        return AppColors.navy;
+      default:
+        return AppColors.white;
+    }
+  }
+
   IconData get icon {
     switch (this) {
       case NotifCategory.reminder:
@@ -72,6 +91,7 @@ class NotifItem {
   final String id;
   final String title;
   final String body;
+  final String detail;
   final NotifCategory category;
   final DateTime time;
   bool isRead;
@@ -80,6 +100,7 @@ class NotifItem {
     required this.id,
     required this.title,
     required this.body,
+    required this.detail,
     required this.category,
     required this.time,
     this.isRead = false,
@@ -87,100 +108,157 @@ class NotifItem {
 }
 
 // ─────────────────────────────────────────────
-//  DUMMY DATA
+//  DUMMY DATA (Rupiah)
 // ─────────────────────────────────────────────
 List<NotifItem> _generateDummyNotifs() {
   final now = DateTime.now();
   return [
     NotifItem(
-        id: '1',
-        title: 'Electricity Bill Due',
-        body: 'Due tomorrow — pay before the late fee kicks in.',
-        category: NotifCategory.reminder,
-        time: now.subtract(const Duration(hours: 1)),
-        isRead: false),
+      id: '1',
+      title: 'Electricity Bill Due',
+      body: 'Tagihan listrik jatuh tempo besok — bayar sebelum dikenai denda.',
+      detail: 'Tagihan listrik PLN sebesar ${rp(450000)} jatuh tempo besok. '
+          'Hindari denda keterlambatan sebesar ${rp(50000)} dengan membayar sebelum tengah malam. '
+          'Kamu bisa bayar melalui fitur transfer atau marketplace favoritmu.',
+      category: NotifCategory.reminder,
+      time: now.subtract(const Duration(hours: 1)),
+      isRead: false,
+    ),
     NotifItem(
-        id: '2',
-        title: 'Transaction Recorded',
-        body: '\$12.50 expense at Grocery Store has been logged.',
-        category: NotifCategory.transaction,
-        time: now.subtract(const Duration(hours: 3)),
-        isRead: false),
+      id: '2',
+      title: 'Transaction Recorded',
+      body: 'Pengeluaran ${rp(87500)} di Indomaret sudah dicatat.',
+      detail:
+          'Transaksi sebesar ${rp(87500)} di Indomaret telah berhasil dicatat '
+          'ke kategori Makanan & Minuman. Saldo anggaran kategori ini sekarang tersisa ${rp(312500)}. '
+          'Ketuk untuk melihat detail transaksi lengkap.',
+      category: NotifCategory.transaction,
+      time: now.subtract(const Duration(hours: 3)),
+      isRead: false,
+    ),
     NotifItem(
-        id: '3',
-        title: 'Budget Almost Exhausted',
-        body: 'Food & Beverages is at 90% of your monthly limit.',
-        category: NotifCategory.budget,
-        time: now.subtract(const Duration(hours: 5)),
-        isRead: true),
+      id: '3',
+      title: 'Budget Almost Exhausted',
+      body: 'Makanan & Minuman sudah 90% dari limit bulanan.',
+      detail:
+          'Kamu sudah menggunakan ${rp(1800000)} dari anggaran ${rp(2000000)} '
+          'untuk kategori Makanan & Minuman bulan ini. '
+          'Hanya tersisa ${rp(200000)} untuk sisa bulan ini — coba kurangi makan di luar yuk!',
+      category: NotifCategory.budget,
+      time: now.subtract(const Duration(hours: 5)),
+      isRead: true,
+    ),
     NotifItem(
-        id: '4',
-        title: 'Weekly Insight',
-        body: "You spent 12% less than last week. Keep it up!",
-        category: NotifCategory.insight,
-        time: now.subtract(const Duration(hours: 6)),
-        isRead: true),
+      id: '4',
+      title: 'Weekly Insight',
+      body: 'Pengeluaranmu 12% lebih hemat dari minggu lalu. Keren!',
+      detail:
+          'Minggu ini kamu menghabiskan ${rp(1230000)}, turun dari ${rp(1398000)} '
+          'minggu lalu — penghematan sebesar ${rp(168000)}. '
+          'Kategori terbesar yang berhasil dikurangi adalah makan di luar. Pertahankan ya!',
+      category: NotifCategory.insight,
+      time: now.subtract(const Duration(hours: 6)),
+      isRead: true,
+    ),
     NotifItem(
-        id: '5',
-        title: 'Finance Tip',
-        body: 'Try the 50/30/20 rule to better manage your monthly expenses.',
-        category: NotifCategory.tips,
-        time: now.subtract(const Duration(hours: 8)),
-        isRead: true),
+      id: '5',
+      title: 'Finance Tip',
+      body: 'Coba aturan 50/30/20 untuk kelola pengeluaran bulanan kamu.',
+      detail:
+          'Alokasikan 50% penghasilan untuk kebutuhan, 30% untuk keinginan, '
+          'dan 20% untuk tabungan atau cicilan. '
+          'Berdasarkan penghasilan kamu ${rp(8000000)}, artinya ${rp(1600000)} bisa masuk ke tabungan tiap bulan.',
+      category: NotifCategory.tips,
+      time: now.subtract(const Duration(hours: 8)),
+      isRead: true,
+    ),
     NotifItem(
-        id: '6',
-        title: 'Health Insurance Reminder',
-        body: "This month's health insurance payment hasn't been made yet.",
-        category: NotifCategory.reminder,
-        time: now.subtract(const Duration(days: 1, hours: 2)),
-        isRead: true),
+      id: '6',
+      title: 'Health Insurance Reminder',
+      body: 'Iuran BPJS bulan ini belum dibayar.',
+      detail: 'Iuran BPJS Kesehatan kamu sebesar ${rp(150000)} untuk bulan ini '
+          'belum terbayar. Batas pembayaran tanggal 10. '
+          'Jangan sampai telat ya agar manfaatnya tetap aktif!',
+      category: NotifCategory.reminder,
+      time: now.subtract(const Duration(days: 1, hours: 2)),
+      isRead: true,
+    ),
     NotifItem(
-        id: '7',
-        title: 'Income Received',
-        body: '\$2,500.00 salary transfer has been received.',
-        category: NotifCategory.transaction,
-        time: now.subtract(const Duration(days: 1, hours: 4)),
-        isRead: true),
+      id: '7',
+      title: 'Income Received',
+      body: 'Transfer gaji ${rp(8500000)} sudah masuk ke rekening.',
+      detail:
+          'Gaji sebesar ${rp(8500000)} telah berhasil masuk ke rekening BCA kamu '
+          'yang berakhiran 4521. Anggaran bulanan kamu juga sudah otomatis diperbarui. '
+          'Yuk alokasikan sesuai rencana keuanganmu!',
+      category: NotifCategory.transaction,
+      time: now.subtract(const Duration(days: 1, hours: 4)),
+      isRead: true,
+    ),
     NotifItem(
-        id: '8',
-        title: 'Monthly Budget Reset',
-        body: 'Your monthly budget has been reset for this period.',
-        category: NotifCategory.budget,
-        time: now.subtract(const Duration(days: 1, hours: 7)),
-        isRead: true),
+      id: '8',
+      title: 'Monthly Budget Reset',
+      body: 'Anggaran bulanan sudah direset untuk periode ini.',
+      detail: 'Periode anggaran baru telah dimulai. Alokasi bulan ini: '
+          'Makanan ${rp(2000000)} · Transportasi ${rp(500000)} · '
+          'Hiburan ${rp(300000)} · Tabungan ${rp(1600000)}. '
+          'Semangat kelola keuangan bulan ini!',
+      category: NotifCategory.budget,
+      time: now.subtract(const Duration(days: 1, hours: 7)),
+      isRead: true,
+    ),
     NotifItem(
-        id: '9',
-        title: 'Shopping Saving Tip',
-        body: 'End-of-month sales usually offer the best discounts.',
-        category: NotifCategory.tips,
-        time: now.subtract(const Duration(days: 2, hours: 1)),
-        isRead: true),
+      id: '9',
+      title: 'Shopping Saving Tip',
+      body: 'Promo akhir bulan biasanya kasih diskon paling besar.',
+      detail:
+          'Tokopedia, Shopee, dan Lazada biasanya mengadakan promo besar di akhir bulan. '
+          'Pertimbangkan menunda pembelian yang tidak mendesak untuk mendapatkan '
+          'penghematan hingga 30%. Aktifkan wishlist sekarang!',
+      category: NotifCategory.tips,
+      time: now.subtract(const Duration(days: 2, hours: 1)),
+      isRead: true,
+    ),
     NotifItem(
-        id: '10',
-        title: 'Weekly Report Ready',
-        body: 'Your financial summary for last week is ready to view.',
-        category: NotifCategory.insight,
-        time: now.subtract(const Duration(days: 2, hours: 3)),
-        isRead: true),
+      id: '10',
+      title: 'Weekly Report Ready',
+      body: 'Ringkasan keuangan minggu lalu sudah siap dilihat.',
+      detail:
+          'Ringkasan minggu lalu: Pemasukan ${rp(0)} · Pengeluaran ${rp(1230000)} · '
+          'Kategori terbesar: Makanan & Minuman (${rp(560000)}). '
+          'Tingkat tabungan minggu ini 0% — gaji kamu cair minggu depan kok!',
+      category: NotifCategory.insight,
+      time: now.subtract(const Duration(days: 2, hours: 3)),
+      isRead: true,
+    ),
     NotifItem(
-        id: '11',
-        title: 'Large Transaction Detected',
-        body: '\$350.00 expense at Online Store has been recorded.',
-        category: NotifCategory.transaction,
-        time: now.subtract(const Duration(days: 3, hours: 2)),
-        isRead: true),
+      id: '11',
+      title: 'Large Transaction Alert',
+      body: 'Pengeluaran ${rp(2450000)} di Tokopedia sudah dicatat.',
+      detail: 'Transaksi besar sebesar ${rp(2450000)} terdeteksi di Tokopedia. '
+          'Jumlah ini melebihi batas notifikasi transaksi besar kamu (${rp(500000)}). '
+          'Apakah transaksi ini benar? Jika tidak, segera hubungi bank kamu.',
+      category: NotifCategory.transaction,
+      time: now.subtract(const Duration(days: 3, hours: 2)),
+      isRead: true,
+    ),
     NotifItem(
-        id: '12',
-        title: 'Investment Reminder',
-        body: "Time to transfer your regular monthly investment funds.",
-        category: NotifCategory.reminder,
-        time: now.subtract(const Duration(days: 3, hours: 5)),
-        isRead: true),
+      id: '12',
+      title: 'Investment Reminder',
+      body: 'Saatnya transfer dana investasi rutin bulanan kamu.',
+      detail:
+          'Transfer investasi rutin sebesar ${rp(500000)} ke akun Bibit kamu '
+          'belum dilakukan bulan ini. Kamu sudah konsisten selama 8 bulan berturut-turut — '
+          'jangan putus sekarang ya! Investasi konsisten adalah kunci.',
+      category: NotifCategory.reminder,
+      time: now.subtract(const Duration(days: 3, hours: 5)),
+      isRead: true,
+    ),
   ];
 }
 
 // ─────────────────────────────────────────────
-//  SCREEN
+//  MAIN SCREEN
 // ─────────────────────────────────────────────
 class NotificationScreen extends StatefulWidget {
   const NotificationScreen({super.key});
@@ -192,7 +270,7 @@ class NotificationScreen extends StatefulWidget {
 class _NotificationScreenState extends State<NotificationScreen>
     with SingleTickerProviderStateMixin {
   final List<NotifItem> _allNotifs = _generateDummyNotifs();
-  NotifCategory? _selectedCategory; // null = all
+  NotifCategory? _selectedCategory;
   late AnimationController _fadeCtrl;
 
   @override
@@ -200,7 +278,7 @@ class _NotificationScreenState extends State<NotificationScreen>
     super.initState();
     _fadeCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 280),
     )..forward();
   }
 
@@ -217,13 +295,11 @@ class _NotificationScreenState extends State<NotificationScreen>
 
   int get _unreadCount => _allNotifs.where((n) => !n.isRead).length;
 
-  // Group by day
   Map<String, List<NotifItem>> _groupByDay(List<NotifItem> items) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final yesterday = today.subtract(const Duration(days: 1));
     final result = <String, List<NotifItem>>{};
-
     for (final item in items) {
       final d = DateTime(item.time.year, item.time.month, item.time.day);
       String key;
@@ -232,26 +308,34 @@ class _NotificationScreenState extends State<NotificationScreen>
       } else if (d == yesterday) {
         key = 'Yesterday';
       } else {
-        key = DateFormat('MMMM d, yyyy').format(d);
+        key = DateFormat('d MMMM yyyy').format(d);
       }
       result.putIfAbsent(key, () => []).add(item);
     }
     return result;
   }
 
-  void _markAllRead() {
-    setState(() {
-      for (final n in _allNotifs) {
-        n.isRead = true;
-      }
-    });
-  }
+  void _markAllRead() => setState(() {
+        for (final n in _allNotifs) {
+          n.isRead = true;
+        }
+      });
 
   void _markRead(String id) {
     setState(() {
       final idx = _allNotifs.indexWhere((n) => n.id == id);
       if (idx != -1) _allNotifs[idx].isRead = true;
     });
+  }
+
+  void _openDetail(NotifItem item) {
+    _markRead(item.id);
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _NotifDetailSheet(item: item),
+    );
   }
 
   @override
@@ -272,7 +356,7 @@ class _NotificationScreenState extends State<NotificationScreen>
                   : FadeTransition(
                       opacity: _fadeCtrl,
                       child: ListView.builder(
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                        padding: const EdgeInsets.fromLTRB(14, 8, 14, 24),
                         itemCount: dayKeys.length,
                         itemBuilder: (ctx, i) {
                           final key = dayKeys[i];
@@ -292,23 +376,26 @@ class _NotificationScreenState extends State<NotificationScreen>
   Widget _buildHeader() {
     return Container(
       color: AppColors.navy,
-      padding: const EdgeInsets.fromLTRB(20, 16, 16, 20),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 18),
       child: Row(
         children: [
           GestureDetector(
             onTap: () => Navigator.of(context).maybePop(),
             child: Container(
-              width: 38,
-              height: 38,
+              width: 36,
+              height: 36,
               decoration: BoxDecoration(
                 color: AppColors.navyLight,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.arrow_back_ios_new_rounded,
-                  color: AppColors.white, size: 16),
+              child: const Icon(
+                Icons.arrow_back_ios_new_rounded,
+                color: AppColors.white,
+                size: 15,
+              ),
             ),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -317,7 +404,7 @@ class _NotificationScreenState extends State<NotificationScreen>
                   'Notifications',
                   style: TextStyle(
                     color: AppColors.white,
-                    fontSize: 20,
+                    fontSize: 19,
                     fontWeight: FontWeight.w700,
                     letterSpacing: -0.3,
                   ),
@@ -339,7 +426,7 @@ class _NotificationScreenState extends State<NotificationScreen>
               onTap: _markAllRead,
               child: Container(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                 decoration: BoxDecoration(
                   color: AppColors.yellow,
                   borderRadius: BorderRadius.circular(20),
@@ -367,39 +454,34 @@ class _NotificationScreenState extends State<NotificationScreen>
       child: Column(
         children: [
           SizedBox(
-            height: 50,
+            height: 48,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
               itemCount: categories.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              separatorBuilder: (_, __) => const SizedBox(width: 7),
               itemBuilder: (ctx, i) {
                 final cat = categories[i];
                 final isSelected = _selectedCategory == cat;
+                final activeColor = cat == null ? AppColors.yellow : cat.color;
                 return GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _selectedCategory = cat;
-                      _fadeCtrl.forward(from: 0);
-                    });
-                  },
+                  onTap: () => setState(() {
+                    _selectedCategory = cat;
+                    _fadeCtrl.forward(from: 0);
+                  }),
                   child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
+                    duration: const Duration(milliseconds: 180),
                     padding:
                         const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                     decoration: BoxDecoration(
-                      color: isSelected
-                          ? (cat == null ? AppColors.yellow : cat.color)
-                          : AppColors.navyLight,
+                      color: isSelected ? activeColor : AppColors.navyLight,
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
                       cat == null ? 'All' : cat.label,
                       style: TextStyle(
                         color: isSelected
-                            ? (cat == null || cat == NotifCategory.reminder
-                                ? AppColors.navy
-                                : AppColors.white)
+                            ? (cat == null ? AppColors.navy : cat.onColor)
                             : AppColors.textMuted,
                         fontSize: 12,
                         fontWeight:
@@ -436,28 +518,28 @@ class _NotificationScreenState extends State<NotificationScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
         Row(
           children: [
             Container(
-              width: 4,
-              height: 18,
+              width: 3,
+              height: 16,
               decoration: BoxDecoration(
                 color: AppColors.navy,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 9),
             Text(
               dayLabel,
               style: const TextStyle(
                 color: AppColors.navy,
-                fontSize: 14,
+                fontSize: 13,
                 fontWeight: FontWeight.w700,
-                letterSpacing: -0.2,
+                letterSpacing: -0.1,
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 7),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
               decoration: BoxDecoration(
@@ -473,7 +555,7 @@ class _NotificationScreenState extends State<NotificationScreen>
                 ),
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 7),
             Expanded(
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
@@ -484,9 +566,10 @@ class _NotificationScreenState extends State<NotificationScreen>
                       padding: const EdgeInsets.symmetric(
                           horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                        color: e.key.color.withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: e.key.color.withOpacity(0.3)),
+                        color: e.key.color.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(6),
+                        border:
+                            Border.all(color: e.key.color.withOpacity(0.25)),
                       ),
                       child: Text(
                         '${e.key.label} (${e.value})',
@@ -512,35 +595,35 @@ class _NotificationScreenState extends State<NotificationScreen>
 
   // ── NOTIF CARD ───────────────────────────────
   Widget _buildNotifCard(NotifItem item) {
-    final timeStr = DateFormat('h:mm a').format(item.time);
+    final timeStr = DateFormat('HH:mm').format(item.time);
 
     return GestureDetector(
-      onTap: () => _markRead(item.id),
+      onTap: () => _openDetail(item),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
+        duration: const Duration(milliseconds: 180),
         margin: const EdgeInsets.only(bottom: 8),
         decoration: BoxDecoration(
           color:
-              item.isRead ? AppColors.white : AppColors.navy.withOpacity(0.03),
+              item.isRead ? AppColors.white : AppColors.navy.withOpacity(0.02),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: item.isRead
                 ? AppColors.divider
-                : item.category.color.withOpacity(0.4),
-            width: item.isRead ? 1 : 1.5,
+                : item.category.color.withOpacity(0.45),
+            width: item.isRead ? 0.8 : 1.5,
           ),
           boxShadow: item.isRead
               ? []
               : [
                   BoxShadow(
-                    color: item.category.color.withOpacity(0.08),
+                    color: item.category.color.withOpacity(0.07),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
                 ],
         ),
         child: Padding(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(13),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -548,13 +631,13 @@ class _NotificationScreenState extends State<NotificationScreen>
                 width: 42,
                 height: 42,
                 decoration: BoxDecoration(
-                  color: item.category.color.withOpacity(0.12),
+                  color: item.category.color.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(item.category.icon,
                     color: item.category.color, size: 20),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 11),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -584,15 +667,15 @@ class _NotificationScreenState extends State<NotificationScreen>
                           ),
                       ],
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 3),
                     Text(
                       item.body,
                       style: TextStyle(
                         color: item.isRead
                             ? AppColors.textMuted
-                            : AppColors.navy.withOpacity(0.65),
+                            : AppColors.navy.withOpacity(0.6),
                         fontSize: 12,
-                        height: 1.4,
+                        height: 1.45,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -608,7 +691,7 @@ class _NotificationScreenState extends State<NotificationScreen>
                             fontSize: 11,
                           ),
                         ),
-                        const SizedBox(width: 10),
+                        const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 7, vertical: 2),
@@ -624,6 +707,12 @@ class _NotificationScreenState extends State<NotificationScreen>
                               fontWeight: FontWeight.w600,
                             ),
                           ),
+                        ),
+                        const Spacer(),
+                        Icon(
+                          Icons.chevron_right_rounded,
+                          size: 16,
+                          color: AppColors.textMuted.withOpacity(0.5),
                         ),
                       ],
                     ),
@@ -644,16 +733,16 @@ class _NotificationScreenState extends State<NotificationScreen>
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            width: 72,
-            height: 72,
+            width: 68,
+            height: 68,
             decoration: BoxDecoration(
               color: AppColors.navy.withOpacity(0.06),
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(18),
             ),
             child: const Icon(Icons.notifications_off_rounded,
-                color: AppColors.textMuted, size: 32),
+                color: AppColors.textMuted, size: 30),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
           const Text(
             'No notifications',
             style: TextStyle(
@@ -662,14 +751,211 @@ class _NotificationScreenState extends State<NotificationScreen>
               fontWeight: FontWeight.w700,
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 5),
           Text(
             _selectedCategory != null
                 ? 'No ${_selectedCategory!.label} notifications found'
-                : 'You\'re all caught up!',
+                : "You're all caught up!",
             style: const TextStyle(
               color: AppColors.textMuted,
               fontSize: 13,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────
+//  DETAIL BOTTOM SHEET
+// ─────────────────────────────────────────────
+class _NotifDetailSheet extends StatelessWidget {
+  final NotifItem item;
+
+  const _NotifDetailSheet({required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    final cat = item.category;
+    final dateStr = DateFormat('EEEE, d MMMM yyyy').format(item.time);
+    final timeStr = DateFormat('HH:mm').format(item.time);
+
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        top: 16,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 28,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Handle bar
+          Center(
+            child: Container(
+              width: 38,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.divider,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Icon + title row
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: cat.color.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(cat.icon, color: cat.color, size: 24),
+              ),
+              const SizedBox(width: 13),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.title,
+                      style: const TextStyle(
+                        color: AppColors.navy,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        height: 1.3,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 9, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: cat.color.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(7),
+                      ),
+                      child: Text(
+                        cat.label,
+                        style: TextStyle(
+                          color: cat.color,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              GestureDetector(
+                onTap: () => Navigator.of(context).pop(),
+                child: Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: AppColors.offWhite,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.close_rounded,
+                    size: 17,
+                    color: AppColors.textMuted,
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 18),
+          const Divider(color: AppColors.divider, height: 1),
+          const SizedBox(height: 16),
+
+          // Detail text
+          Text(
+            item.detail,
+            style: const TextStyle(
+              color: Color(0xFF3D4B6B),
+              fontSize: 14,
+              height: 1.65,
+            ),
+          ),
+
+          const SizedBox(height: 18),
+
+          // Meta info row
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.offWhite,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                _metaItem(Icons.calendar_today_rounded, dateStr),
+                Container(
+                  width: 1,
+                  height: 16,
+                  color: AppColors.divider,
+                  margin: const EdgeInsets.symmetric(horizontal: 12),
+                ),
+                _metaItem(Icons.access_time_rounded, timeStr),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          // Action button
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.navy,
+                foregroundColor: AppColors.white,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Text(
+                'Got it',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _metaItem(IconData icon, String text) {
+    return Expanded(
+      child: Row(
+        children: [
+          Icon(icon, size: 13, color: AppColors.textMuted),
+          const SizedBox(width: 5),
+          Flexible(
+            child: Text(
+              text,
+              style: const TextStyle(
+                color: AppColors.textMuted,
+                fontSize: 12,
+              ),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],

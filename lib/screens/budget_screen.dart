@@ -12,6 +12,10 @@ import '../theme/app_theme.dart';
 import '../screens/goal_detail_screen.dart';
 import 'app_top_bar.dart';
 
+// ─── Colors ───────────────────────────────────────────────────────────────
+const _navy = Color(0xFF0D1B3E);
+const _yellow = Color(0xFFF5C842);
+
 // ─── Goal icon data ───────────────────────────────────────────────────────
 class _GoalIcon {
   final IconData icon;
@@ -21,26 +25,26 @@ class _GoalIcon {
 }
 
 const _goalIcons = [
-  _GoalIcon(Icons.directions_car_rounded, Color(0xFF3B82F6), 'Mobil'),
-  _GoalIcon(Icons.home_rounded, Color(0xFF10B981), 'Rumah'),
-  _GoalIcon(Icons.flight_rounded, Color(0xFF6366F1), 'Liburan'),
+  _GoalIcon(Icons.directions_car_rounded, Color(0xFF3B82F6), 'Car'),
+  _GoalIcon(Icons.home_rounded, Color(0xFF10B981), 'House'),
+  _GoalIcon(Icons.flight_rounded, Color(0xFF6366F1), 'Vacation'),
   _GoalIcon(Icons.laptop_rounded, Color(0xFF8B5CF6), 'Laptop'),
-  _GoalIcon(Icons.smartphone_rounded, Color(0xFF06B6D4), 'HP'),
-  _GoalIcon(Icons.school_rounded, Color(0xFFF59E0B), 'Pendidikan'),
-  _GoalIcon(Icons.favorite_rounded, Color(0xFFEF4444), 'Pernikahan'),
-  _GoalIcon(Icons.savings_rounded, Color(0xFF10B981), 'Tabungan'),
-  _GoalIcon(Icons.trending_up_rounded, Color(0xFF059669), 'Investasi'),
-  _GoalIcon(Icons.two_wheeler_rounded, Color(0xFFF97316), 'Motor'),
-  _GoalIcon(Icons.watch_rounded, Color(0xFF6B7280), 'Jam'),
+  _GoalIcon(Icons.smartphone_rounded, Color(0xFF06B6D4), 'Phone'),
+  _GoalIcon(Icons.school_rounded, Color(0xFFF59E0B), 'Education'),
+  _GoalIcon(Icons.favorite_rounded, Color(0xFFEF4444), 'Wedding'),
+  _GoalIcon(Icons.savings_rounded, Color(0xFF10B981), 'Savings'),
+  _GoalIcon(Icons.trending_up_rounded, Color(0xFF059669), 'Investment'),
+  _GoalIcon(Icons.two_wheeler_rounded, Color(0xFFF97316), 'Motorcycle'),
+  _GoalIcon(Icons.watch_rounded, Color(0xFF6B7280), 'Watch'),
   _GoalIcon(Icons.shopping_bag_rounded, Color(0xFFEC4899), 'Fashion'),
   _GoalIcon(Icons.sports_esports_rounded, Color(0xFF7C3AED), 'Gaming'),
-  _GoalIcon(Icons.camera_alt_rounded, Color(0xFF0EA5E9), 'Kamera'),
-  _GoalIcon(Icons.music_note_rounded, Color(0xFFF43F5E), 'Musik'),
+  _GoalIcon(Icons.camera_alt_rounded, Color(0xFF0EA5E9), 'Camera'),
+  _GoalIcon(Icons.music_note_rounded, Color(0xFFF43F5E), 'Music'),
   _GoalIcon(Icons.fitness_center_rounded, Color(0xFF84CC16), 'Gym'),
-  _GoalIcon(Icons.beach_access_rounded, Color(0xFF06B6D4), 'Pantai'),
-  _GoalIcon(Icons.directions_boat_rounded, Color(0xFF1D4ED8), 'Kapal'),
+  _GoalIcon(Icons.beach_access_rounded, Color(0xFF06B6D4), 'Beach'),
+  _GoalIcon(Icons.directions_boat_rounded, Color(0xFF1D4ED8), 'Boat'),
   _GoalIcon(Icons.emoji_events_rounded, Color(0xFFF59E0B), 'Trophy'),
-  _GoalIcon(Icons.rocket_launch_rounded, Color(0xFF7C3AED), 'Bisnis'),
+  _GoalIcon(Icons.rocket_launch_rounded, Color(0xFF7C3AED), 'Business'),
 ];
 
 class BudgetScreen extends StatefulWidget {
@@ -68,7 +72,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
     final provider = context.read<BudgetProvider>();
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppTheme.surface,
+      backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (ctx) => StatefulBuilder(
@@ -84,33 +88,31 @@ class _BudgetScreenState extends State<BudgetScreen> {
                   height: 4,
                   margin: const EdgeInsets.only(bottom: 16),
                   decoration: BoxDecoration(
-                    color: AppTheme.outline,
+                    color: Colors.grey.shade300,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
               ),
-              const Text('Urutkan Goals',
+              const Text('Sort Goals',
                   style: TextStyle(
-                      color: AppTheme.onSurface,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800)),
+                      color: _navy, fontSize: 18, fontWeight: FontWeight.w800)),
               const SizedBox(height: 16),
               ...BudgetSortBy.values.map((sort) {
                 final labels = {
                   BudgetSortBy.dateAdded: (
-                    'Tanggal Dibuat',
+                    'Date Added',
                     Icons.access_time_rounded
                   ),
                   BudgetSortBy.progress: (
-                    'Progress Tertinggi',
+                    'Highest Progress',
                     Icons.trending_up_rounded
                   ),
                   BudgetSortBy.deadline: (
-                    'Deadline Terdekat',
+                    'Nearest Deadline',
                     Icons.event_rounded
                   ),
                   BudgetSortBy.targetAmount: (
-                    'Target Terbesar',
+                    'Largest Target',
                     Icons.attach_money_rounded
                   ),
                 };
@@ -126,12 +128,12 @@ class _BudgetScreenState extends State<BudgetScreen> {
                         horizontal: 16, vertical: 14),
                     decoration: BoxDecoration(
                       color: isSelected
-                          ? AppTheme.primary.withOpacity(0.1)
-                          : AppTheme.surfaceContainer,
+                          ? _navy.withOpacity(0.07)
+                          : Colors.grey.shade50,
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
                         color: isSelected
-                            ? AppTheme.primary.withOpacity(0.4)
+                            ? _navy.withOpacity(0.4)
                             : Colors.transparent,
                         width: 1.5,
                       ),
@@ -139,22 +141,19 @@ class _BudgetScreenState extends State<BudgetScreen> {
                     child: Row(
                       children: [
                         Icon(labels[sort]!.$2,
-                            color: isSelected
-                                ? AppTheme.primary
-                                : AppTheme.onSurfaceVariant,
+                            color: isSelected ? _navy : Colors.grey.shade500,
                             size: 18),
                         const SizedBox(width: 12),
                         Text(labels[sort]!.$1,
                             style: TextStyle(
-                                color: isSelected
-                                    ? AppTheme.primary
-                                    : AppTheme.onSurface,
+                                color:
+                                    isSelected ? _navy : Colors.grey.shade800,
                                 fontWeight: FontWeight.w600,
                                 fontSize: 14)),
                         const Spacer(),
                         if (isSelected)
                           const Icon(Icons.check_rounded,
-                              color: AppTheme.primary, size: 18),
+                              color: _navy, size: 18),
                       ],
                     ),
                   ),
@@ -172,12 +171,12 @@ class _BudgetScreenState extends State<BudgetScreen> {
     final provider = context.read<BudgetProvider>();
     final categories = [
       null, // all
-      'Kendaraan', 'Properti', 'Elektronik', 'Fashion',
-      'Pendidikan', 'Liburan', 'Investasi', 'Kesehatan', 'Hiburan', 'Lainnya',
+      'Vehicle', 'Property', 'Electronics', 'Fashion',
+      'Education', 'Vacation', 'Investment', 'Health', 'Entertainment', 'Other',
     ];
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppTheme.surface,
+      backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (ctx) => StatefulBuilder(
@@ -193,21 +192,19 @@ class _BudgetScreenState extends State<BudgetScreen> {
                   height: 4,
                   margin: const EdgeInsets.only(bottom: 16),
                   decoration: BoxDecoration(
-                      color: AppTheme.outline,
+                      color: Colors.grey.shade300,
                       borderRadius: BorderRadius.circular(2)),
                 ),
               ),
-              const Text('Filter Kategori',
+              const Text('Filter Category',
                   style: TextStyle(
-                      color: AppTheme.onSurface,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800)),
+                      color: _navy, fontSize: 18, fontWeight: FontWeight.w800)),
               const SizedBox(height: 16),
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
                 children: categories.map((cat) {
-                  final label = cat ?? 'Semua';
+                  final label = cat ?? 'All';
                   final isSelected = provider.filterCategory == cat;
                   return GestureDetector(
                     onTap: () {
@@ -218,16 +215,14 @@ class _BudgetScreenState extends State<BudgetScreen> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 14, vertical: 8),
                       decoration: BoxDecoration(
-                        color: isSelected
-                            ? AppTheme.primary
-                            : AppTheme.surfaceContainer,
+                        color: isSelected ? _navy : Colors.grey.shade100,
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(label,
                           style: TextStyle(
                               color: isSelected
                                   ? Colors.white
-                                  : AppTheme.onSurface,
+                                  : Colors.grey.shade800,
                               fontWeight: FontWeight.w600,
                               fontSize: 13)),
                     ),
@@ -250,7 +245,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppTheme.surface,
+      backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
       builder: (ctx) => StatefulBuilder(
@@ -271,7 +266,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                   height: 4,
                   margin: const EdgeInsets.only(bottom: 16),
                   decoration: BoxDecoration(
-                      color: AppTheme.outline,
+                      color: Colors.grey.shade300,
                       borderRadius: BorderRadius.circular(2)),
                 ),
               ),
@@ -292,15 +287,15 @@ class _BudgetScreenState extends State<BudgetScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Setor ke "${budget.title}"',
+                        Text('Deposit to "${budget.title}"',
                             style: const TextStyle(
-                                color: AppTheme.onSurface,
+                                color: _navy,
                                 fontSize: 17,
                                 fontWeight: FontWeight.w800)),
                         Text(
-                          '${(budget.progress * 100).toStringAsFixed(0)}% tercapai · sisa ${_fmt.format(budget.remaining < 0 ? 0 : budget.remaining)}',
-                          style: const TextStyle(
-                              color: AppTheme.onSurfaceVariant, fontSize: 11),
+                          '${(budget.progress * 100).toStringAsFixed(0)}% reached · remaining ${_fmt.format(budget.remaining < 0 ? 0 : budget.remaining)}',
+                          style: TextStyle(
+                              color: Colors.grey.shade500, fontSize: 11),
                         ),
                       ],
                     ),
@@ -319,14 +314,14 @@ class _BudgetScreenState extends State<BudgetScreen> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 7),
                       decoration: BoxDecoration(
-                        color: AppTheme.surfaceContainer,
+                        color: Colors.grey.shade100,
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: AppTheme.outline),
+                        border: Border.all(color: Colors.grey.shade300),
                       ),
                       child: Text(
                         _fmt.format(amt.toDouble()),
-                        style: const TextStyle(
-                            color: AppTheme.onSurface,
+                        style: TextStyle(
+                            color: Colors.grey.shade800,
                             fontSize: 12,
                             fontWeight: FontWeight.w600),
                       ),
@@ -341,35 +336,30 @@ class _BudgetScreenState extends State<BudgetScreen> {
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 autofocus: true,
                 style: const TextStyle(
-                    color: AppTheme.onSurface,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700),
+                    color: _navy, fontSize: 22, fontWeight: FontWeight.w700),
                 decoration: InputDecoration(
                   prefixText: 'Rp ',
                   prefixStyle: const TextStyle(
-                      color: AppTheme.primary,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 22),
+                      color: _navy, fontWeight: FontWeight.w700, fontSize: 22),
                   hintText: '0',
                   filled: true,
-                  fillColor: AppTheme.surfaceContainer,
+                  fillColor: Colors.grey.shade100,
                   border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
                       borderSide: BorderSide.none),
                   focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
-                      borderSide: const BorderSide(
-                          color: AppTheme.primary, width: 1.5)),
+                      borderSide: const BorderSide(color: _navy, width: 1.5)),
                 ),
               ),
               if (accounts.isNotEmpty) ...[
                 const SizedBox(height: 12),
                 DropdownButtonFormField<AppAccount>(
                   value: selectedAccount,
-                  hint: const Text('Pilih sumber dana (opsional)'),
+                  hint: const Text('Select funding source (optional)'),
                   decoration: InputDecoration(
                     filled: true,
-                    fillColor: AppTheme.surfaceContainer,
+                    fillColor: Colors.grey.shade100,
                     border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
                         borderSide: BorderSide.none),
@@ -380,12 +370,12 @@ class _BudgetScreenState extends State<BudgetScreen> {
                             child: Row(children: [
                               Text(a.name,
                                   style: const TextStyle(
-                                      color: AppTheme.onSurface,
+                                      color: _navy,
                                       fontWeight: FontWeight.w600)),
                               const SizedBox(width: 8),
                               Text(_fmt.format(a.balance),
                                   style: const TextStyle(
-                                      color: AppTheme.primary, fontSize: 12)),
+                                      color: _navy, fontSize: 12)),
                             ]),
                           ))
                       .toList(),
@@ -398,7 +388,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                 height: 54,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primary,
+                    backgroundColor: _navy,
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16)),
                   ),
@@ -415,7 +405,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                           deductFromWallet: selectedAccount != null,
                         );
                   },
-                  child: const Text('Simpan Setoran',
+                  child: const Text('Save Deposit',
                       style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.w700,
@@ -437,7 +427,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
     try {
       return Color(int.parse(budget.color));
     } catch (_) {
-      return AppTheme.primary;
+      return _navy;
     }
   }
 
@@ -453,22 +443,22 @@ class _BudgetScreenState extends State<BudgetScreen> {
     bool isPriority = false;
 
     final categories = [
-      'Kendaraan',
-      'Properti',
-      'Elektronik',
+      'Vehicle',
+      'Property',
+      'Electronics',
       'Fashion',
-      'Pendidikan',
-      'Liburan',
-      'Investasi',
-      'Kesehatan',
-      'Hiburan',
-      'Lainnya',
+      'Education',
+      'Vacation',
+      'Investment',
+      'Health',
+      'Entertainment',
+      'Other',
     ];
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppTheme.surface,
+      backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
       builder: (ctx) => StatefulBuilder(
@@ -500,22 +490,22 @@ class _BudgetScreenState extends State<BudgetScreen> {
                       height: 4,
                       margin: const EdgeInsets.only(bottom: 20),
                       decoration: BoxDecoration(
-                        color: AppTheme.outline,
+                        color: Colors.grey.shade300,
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
                   ),
-                  const Text('Financial Goal Baru',
+                  const Text('New Financial Goal',
                       style: TextStyle(
-                          color: AppTheme.onSurface,
+                          color: _navy,
                           fontSize: 20,
                           fontWeight: FontWeight.w800)),
                   const SizedBox(height: 20),
 
-                  // ── Foto Vision Board ──────────────────────────────────
-                  const Text('Foto Vision Board (opsional)',
+                  // ── Vision Board Photo ─────────────────────────────────
+                  const Text('Vision Board Photo (optional)',
                       style: TextStyle(
-                          color: AppTheme.onSurface,
+                          color: _navy,
                           fontSize: 13,
                           fontWeight: FontWeight.w700)),
                   const SizedBox(height: 8),
@@ -523,7 +513,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                     onTap: () async {
                       final choice = await showModalBottomSheet<String>(
                         context: ctx,
-                        backgroundColor: AppTheme.surface,
+                        backgroundColor: Colors.white,
                         shape: const RoundedRectangleBorder(
                             borderRadius: BorderRadius.vertical(
                                 top: Radius.circular(20))),
@@ -537,19 +527,19 @@ class _BudgetScreenState extends State<BudgetScreen> {
                                 height: 4,
                                 margin: const EdgeInsets.only(bottom: 16),
                                 decoration: BoxDecoration(
-                                  color: AppTheme.outline,
+                                  color: Colors.grey.shade300,
                                   borderRadius: BorderRadius.circular(2),
                                 ),
                               ),
                               _photoSheetTile(c, Icons.photo_library_rounded,
-                                  'Pilih dari Galeri', 'gallery'),
+                                  'Choose from Gallery', 'gallery'),
                               const SizedBox(height: 10),
                               _photoSheetTile(c, Icons.camera_alt_rounded,
-                                  'Ambil Foto', 'camera'),
+                                  'Take a Photo', 'camera'),
                               if (imagePath != null) ...[
                                 const SizedBox(height: 10),
                                 _photoSheetTile(c, Icons.delete_outline_rounded,
-                                    'Hapus Foto', 'remove',
+                                    'Remove Photo', 'remove',
                                     color: Colors.red),
                               ],
                             ],
@@ -567,12 +557,11 @@ class _BudgetScreenState extends State<BudgetScreen> {
                       height: imagePath != null ? 160 : 90,
                       width: double.infinity,
                       decoration: BoxDecoration(
-                        color: AppTheme.surfaceContainer,
+                        color: Colors.grey.shade100,
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: imagePath != null
-                              ? AppTheme.primary
-                              : AppTheme.outline,
+                          color:
+                              imagePath != null ? _navy : Colors.grey.shade300,
                           width: imagePath != null ? 1.5 : 1,
                         ),
                       ),
@@ -598,7 +587,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                                         Icon(Icons.edit_rounded,
                                             color: Colors.white, size: 12),
                                         SizedBox(width: 4),
-                                        Text('Ganti',
+                                        Text('Change',
                                             style: TextStyle(
                                                 color: Colors.white,
                                                 fontSize: 11,
@@ -613,11 +602,11 @@ class _BudgetScreenState extends State<BudgetScreen> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Icon(Icons.add_photo_alternate_outlined,
-                                    color: AppTheme.onSurfaceVariant, size: 28),
+                                    color: Colors.grey.shade400, size: 28),
                                 const SizedBox(height: 6),
-                                const Text('Tambah foto impianmu',
+                                Text('Add a photo of your dream',
                                     style: TextStyle(
-                                        color: AppTheme.onSurfaceVariant,
+                                        color: Colors.grey.shade400,
                                         fontSize: 13)),
                               ],
                             ),
@@ -625,10 +614,10 @@ class _BudgetScreenState extends State<BudgetScreen> {
                   ),
                   const SizedBox(height: 20),
 
-                  // ── Icon Goal ──────────────────────────────────────────
-                  const Text('Ikon Goal',
+                  // ── Goal Icon ──────────────────────────────────────────
+                  const Text('Goal Icon',
                       style: TextStyle(
-                          color: AppTheme.onSurface,
+                          color: _navy,
                           fontSize: 13,
                           fontWeight: FontWeight.w700)),
                   const SizedBox(height: 8),
@@ -650,7 +639,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                             decoration: BoxDecoration(
                               color: selected
                                   ? gi.color.withOpacity(0.15)
-                                  : AppTheme.surfaceContainer,
+                                  : Colors.grey.shade100,
                               borderRadius: BorderRadius.circular(14),
                               border: Border.all(
                                 color: selected ? gi.color : Colors.transparent,
@@ -661,7 +650,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                               child: Icon(gi.icon,
                                   color: selected
                                       ? gi.color
-                                      : AppTheme.onSurfaceVariant,
+                                      : Colors.grey.shade400,
                                   size: 22),
                             ),
                           ),
@@ -684,46 +673,46 @@ class _BudgetScreenState extends State<BudgetScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // ── Nama Goal ──────────────────────────────────────────
-                  const Text('Nama Goal',
+                  // ── Goal Name ──────────────────────────────────────────
+                  const Text('Goal Name',
                       style: TextStyle(
-                          color: AppTheme.onSurface,
+                          color: _navy,
                           fontSize: 13,
                           fontWeight: FontWeight.w700)),
                   const SizedBox(height: 8),
                   TextField(
                     controller: titleCtrl,
-                    style: const TextStyle(color: AppTheme.onSurface),
+                    style: const TextStyle(color: _navy),
                     decoration: InputDecoration(
-                      hintText: 'Contoh: Beli Mobil, Liburan Eropa',
+                      hintText: 'e.g. Buy a Car, Europe Trip',
                       filled: true,
-                      fillColor: AppTheme.surfaceContainer,
+                      fillColor: Colors.grey.shade100,
                       border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
                           borderSide: BorderSide.none),
                       focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(
-                              color: AppTheme.primary, width: 1.5)),
+                          borderSide:
+                              const BorderSide(color: _navy, width: 1.5)),
                     ),
                   ),
                   const SizedBox(height: 12),
 
-                  // ── Deskripsi ──────────────────────────────────────────
-                  const Text('Deskripsi (opsional)',
+                  // ── Description ────────────────────────────────────────
+                  const Text('Description (optional)',
                       style: TextStyle(
-                          color: AppTheme.onSurface,
+                          color: _navy,
                           fontSize: 13,
                           fontWeight: FontWeight.w700)),
                   const SizedBox(height: 8),
                   TextField(
                     controller: descCtrl,
                     maxLines: 2,
-                    style: const TextStyle(color: AppTheme.onSurface),
+                    style: const TextStyle(color: _navy),
                     decoration: InputDecoration(
-                      hintText: 'Ceritakan goalmu...',
+                      hintText: 'Tell us about your goal...',
                       filled: true,
-                      fillColor: AppTheme.surfaceContainer,
+                      fillColor: Colors.grey.shade100,
                       border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
                           borderSide: BorderSide.none),
@@ -731,10 +720,10 @@ class _BudgetScreenState extends State<BudgetScreen> {
                   ),
                   const SizedBox(height: 12),
 
-                  // ── Target Nominal ──────────────────────────────────────
-                  const Text('Target Nominal',
+                  // ── Target Amount ──────────────────────────────────────
+                  const Text('Target Amount',
                       style: TextStyle(
-                          color: AppTheme.onSurface,
+                          color: _navy,
                           fontSize: 13,
                           fontWeight: FontWeight.w700)),
                   const SizedBox(height: 8),
@@ -743,42 +732,42 @@ class _BudgetScreenState extends State<BudgetScreen> {
                     keyboardType: TextInputType.number,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     style: const TextStyle(
-                        color: AppTheme.onSurface,
+                        color: _navy,
                         fontSize: 18,
                         fontWeight: FontWeight.w700),
                     decoration: InputDecoration(
                       prefixText: 'Rp ',
                       prefixStyle: const TextStyle(
-                          color: AppTheme.primary,
+                          color: _navy,
                           fontWeight: FontWeight.w700,
                           fontSize: 18),
                       hintText: '0',
                       filled: true,
-                      fillColor: AppTheme.surfaceContainer,
+                      fillColor: Colors.grey.shade100,
                       border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
                           borderSide: BorderSide.none),
                       focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(
-                              color: AppTheme.primary, width: 1.5)),
+                          borderSide:
+                              const BorderSide(color: _navy, width: 1.5)),
                     ),
                   ),
                   const SizedBox(height: 12),
 
-                  // ── Kategori ───────────────────────────────────────────
-                  const Text('Kategori',
+                  // ── Category ───────────────────────────────────────────
+                  const Text('Category',
                       style: TextStyle(
-                          color: AppTheme.onSurface,
+                          color: _navy,
                           fontSize: 13,
                           fontWeight: FontWeight.w700)),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
                     value: selectedCategory,
-                    hint: const Text('Pilih kategori'),
+                    hint: const Text('Select a category'),
                     decoration: InputDecoration(
                       filled: true,
-                      fillColor: AppTheme.surfaceContainer,
+                      fillColor: Colors.grey.shade100,
                       border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
                           borderSide: BorderSide.none),
@@ -791,9 +780,9 @@ class _BudgetScreenState extends State<BudgetScreen> {
                   const SizedBox(height: 12),
 
                   // ── Deadline ───────────────────────────────────────────
-                  const Text('Target Deadline (opsional)',
+                  const Text('Target Deadline (optional)',
                       style: TextStyle(
-                          color: AppTheme.onSurface,
+                          color: _navy,
                           fontSize: 13,
                           fontWeight: FontWeight.w700)),
                   const SizedBox(height: 8),
@@ -808,8 +797,8 @@ class _BudgetScreenState extends State<BudgetScreen> {
                             DateTime.now().add(const Duration(days: 3650)),
                         builder: (context, child) => Theme(
                           data: Theme.of(context).copyWith(
-                            colorScheme: const ColorScheme.light(
-                                primary: AppTheme.primary),
+                            colorScheme:
+                                const ColorScheme.light(primary: _navy),
                           ),
                           child: child!,
                         ),
@@ -820,12 +809,10 @@ class _BudgetScreenState extends State<BudgetScreen> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 16, vertical: 14),
                       decoration: BoxDecoration(
-                        color: AppTheme.surfaceContainer,
+                        color: Colors.grey.shade100,
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
-                          color: deadline != null
-                              ? AppTheme.primary
-                              : Colors.transparent,
+                          color: deadline != null ? _navy : Colors.transparent,
                           width: 1.5,
                         ),
                       ),
@@ -834,20 +821,19 @@ class _BudgetScreenState extends State<BudgetScreen> {
                           Icon(
                             Icons.calendar_today_rounded,
                             size: 18,
-                            color: deadline != null
-                                ? AppTheme.primary
-                                : AppTheme.onSurfaceVariant,
+                            color:
+                                deadline != null ? _navy : Colors.grey.shade400,
                           ),
                           const SizedBox(width: 10),
                           Text(
                             deadline != null
                                 ? DateFormat('dd MMMM yyyy', 'id')
                                     .format(deadline!)
-                                : 'Pilih tanggal deadline',
+                                : 'Select deadline date',
                             style: TextStyle(
                               color: deadline != null
-                                  ? AppTheme.onSurface
-                                  : AppTheme.onSurfaceVariant,
+                                  ? _navy
+                                  : Colors.grey.shade400,
                               fontWeight: deadline != null
                                   ? FontWeight.w600
                                   : FontWeight.w400,
@@ -857,8 +843,8 @@ class _BudgetScreenState extends State<BudgetScreen> {
                           if (deadline != null)
                             GestureDetector(
                               onTap: () => setSheet(() => deadline = null),
-                              child: const Icon(Icons.close_rounded,
-                                  size: 16, color: AppTheme.onSurfaceVariant),
+                              child: Icon(Icons.close_rounded,
+                                  size: 16, color: Colors.grey.shade400),
                             ),
                         ],
                       ),
@@ -866,7 +852,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                   ),
                   const SizedBox(height: 12),
 
-                  // ── Jadikan Prioritas ──────────────────────────────────
+                  // ── Set as Priority ────────────────────────────────────
                   GestureDetector(
                     onTap: () => setSheet(() => isPriority = !isPriority),
                     child: Container(
@@ -874,12 +860,12 @@ class _BudgetScreenState extends State<BudgetScreen> {
                           horizontal: 16, vertical: 14),
                       decoration: BoxDecoration(
                         color: isPriority
-                            ? AppTheme.primary.withOpacity(0.08)
-                            : AppTheme.surfaceContainer,
+                            ? _navy.withOpacity(0.06)
+                            : Colors.grey.shade100,
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
                           color: isPriority
-                              ? AppTheme.primary.withOpacity(0.4)
+                              ? _navy.withOpacity(0.4)
                               : Colors.transparent,
                           width: 1.5,
                         ),
@@ -890,9 +876,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                             isPriority
                                 ? Icons.star_rounded
                                 : Icons.star_border_rounded,
-                            color: isPriority
-                                ? Colors.amber
-                                : AppTheme.onSurfaceVariant,
+                            color: isPriority ? _yellow : Colors.grey.shade400,
                             size: 20,
                           ),
                           const SizedBox(width: 10),
@@ -900,26 +884,25 @@ class _BudgetScreenState extends State<BudgetScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Jadikan Prioritas',
+                                'Set as Priority',
                                 style: TextStyle(
                                     color: isPriority
-                                        ? AppTheme.onSurface
-                                        : AppTheme.onSurfaceVariant,
+                                        ? _navy
+                                        : Colors.grey.shade500,
                                     fontWeight: FontWeight.w600,
                                     fontSize: 14),
                               ),
-                              const Text(
-                                'Goal ini akan tampil di bagian atas',
+                              Text(
+                                'This goal will appear at the top',
                                 style: TextStyle(
-                                    color: AppTheme.onSurfaceVariant,
-                                    fontSize: 11),
+                                    color: Colors.grey.shade400, fontSize: 11),
                               ),
                             ],
                           ),
                           const Spacer(),
                           Switch(
                             value: isPriority,
-                            activeColor: AppTheme.primary,
+                            activeColor: _navy,
                             onChanged: (v) => setSheet(() => isPriority = v),
                           ),
                         ],
@@ -933,7 +916,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                     height: 54,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primary,
+                        backgroundColor: _navy,
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16)),
                       ),
@@ -965,7 +948,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                               isPriority: isPriority,
                             ));
                       },
-                      child: const Text('Buat Goal',
+                      child: const Text('Create Goal',
                           style: TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.w700,
@@ -990,16 +973,16 @@ class _BudgetScreenState extends State<BudgetScreen> {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: AppTheme.surfaceContainer,
+          color: Colors.grey.shade100,
           borderRadius: BorderRadius.circular(14),
         ),
         child: Row(
           children: [
-            Icon(icon, color: color ?? AppTheme.onSurface, size: 20),
+            Icon(icon, color: color ?? _navy, size: 20),
             const SizedBox(width: 12),
             Text(label,
                 style: TextStyle(
-                    color: color ?? AppTheme.onSurface,
+                    color: color ?? _navy,
                     fontWeight: FontWeight.w600,
                     fontSize: 14)),
           ],
@@ -1022,14 +1005,14 @@ class _BudgetScreenState extends State<BudgetScreen> {
     final hasActiveFilter = provider.filterCategory != null;
     final currentSort = provider.sortBy;
     final sortLabels = {
-      BudgetSortBy.dateAdded: 'Terbaru',
+      BudgetSortBy.dateAdded: 'Recent',
       BudgetSortBy.progress: 'Progress',
       BudgetSortBy.deadline: 'Deadline',
       BudgetSortBy.targetAmount: 'Target',
     };
 
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: Colors.white,
       body: SafeArea(
         bottom: false,
         child: CustomScrollView(
@@ -1046,18 +1029,17 @@ class _BudgetScreenState extends State<BudgetScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Column(
+                        Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Financial Goals',
+                            const Text('Financial Goals',
                                 style: TextStyle(
-                                    color: AppTheme.onSurface,
+                                    color: _navy,
                                     fontSize: 26,
                                     fontWeight: FontWeight.w800)),
-                            Text('Nabung & wujudkan impianmu',
+                            Text('Save & make your dreams come true',
                                 style: TextStyle(
-                                    color: AppTheme.onSurfaceVariant,
-                                    fontSize: 13)),
+                                    color: Colors.grey.shade500, fontSize: 13)),
                           ],
                         ),
                         GestureDetector(
@@ -1066,7 +1048,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 16, vertical: 10),
                             decoration: BoxDecoration(
-                              color: AppTheme.primary,
+                              color: _navy,
                               borderRadius: BorderRadius.circular(30),
                             ),
                             child: const Row(
@@ -1074,7 +1056,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                                 Icon(Icons.add_rounded,
                                     color: Colors.white, size: 18),
                                 SizedBox(width: 4),
-                                Text('Goal Baru',
+                                Text('New Goal',
                                     style: TextStyle(
                                         color: Colors.white,
                                         fontWeight: FontWeight.w700,
@@ -1097,19 +1079,19 @@ class _BudgetScreenState extends State<BudgetScreen> {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 12, vertical: 8),
                             decoration: BoxDecoration(
-                              color: AppTheme.surfaceContainer,
+                              color: Colors.grey.shade100,
                               borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: AppTheme.outline),
+                              border: Border.all(color: Colors.grey.shade300),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(Icons.sort_rounded,
-                                    size: 15, color: AppTheme.onSurfaceVariant),
+                                Icon(Icons.sort_rounded,
+                                    size: 15, color: Colors.grey.shade500),
                                 const SizedBox(width: 5),
-                                Text(sortLabels[currentSort] ?? 'Urut',
+                                Text(sortLabels[currentSort] ?? 'Sort',
                                     style: const TextStyle(
-                                        color: AppTheme.onSurface,
+                                        color: _navy,
                                         fontSize: 12,
                                         fontWeight: FontWeight.w600)),
                               ],
@@ -1125,13 +1107,13 @@ class _BudgetScreenState extends State<BudgetScreen> {
                                 horizontal: 12, vertical: 8),
                             decoration: BoxDecoration(
                               color: hasActiveFilter
-                                  ? AppTheme.primary.withOpacity(0.1)
-                                  : AppTheme.surfaceContainer,
+                                  ? _navy.withOpacity(0.08)
+                                  : Colors.grey.shade100,
                               borderRadius: BorderRadius.circular(20),
                               border: Border.all(
                                 color: hasActiveFilter
-                                    ? AppTheme.primary.withOpacity(0.4)
-                                    : AppTheme.outline,
+                                    ? _navy.withOpacity(0.4)
+                                    : Colors.grey.shade300,
                               ),
                             ),
                             child: Row(
@@ -1141,8 +1123,8 @@ class _BudgetScreenState extends State<BudgetScreen> {
                                   Icons.filter_list_rounded,
                                   size: 15,
                                   color: hasActiveFilter
-                                      ? AppTheme.primary
-                                      : AppTheme.onSurfaceVariant,
+                                      ? _navy
+                                      : Colors.grey.shade500,
                                 ),
                                 const SizedBox(width: 5),
                                 Text(
@@ -1151,8 +1133,8 @@ class _BudgetScreenState extends State<BudgetScreen> {
                                       : 'Filter',
                                   style: TextStyle(
                                       color: hasActiveFilter
-                                          ? AppTheme.primary
-                                          : AppTheme.onSurface,
+                                          ? _navy
+                                          : Colors.grey.shade700,
                                       fontSize: 12,
                                       fontWeight: FontWeight.w600),
                                 ),
@@ -1162,7 +1144,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                                     onTap: () =>
                                         provider.setFilterCategory(null),
                                     child: const Icon(Icons.close_rounded,
-                                        size: 13, color: AppTheme.primary),
+                                        size: 13, color: _navy),
                                   ),
                                 ],
                               ],
@@ -1180,10 +1162,10 @@ class _BudgetScreenState extends State<BudgetScreen> {
                                   horizontal: 12, vertical: 8),
                               decoration: BoxDecoration(
                                 color: _showArchived
-                                    ? Colors.grey.withOpacity(0.15)
-                                    : AppTheme.surfaceContainer,
+                                    ? Colors.grey.shade200
+                                    : Colors.grey.shade100,
                                 borderRadius: BorderRadius.circular(20),
-                                border: Border.all(color: AppTheme.outline),
+                                border: Border.all(color: Colors.grey.shade300),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
@@ -1191,14 +1173,14 @@ class _BudgetScreenState extends State<BudgetScreen> {
                                   Icon(Icons.archive_rounded,
                                       size: 15,
                                       color: _showArchived
-                                          ? Colors.grey
-                                          : AppTheme.onSurfaceVariant),
+                                          ? Colors.grey.shade600
+                                          : Colors.grey.shade500),
                                   const SizedBox(width: 5),
-                                  Text('Arsip (${archivedBudgets.length})',
+                                  Text('Archive (${archivedBudgets.length})',
                                       style: TextStyle(
                                           color: _showArchived
-                                              ? Colors.grey
-                                              : AppTheme.onSurface,
+                                              ? Colors.grey.shade700
+                                              : Colors.grey.shade700,
                                           fontSize: 12,
                                           fontWeight: FontWeight.w600)),
                                 ],
@@ -1215,12 +1197,12 @@ class _BudgetScreenState extends State<BudgetScreen> {
 
             // ── Priority Goals ─────────────────────────────────────────
             if (priorities.isNotEmpty && !_showArchived) ...[
-              const SliverToBoxAdapter(
+              SliverToBoxAdapter(
                 child: Padding(
-                  padding: EdgeInsets.fromLTRB(20, 8, 20, 10),
-                  child: Text('PRIORITAS',
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 10),
+                  child: Text('PRIORITY',
                       style: TextStyle(
-                          color: AppTheme.onSurfaceVariant,
+                          color: Colors.grey.shade500,
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
                           letterSpacing: 0.8)),
@@ -1255,9 +1237,9 @@ class _BudgetScreenState extends State<BudgetScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('LIQUIDITY SOURCES',
+                      Text('LIQUIDITY SOURCES',
                           style: TextStyle(
-                              color: AppTheme.onSurfaceVariant,
+                              color: Colors.grey.shade500,
                               fontSize: 11,
                               fontWeight: FontWeight.w700,
                               letterSpacing: 0.8)),
@@ -1266,14 +1248,13 @@ class _BudgetScreenState extends State<BudgetScreen> {
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: AppTheme.surface,
+                            color: Colors.grey.shade50,
                             borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: AppTheme.outline),
+                            border: Border.all(color: Colors.grey.shade200),
                           ),
-                          child: const Text('Belum ada wallet',
+                          child: Text('No wallets yet',
                               style: TextStyle(
-                                  color: AppTheme.onSurfaceVariant,
-                                  fontSize: 13)),
+                                  color: Colors.grey.shade400, fontSize: 13)),
                         )
                       else
                         SizedBox(
@@ -1294,12 +1275,12 @@ class _BudgetScreenState extends State<BudgetScreen> {
 
             // ── Other Goals ────────────────────────────────────────────
             if (others.isNotEmpty && !_showArchived) ...[
-              const SliverToBoxAdapter(
+              SliverToBoxAdapter(
                 child: Padding(
-                  padding: EdgeInsets.fromLTRB(20, 20, 20, 10),
-                  child: Text('GOALS LAINNYA',
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+                  child: Text('OTHER GOALS',
                       style: TextStyle(
-                          color: AppTheme.onSurfaceVariant,
+                          color: Colors.grey.shade500,
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
                           letterSpacing: 0.8)),
@@ -1333,12 +1314,12 @@ class _BudgetScreenState extends State<BudgetScreen> {
                   padding: const EdgeInsets.fromLTRB(20, 12, 20, 10),
                   child: Row(
                     children: [
-                      const Icon(Icons.archive_rounded,
-                          size: 14, color: AppTheme.onSurfaceVariant),
+                      Icon(Icons.archive_rounded,
+                          size: 14, color: Colors.grey.shade500),
                       const SizedBox(width: 6),
-                      const Text('GOALS SELESAI (ARSIP)',
+                      Text('COMPLETED GOALS (ARCHIVE)',
                           style: TextStyle(
-                              color: AppTheme.onSurfaceVariant,
+                              color: Colors.grey.shade500,
                               fontSize: 11,
                               fontWeight: FontWeight.w700,
                               letterSpacing: 0.8)),
@@ -1377,19 +1358,19 @@ class _BudgetScreenState extends State<BudgetScreen> {
                 child: Center(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 48),
-                    child: Column(children: const [
+                    child: Column(children: [
                       Icon(Icons.savings_rounded,
-                          size: 52, color: AppTheme.onSurfaceVariant),
-                      SizedBox(height: 12),
-                      Text('Belum ada financial goal',
+                          size: 52, color: Colors.grey.shade300),
+                      const SizedBox(height: 12),
+                      Text('No financial goals yet',
                           style: TextStyle(
-                              color: AppTheme.onSurfaceVariant,
+                              color: Colors.grey.shade500,
                               fontWeight: FontWeight.w600,
                               fontSize: 15)),
-                      SizedBox(height: 6),
-                      Text('Tap "Goal Baru" untuk mulai',
+                      const SizedBox(height: 6),
+                      Text('Tap "New Goal" to get started',
                           style: TextStyle(
-                              color: AppTheme.onSurfaceVariant, fontSize: 13)),
+                              color: Colors.grey.shade400, fontSize: 13)),
                     ]),
                   ),
                 ),
@@ -1463,9 +1444,16 @@ class _PriorityGoalCard extends StatelessWidget {
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: AppTheme.surface,
+          color: Colors.white,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppTheme.outline),
+          border: Border.all(color: Colors.grey.shade200),
+          boxShadow: [
+            BoxShadow(
+              color: _navy.withOpacity(0.06),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         clipBehavior: Clip.hardEdge,
         child: Column(
@@ -1500,7 +1488,7 @@ class _PriorityGoalCard extends StatelessWidget {
                         end: Alignment.bottomCenter,
                         colors: [
                           Colors.transparent,
-                          AppTheme.surface.withOpacity(0.95),
+                          Colors.white.withOpacity(0.95),
                         ],
                       ),
                     ),
@@ -1514,17 +1502,17 @@ class _PriorityGoalCard extends StatelessWidget {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.amber.withOpacity(0.15),
+                      color: _yellow.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.amber.withOpacity(0.4)),
+                      border: Border.all(color: _yellow.withOpacity(0.5)),
                     ),
                     child: const Row(
                       children: [
-                        Icon(Icons.star_rounded, color: Colors.amber, size: 12),
+                        Icon(Icons.star_rounded, color: _yellow, size: 12),
                         SizedBox(width: 4),
-                        Text('PRIORITAS',
+                        Text('PRIORITY',
                             style: TextStyle(
-                                color: Colors.amber,
+                                color: Color(0xFF9A7A00),
                                 fontSize: 10,
                                 fontWeight: FontWeight.w800,
                                 letterSpacing: 0.5)),
@@ -1548,7 +1536,7 @@ class _PriorityGoalCard extends StatelessWidget {
                         children: [
                           const Text('🔥', style: TextStyle(fontSize: 10)),
                           const SizedBox(width: 3),
-                          Text('${budget.streakMonths} bln',
+                          Text('${budget.streakMonths} mo',
                               style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 10,
@@ -1567,13 +1555,11 @@ class _PriorityGoalCard extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: daysLeft < 30
                             ? Colors.red.withOpacity(0.8)
-                            : Colors.black.withOpacity(0.5),
+                            : _navy.withOpacity(0.7),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
-                        daysLeft < 0
-                            ? 'Lewat deadline!'
-                            : '$daysLeft hari lagi',
+                        daysLeft < 0 ? 'Past deadline!' : '$daysLeft days left',
                         style: const TextStyle(
                             color: Colors.white,
                             fontSize: 10,
@@ -1620,21 +1606,21 @@ class _PriorityGoalCard extends StatelessWidget {
                       Expanded(
                         child: Text(budget.title,
                             style: const TextStyle(
-                                color: AppTheme.onSurface,
+                                color: _navy,
                                 fontSize: 20,
                                 fontWeight: FontWeight.w800),
                             overflow: TextOverflow.ellipsis),
                       ),
                       const SizedBox(width: 8),
-                      const Icon(Icons.arrow_forward_ios_rounded,
-                          size: 14, color: AppTheme.onSurfaceVariant),
+                      Icon(Icons.arrow_forward_ios_rounded,
+                          size: 14, color: Colors.grey.shade400),
                     ],
                   ),
                   if (budget.description != null) ...[
                     const SizedBox(height: 2),
                     Text(budget.description!,
-                        style: const TextStyle(
-                            color: AppTheme.onSurfaceVariant, fontSize: 12),
+                        style: TextStyle(
+                            color: Colors.grey.shade500, fontSize: 12),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis),
                   ],
@@ -1642,15 +1628,15 @@ class _PriorityGoalCard extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('$percent% tercapai',
+                      Text('$percent% reached',
                           style: const TextStyle(
-                              color: AppTheme.onSurface,
+                              color: _navy,
                               fontWeight: FontWeight.w700,
                               fontSize: 13)),
                       Text(
                         '${fmt.format(budget.currentAmount)} / ${fmt.format(budget.targetAmount)}',
-                        style: const TextStyle(
-                            color: AppTheme.onSurfaceVariant, fontSize: 11),
+                        style: TextStyle(
+                            color: Colors.grey.shade500, fontSize: 11),
                       ),
                     ],
                   ),
@@ -1660,9 +1646,9 @@ class _PriorityGoalCard extends StatelessWidget {
                     child: LinearProgressIndicator(
                       value: progress,
                       minHeight: 10,
-                      backgroundColor: AppTheme.surfaceContainer,
+                      backgroundColor: Colors.grey.shade100,
                       valueColor: AlwaysStoppedAnimation<Color>(
-                          budget.isCompleted ? Colors.amber : color),
+                          budget.isCompleted ? _yellow : color),
                     ),
                   ),
 
@@ -1681,19 +1667,19 @@ class _PriorityGoalCard extends StatelessWidget {
                         width: double.infinity,
                         padding: const EdgeInsets.symmetric(vertical: 10),
                         decoration: BoxDecoration(
-                          color: color.withOpacity(0.1),
+                          color: _navy.withOpacity(0.06),
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: color.withOpacity(0.3)),
+                          border: Border.all(color: _navy.withOpacity(0.2)),
                         ),
-                        child: Row(
+                        child: const Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(Icons.add_circle_outline_rounded,
-                                color: color, size: 16),
-                            const SizedBox(width: 6),
-                            Text('Setor Nabung',
+                                color: _navy, size: 16),
+                            SizedBox(width: 6),
+                            Text('Save & Deposit',
                                 style: TextStyle(
-                                    color: color,
+                                    color: _navy,
                                     fontWeight: FontWeight.w700,
                                     fontSize: 13)),
                           ],
@@ -1717,21 +1703,19 @@ class _PriorityGoalCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: AppTheme.primary.withOpacity(0.07),
+        color: _yellow.withOpacity(0.12),
         borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: _yellow.withOpacity(0.3)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.lightbulb_outline_rounded,
-              color: Colors.amber, size: 16),
+          const Icon(Icons.lightbulb_outline_rounded, color: _yellow, size: 16),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              'Nabung ${fmt.format(monthly)}/bulan biar tepat waktu',
+              'Save ${fmt.format(monthly)}/month to stay on track',
               style: const TextStyle(
-                  color: AppTheme.onSurface,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600),
+                  color: _navy, fontSize: 11, fontWeight: FontWeight.w600),
             ),
           ),
         ],
@@ -1768,9 +1752,16 @@ class _GoalCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: AppTheme.surface,
+          color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppTheme.outline),
+          border: Border.all(color: Colors.grey.shade200),
+          boxShadow: [
+            BoxShadow(
+              color: _navy.withOpacity(0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Column(
           children: [
@@ -1805,7 +1796,7 @@ class _GoalCard extends StatelessWidget {
                           Expanded(
                             child: Text(budget.title,
                                 style: const TextStyle(
-                                    color: AppTheme.onSurface,
+                                    color: _navy,
                                     fontWeight: FontWeight.w700,
                                     fontSize: 14),
                                 overflow: TextOverflow.ellipsis),
@@ -1834,18 +1825,18 @@ class _GoalCard extends StatelessWidget {
                             ),
                           ],
                           if (budget.isCompleted)
-                            const Padding(
-                              padding: EdgeInsets.only(left: 6),
+                            Padding(
+                              padding: const EdgeInsets.only(left: 6),
                               child: Icon(Icons.emoji_events_rounded,
-                                  color: Colors.amber, size: 16),
+                                  color: _yellow, size: 16),
                             ),
                         ],
                       ),
                       const SizedBox(height: 2),
                       Text(
                         fmt.format(budget.targetAmount),
-                        style: const TextStyle(
-                            color: AppTheme.onSurfaceVariant, fontSize: 12),
+                        style: TextStyle(
+                            color: Colors.grey.shade500, fontSize: 12),
                       ),
                       const SizedBox(height: 6),
                       ClipRRect(
@@ -1853,9 +1844,9 @@ class _GoalCard extends StatelessWidget {
                         child: LinearProgressIndicator(
                           value: progress,
                           minHeight: 6,
-                          backgroundColor: AppTheme.surfaceContainer,
+                          backgroundColor: Colors.grey.shade100,
                           valueColor: AlwaysStoppedAnimation<Color>(
-                              budget.isCompleted ? Colors.amber : color),
+                              budget.isCompleted ? _yellow : color),
                         ),
                       ),
                     ],
@@ -1874,8 +1865,8 @@ class _GoalCard extends StatelessWidget {
                           fontSize: 15),
                     ),
                     const SizedBox(height: 4),
-                    const Icon(Icons.arrow_forward_ios_rounded,
-                        size: 12, color: AppTheme.onSurfaceVariant),
+                    Icon(Icons.arrow_forward_ios_rounded,
+                        size: 12, color: Colors.grey.shade400),
                   ],
                 ),
               ],
@@ -1890,18 +1881,18 @@ class _GoalCard extends StatelessWidget {
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.08),
+                    color: _navy.withOpacity(0.05),
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: color.withOpacity(0.2)),
+                    border: Border.all(color: _navy.withOpacity(0.15)),
                   ),
-                  child: Row(
+                  child: const Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.add_rounded, color: color, size: 15),
-                      const SizedBox(width: 5),
-                      Text('Setor Nabung',
+                      Icon(Icons.add_rounded, color: _navy, size: 15),
+                      SizedBox(width: 5),
+                      Text('Save & Deposit',
                           style: TextStyle(
-                              color: color,
+                              color: _navy,
                               fontWeight: FontWeight.w700,
                               fontSize: 12)),
                     ],
@@ -1940,9 +1931,9 @@ class _ArchivedGoalCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppTheme.surface,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.outline),
+        border: Border.all(color: Colors.grey.shade200),
       ),
       child: Row(
         children: [
@@ -2001,9 +1992,9 @@ class _ArchivedGoalCard extends StatelessWidget {
                     width: 22,
                     height: 22,
                     decoration: BoxDecoration(
-                      color: Colors.amber,
+                      color: _yellow,
                       shape: BoxShape.circle,
-                      border: Border.all(color: AppTheme.surface, width: 1.5),
+                      border: Border.all(color: Colors.white, width: 1.5),
                     ),
                     child: const Icon(Icons.emoji_events_rounded,
                         color: Colors.white, size: 12),
@@ -2017,16 +2008,15 @@ class _ArchivedGoalCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(budget.title,
-                    style: const TextStyle(
-                        color: AppTheme.onSurfaceVariant,
+                    style: TextStyle(
+                        color: Colors.grey.shade500,
                         fontWeight: FontWeight.w700,
                         fontSize: 14),
                     overflow: TextOverflow.ellipsis),
                 const SizedBox(height: 2),
                 Text(
                   '${fmt.format(budget.currentAmount)} / ${fmt.format(budget.targetAmount)}',
-                  style: const TextStyle(
-                      color: AppTheme.onSurfaceVariant, fontSize: 11),
+                  style: TextStyle(color: Colors.grey.shade400, fontSize: 11),
                 ),
                 const SizedBox(height: 6),
                 ClipRRect(
@@ -2034,7 +2024,7 @@ class _ArchivedGoalCard extends StatelessWidget {
                   child: LinearProgressIndicator(
                     value: progress,
                     minHeight: 5,
-                    backgroundColor: AppTheme.surfaceContainer,
+                    backgroundColor: Colors.grey.shade100,
                     valueColor:
                         AlwaysStoppedAnimation<Color>(Colors.grey.shade400),
                   ),
@@ -2042,9 +2032,8 @@ class _ArchivedGoalCard extends StatelessWidget {
                 if (budget.archivedAt != null) ...[
                   const SizedBox(height: 4),
                   Text(
-                    'Diarsipkan ${DateFormat('dd MMM yyyy', 'id').format(budget.archivedAt!)}',
-                    style: const TextStyle(
-                        color: AppTheme.onSurfaceVariant, fontSize: 10),
+                    'Archived ${DateFormat('dd MMM yyyy').format(budget.archivedAt!)}',
+                    style: TextStyle(color: Colors.grey.shade400, fontSize: 10),
                   ),
                 ],
               ],
@@ -2056,17 +2045,17 @@ class _ArchivedGoalCard extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
               decoration: BoxDecoration(
-                color: AppTheme.surfaceContainer,
+                color: Colors.grey.shade100,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Row(
+              child: Row(
                 children: [
                   Icon(Icons.unarchive_rounded,
-                      size: 14, color: AppTheme.onSurfaceVariant),
-                  SizedBox(width: 4),
-                  Text('Pulihkan',
+                      size: 14, color: Colors.grey.shade500),
+                  const SizedBox(width: 4),
+                  Text('Restore',
                       style: TextStyle(
-                          color: AppTheme.onSurfaceVariant,
+                          color: Colors.grey.shade500,
                           fontSize: 11,
                           fontWeight: FontWeight.w600)),
                 ],
@@ -2104,9 +2093,16 @@ class _LiquidityCard extends StatelessWidget {
       width: 150,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppTheme.surface,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.outline),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: _navy.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2123,15 +2119,13 @@ class _LiquidityCard extends StatelessWidget {
           const Spacer(),
           Text(account.name,
               style: const TextStyle(
-                  color: AppTheme.onSurface,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 12),
+                  color: _navy, fontWeight: FontWeight.w600, fontSize: 12),
               maxLines: 1,
               overflow: TextOverflow.ellipsis),
           const SizedBox(height: 2),
           Text(fmt.format(account.balance),
-              style: TextStyle(
-                  color: color, fontWeight: FontWeight.w800, fontSize: 13),
+              style: const TextStyle(
+                  color: _navy, fontWeight: FontWeight.w800, fontSize: 13),
               overflow: TextOverflow.ellipsis),
         ],
       ),

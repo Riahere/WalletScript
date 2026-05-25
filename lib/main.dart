@@ -1,5 +1,3 @@
-// lib/main.dart
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -18,7 +16,6 @@ import 'screens/history_screen.dart';
 import 'screens/budget_screen.dart';
 import 'screens/insights_screen.dart';
 import 'screens/settings_screen.dart';
-import 'screens/add_transaction_screen.dart';
 import 'screens/splash_screen.dart';
 import 'screens/reset_password_screen.dart';
 
@@ -48,7 +45,6 @@ void main() async {
   runApp(const WalletScriptApp());
 }
 
-// Navigator key untuk navigasi dari luar widget tree
 final _navigatorKey = GlobalKey<NavigatorState>();
 
 class WalletScriptApp extends StatefulWidget {
@@ -69,10 +65,7 @@ class _WalletScriptAppState extends State<WalletScriptApp> {
     Supabase.instance.client.auth.onAuthStateChange.listen((data) {
       final event = data.event;
       debugPrint('>>> Auth event: $event');
-
-      // Saat user klik link reset password dari email → event PASSWORD_RECOVERY
       if (event == AuthChangeEvent.passwordRecovery) {
-        debugPrint('>>> PASSWORD_RECOVERY event — navigating to reset screen');
         _navigatorKey.currentState?.pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => const ResetPasswordScreen()),
           (route) => false,
@@ -106,7 +99,6 @@ class _WalletScriptAppState extends State<WalletScriptApp> {
   }
 }
 
-// Global key to control MainShell from anywhere
 final mainShellKey = GlobalKey<MainShellState>();
 
 class MainShell extends StatefulWidget {
@@ -117,92 +109,245 @@ class MainShell extends StatefulWidget {
 }
 
 class MainShellState extends State<MainShell> {
-  int _currentIndex = 0;
+  int _currentIndex = 2; // default Home (tengah)
 
-  void goHome() => setState(() => _currentIndex = 0);
+  void goHome() => setState(() => _currentIndex = 2);
   void goTo(int index) => setState(() => _currentIndex = index);
 
   final List<Widget> _screens = const [
-    HomeScreen(),
     HistoryScreen(),
     BudgetScreen(),
+    HomeScreen(),
     InsightsScreen(),
     SettingsScreen(),
   ];
 
-  void _openAddTransaction() {
-    Navigator.push(context,
-        MaterialPageRoute(builder: (_) => const AddTransactionScreen()));
-  }
-
   @override
   Widget build(BuildContext context) {
+    // ── TIDAK pakai extendBody supaya tidak ada overlap ──────────────────
     return Scaffold(
       backgroundColor: AppTheme.background,
       body: IndexedStack(index: _currentIndex, children: _screens),
-      extendBody: true,
-      bottomNavigationBar: _buildFloatingNav(),
+      extendBody: false,
+      bottomNavigationBar: _FloatingNav(
+        currentIndex: _currentIndex,
+        onTap: (i) => setState(() => _currentIndex = i),
+      ),
     );
   }
+}
 
-  Widget _buildFloatingNav() {
+// ─────────────────────────────────────────────────────────────────────────────
+// FLOATING NAV — animasi bounce + ripple tiap tombol
+// ─────────────────────────────────────────────────────────────────────────────
+class _FloatingNav extends StatelessWidget {
+  final int currentIndex;
+  final ValueChanged<int> onTap;
+
+  const _FloatingNav({required this.currentIndex, required this.onTap});
+
+  static const _items = [
+    _NavItem(icon: Icons.history_rounded, label: 'History'),
+    _NavItem(icon: Icons.account_balance_wallet_rounded, label: 'Budget'),
+    _NavItem(icon: Icons.home_rounded, label: '', isCenter: true),
+    _NavItem(icon: Icons.show_chart_rounded, label: 'Insights'),
+    _NavItem(icon: Icons.settings_rounded, label: 'Settings'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomPad = MediaQuery.of(context).padding.bottom;
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-      height: 68,
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
-        borderRadius: BorderRadius.circular(36),
-        boxShadow: [
-          BoxShadow(
-              color: const Color(0xFF1E293B).withOpacity(0.4),
+      // Padding bawah = safe area, jadi tidak pernah overlap
+      padding: EdgeInsets.only(bottom: bottomPad),
+      color: Colors.transparent,
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        height: 68,
+        decoration: BoxDecoration(
+          color: const Color(0xFF1E293B),
+          borderRadius: BorderRadius.circular(36),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF1E293B).withOpacity(0.40),
               blurRadius: 24,
-              offset: const Offset(0, 8))
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _navItem(Icons.history_rounded, 'History', 1),
-          _navItem(Icons.account_balance_wallet_rounded, 'Budget', 2),
-          GestureDetector(
-            onTap: _openAddTransaction,
-            child: Container(
-              width: 52,
-              height: 52,
-              decoration: const BoxDecoration(
-                  color: AppTheme.primary, shape: BoxShape.circle),
-              child: const Icon(Icons.add, color: Colors.white, size: 28),
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: List.generate(
+            _items.length,
+            (i) => _AnimatedNavItem(
+              item: _items[i],
+              index: i,
+              isSelected: currentIndex == i,
+              onTap: onTap,
             ),
           ),
-          _navItem(Icons.show_chart_rounded, 'Insights', 3),
-          _navItem(Icons.settings_rounded, 'Settings', 4),
-        ],
-      ),
-    );
-  }
-
-  Widget _navItem(IconData icon, String label, int index) {
-    final isSelected = _currentIndex == index;
-    return GestureDetector(
-      onTap: () => setState(() => _currentIndex = index),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon,
-                color: isSelected ? AppTheme.primary : Colors.white38,
-                size: 22),
-            const SizedBox(height: 2),
-            Text(label,
-                style: TextStyle(
-                  color: isSelected ? AppTheme.primary : Colors.white38,
-                  fontSize: 10,
-                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
-                )),
-          ],
         ),
       ),
     );
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ANIMATED NAV ITEM — bounce scale + ripple
+// ─────────────────────────────────────────────────────────────────────────────
+class _AnimatedNavItem extends StatefulWidget {
+  final _NavItem item;
+  final int index;
+  final bool isSelected;
+  final ValueChanged<int> onTap;
+
+  const _AnimatedNavItem({
+    required this.item,
+    required this.index,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  State<_AnimatedNavItem> createState() => _AnimatedNavItemState();
+}
+
+class _AnimatedNavItemState extends State<_AnimatedNavItem>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _scaleAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 140),
+    );
+    _scaleAnim = TweenSequence([
+      TweenSequenceItem(
+          tween: Tween(begin: 1.0, end: 0.82)
+              .chain(CurveTween(curve: Curves.easeIn)),
+          weight: 40),
+      TweenSequenceItem(
+          tween: Tween(begin: 0.82, end: 1.08)
+              .chain(CurveTween(curve: Curves.easeOut)),
+          weight: 35),
+      TweenSequenceItem(
+          tween: Tween(begin: 1.08, end: 1.0)
+              .chain(CurveTween(curve: Curves.easeInOut)),
+          weight: 25),
+    ]).animate(_ctrl);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  void _handleTap() {
+    HapticFeedback.lightImpact();
+    _ctrl.forward(from: 0);
+    widget.onTap(widget.index);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isCenter = widget.item.isCenter;
+    final isSelected = widget.isSelected;
+
+    return GestureDetector(
+      onTap: _handleTap,
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedBuilder(
+        animation: _scaleAnim,
+        builder: (_, child) => Transform.scale(
+          scale: _scaleAnim.value,
+          child: child,
+        ),
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: isCenter ? 6 : 10,
+            vertical: isCenter ? 4 : 8,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // ── Center (Home) — lingkaran tanpa label ─────────────────
+              if (isCenter)
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 250),
+                  curve: Curves.easeOutCubic,
+                  width: isSelected ? 52 : 46,
+                  height: isSelected ? 52 : 46,
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? AppTheme.primary
+                        : Colors.white.withOpacity(0.12),
+                    shape: BoxShape.circle,
+                    boxShadow: isSelected
+                        ? [
+                            BoxShadow(
+                              color: AppTheme.primary.withOpacity(0.50),
+                              blurRadius: 16,
+                              offset: const Offset(0, 5),
+                            )
+                          ]
+                        : [],
+                  ),
+                  child: Icon(
+                    widget.item.icon,
+                    color: isSelected ? Colors.white : Colors.white54,
+                    size: isSelected ? 26 : 23,
+                  ),
+                )
+              // ── Regular items ──────────────────────────────────────────
+              else ...[
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeOutCubic,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? AppTheme.primary.withOpacity(0.18)
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Icon(
+                    widget.item.icon,
+                    color: isSelected ? AppTheme.primary : Colors.white38,
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                AnimatedDefaultTextStyle(
+                  duration: const Duration(milliseconds: 200),
+                  style: TextStyle(
+                    color: isSelected ? AppTheme.primary : Colors.white38,
+                    fontSize: 10,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
+                  ),
+                  child: Text(widget.item.label),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+class _NavItem {
+  final IconData icon;
+  final String label;
+  final bool isCenter;
+  const _NavItem({
+    required this.icon,
+    required this.label,
+    this.isCenter = false,
+  });
 }

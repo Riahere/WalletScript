@@ -25,6 +25,10 @@ import 'app_top_bar.dart';
 //   printing: ^5.12.0
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ── Custom color constants ────────────────────────────────────────────────────
+const Color _kNavy = Color(0xFF0D1B3E);
+const Color _kGold = Color(0xFFF5C842);
+
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
   @override
@@ -33,8 +37,8 @@ class HistoryScreen extends StatefulWidget {
 
 class _HistoryScreenState extends State<HistoryScreen> {
   // ── Filter state ──────────────────────────────────────────────────────────
-  String _typeFilter = 'Semua'; // Semua / Income / Expense / Transfer
-  String _categoryFilter = 'Semua'; // dinamis dari data
+  String _typeFilter = 'All'; // All / Income / Expense / Transfer
+  String _categoryFilter = 'All'; // dynamic from data
   String _searchQuery = '';
   final TextEditingController _searchCtrl = TextEditingController();
   bool _searchActive = false;
@@ -96,7 +100,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
-  /// Daftar kategori unik dari data
   List<String> _uniqueCategories(List<AppTransaction> all) {
     final cats = all.map((t) => t.category).toSet().toList();
     cats.sort();
@@ -106,7 +109,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
   List<AppTransaction> _filtered(List<AppTransaction> all) {
     List<AppTransaction> result = all;
 
-    // filter tipe
     if (_typeFilter == 'Income')
       result = result.where((t) => t.type == 'income').toList();
     else if (_typeFilter == 'Expense')
@@ -114,11 +116,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
     else if (_typeFilter == 'Transfer')
       result = result.where((t) => t.type == 'transfer').toList();
 
-    // filter kategori
-    if (_categoryFilter != 'Semua')
+    if (_categoryFilter != 'All')
       result = result.where((t) => t.category == _categoryFilter).toList();
 
-    // search
     if (_searchQuery.isNotEmpty) {
       result = result
           .where((t) =>
@@ -134,7 +134,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   Map<String, List<AppTransaction>> _groupByDate(List<AppTransaction> txs) {
     final map = <String, List<AppTransaction>>{};
     for (final t in txs) {
-      final key = DateFormat('d MMMM yyyy', 'id').format(t.date);
+      final key = DateFormat('d MMMM yyyy').format(t.date);
       map[key] = [...(map[key] ?? []), t];
     }
     return map;
@@ -142,11 +142,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   static String _timeAgo(DateTime date) {
     final diff = DateTime.now().difference(date);
-    if (diff.inMinutes < 1) return 'Baru saja';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m lalu';
-    if (diff.inHours < 24) return '${diff.inHours}j lalu';
-    if (diff.inDays == 1) return 'Kemarin';
-    return '${diff.inDays}h lalu';
+    if (diff.inMinutes < 1) return 'Just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    if (diff.inDays == 1) return 'Yesterday';
+    return '${diff.inDays}d ago';
   }
 
   // ── Build ─────────────────────────────────────────────────────────────────
@@ -189,7 +189,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               child: Row(children: [
                 const Text('Flow History',
                     style: TextStyle(
-                        color: AppTheme.onSurface,
+                        color: _kNavy,
                         fontSize: 20,
                         fontWeight: FontWeight.w800)),
                 const Spacer(),
@@ -207,7 +207,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 const SizedBox(width: 8),
                 _iconBtn(
                   icon: Icons.tune_rounded,
-                  active: _typeFilter != 'Semua' || _categoryFilter != 'Semua',
+                  active: _typeFilter != 'All' || _categoryFilter != 'All',
                   onTap: () => _showFilterSheet(context, categories),
                 ),
               ]),
@@ -224,7 +224,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       const TextStyle(color: AppTheme.onSurface, fontSize: 14),
                   onChanged: (v) => setState(() => _searchQuery = v),
                   decoration: InputDecoration(
-                    hintText: 'Cari transaksi...',
+                    hintText: 'Search transactions...',
                     hintStyle:
                         const TextStyle(color: AppTheme.onSurfaceVariant),
                     prefixIcon: const Icon(Icons.search_rounded,
@@ -256,7 +256,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 scrollDirection: Axis.horizontal,
                 child: Row(
                   children: [
-                    for (final f in ['Semua', 'Income', 'Expense', 'Transfer'])
+                    for (final f in ['All', 'Income', 'Expense', 'Transfer'])
                       Padding(
                         padding: const EdgeInsets.only(right: 8),
                         child: _chip(f, _typeFilter == f,
@@ -267,7 +267,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               ),
             ),
 
-            // ── Category filter chips (dinamis)
+            // ── Category filter chips (dynamic)
             if (categories.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 6, 20, 0),
@@ -277,8 +277,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     children: [
                       Padding(
                         padding: const EdgeInsets.only(right: 8),
-                        child: _chip('Semua', _categoryFilter == 'Semua',
-                            () => setState(() => _categoryFilter = 'Semua'),
+                        child: _chip('All', _categoryFilter == 'All',
+                            () => setState(() => _categoryFilter = 'All'),
                             small: true),
                       ),
                       for (final cat in categories)
@@ -300,13 +300,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
                 child: Row(children: [
                   _summaryChip(
-                      label: 'Pemasukan',
+                      label: 'Income',
                       amount: fmt.format(totalIncome),
-                      color: AppTheme.primary,
+                      color: _kGold,
                       icon: Icons.arrow_downward_rounded),
                   const SizedBox(width: 10),
                   _summaryChip(
-                      label: 'Pengeluaran',
+                      label: 'Expense',
                       amount: fmt.format(totalExpense),
                       color: AppTheme.error,
                       icon: Icons.arrow_upward_rounded),
@@ -327,7 +327,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                               color:
                                   AppTheme.onSurfaceVariant.withOpacity(0.4)),
                           const SizedBox(height: 12),
-                          const Text('Belum ada transaksi',
+                          const Text('No transactions yet',
                               style: TextStyle(
                                   color: AppTheme.onSurfaceVariant,
                                   fontSize: 14)),
@@ -360,9 +360,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                 Text(
                                   '${dayTotal >= 0 ? '+' : ''}${fmt.format(dayTotal)}',
                                   style: TextStyle(
-                                    color: dayTotal >= 0
-                                        ? AppTheme.primary
-                                        : AppTheme.error,
+                                    color:
+                                        dayTotal >= 0 ? _kGold : AppTheme.error,
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -477,7 +476,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 color: isTransfer
                     ? AppTheme.onSurfaceVariant
                     : isIncome
-                        ? AppTheme.primary
+                        ? _kGold
                         : AppTheme.error,
                 fontWeight: FontWeight.w700,
                 fontSize: 14,
@@ -523,7 +522,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
       }
     }
 
-    // RepaintBoundary key for screenshot
     final receiptKey = GlobalKey();
 
     showModalBottomSheet(
@@ -556,7 +554,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 ),
               ),
 
-              // Scrollable content
               Expanded(
                 child: SingleChildScrollView(
                   controller: scrollCtrl,
@@ -585,7 +582,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                               color: isTransfer
                                   ? AppTheme.onSurface
                                   : isIncome
-                                      ? AppTheme.primary
+                                      ? _kGold
                                       : AppTheme.error,
                               fontSize: 28,
                               fontWeight: FontWeight.w800,
@@ -605,7 +602,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                               color: (isTransfer
                                       ? AppTheme.onSurfaceVariant
                                       : isIncome
-                                          ? AppTheme.primary
+                                          ? _kGold
                                           : AppTheme.error)
                                   .withOpacity(0.1),
                               borderRadius: BorderRadius.circular(20),
@@ -614,13 +611,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
                               isTransfer
                                   ? 'Transfer'
                                   : isIncome
-                                      ? 'Pemasukan'
-                                      : 'Pengeluaran',
+                                      ? 'Income'
+                                      : 'Expense',
                               style: TextStyle(
                                 color: isTransfer
                                     ? AppTheme.onSurfaceVariant
                                     : isIncome
-                                        ? AppTheme.primary
+                                        ? _kGold
                                         : AppTheme.error,
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
@@ -634,7 +631,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       const Divider(color: AppTheme.outline),
                       const SizedBox(height: 16),
 
-                      // ── Detail rows (wrapped in RepaintBoundary for screenshot)
+                      // ── Detail rows
                       RepaintBoundary(
                         key: receiptKey,
                         child: Container(
@@ -642,18 +639,18 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           child: Column(
                             children: [
                               _detailRow(
-                                  'Tanggal',
-                                  DateFormat('EEEE, d MMMM yyyy', 'id')
+                                  'Date',
+                                  DateFormat('EEEE, d MMMM yyyy')
                                       .format(t.date)),
                               _detailRow(
-                                  'Waktu', DateFormat('HH:mm').format(t.date)),
-                              _detailRow('Kategori', t.category),
-                              _detailRow('Akun', accountName),
+                                  'Time', DateFormat('HH:mm').format(t.date)),
+                              _detailRow('Category', t.category),
+                              _detailRow('Account', accountName),
                               if (isTransfer && toAccountName.isNotEmpty)
-                                _detailRow('Ke Akun', toAccountName),
-                              _detailRow('Mata Uang', t.currency),
+                                _detailRow('To Account', toAccountName),
+                              _detailRow('Currency', t.currency),
                               if (t.note != null && t.note!.isNotEmpty)
-                                _detailRow('Catatan', t.note!),
+                                _detailRow('Note', t.note!),
                             ],
                           ),
                         ),
@@ -663,12 +660,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
                       // ── Action buttons
                       Row(children: [
-                        // Edit
                         Expanded(
                           child: _actionBtn(
                             icon: Icons.edit_rounded,
                             label: 'Edit',
-                            color: AppTheme.primary,
+                            color: _kNavy,
                             onTap: () {
                               Navigator.pop(ctx);
                               _showEditSheet(context, t, ap, tp);
@@ -676,22 +672,20 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           ),
                         ),
                         const SizedBox(width: 10),
-                        // Struk (image share)
                         Expanded(
                           child: _actionBtn(
                             icon: Icons.share_rounded,
-                            label: 'Struk',
-                            color: const Color(0xFF6C63FF),
+                            label: 'Receipt',
+                            color: _kGold,
                             onTap: () => _shareReceiptAsImage(
                                 context, receiptKey, t, fmt),
                           ),
                         ),
                         const SizedBox(width: 10),
-                        // Hapus
                         Expanded(
                           child: _actionBtn(
                             icon: Icons.delete_rounded,
-                            label: 'Hapus',
+                            label: 'Delete',
                             color: AppTheme.error,
                             onTap: () {
                               Navigator.pop(ctx);
@@ -703,12 +697,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
                       const SizedBox(height: 10),
 
-                      // ── Share as text
                       SizedBox(
                         width: double.infinity,
                         child: _actionBtn(
                           icon: Icons.text_snippet_rounded,
-                          label: 'Bagikan sebagai Teks',
+                          label: 'Share as Text',
                           color: AppTheme.onSurfaceVariant,
                           onTap: () => _shareReceiptAsText(t, fmt, accountName),
                         ),
@@ -760,24 +753,18 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                const Text('Edit Transaksi',
+                const Text('Edit Transaction',
                     style: TextStyle(
-                        color: AppTheme.onSurface,
+                        color: _kNavy,
                         fontWeight: FontWeight.w800,
                         fontSize: 16)),
                 const SizedBox(height: 16),
-
-                // Title
-                _editField(titleCtrl, 'Judul', Icons.title_rounded),
+                _editField(titleCtrl, 'Title', Icons.title_rounded),
                 const SizedBox(height: 12),
-
-                // Amount
-                _editField(amountCtrl, 'Jumlah', Icons.attach_money_rounded,
+                _editField(amountCtrl, 'Amount', Icons.attach_money_rounded,
                     keyboardType: TextInputType.number),
                 const SizedBox(height: 12),
-
-                // Category picker
-                const Text('Kategori',
+                const Text('Category',
                     style: TextStyle(
                         color: AppTheme.onSurfaceVariant,
                         fontSize: 12,
@@ -798,7 +785,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                       horizontal: 12, vertical: 7),
                                   decoration: BoxDecoration(
                                     color: selectedCategory == c
-                                        ? AppTheme.primary
+                                        ? _kNavy
                                         : AppTheme.surfaceContainer,
                                     borderRadius: BorderRadius.circular(20),
                                   ),
@@ -827,17 +814,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
-
-                // Note
-                _editField(noteCtrl, 'Catatan (opsional)', Icons.note_rounded),
+                _editField(noteCtrl, 'Note (optional)', Icons.note_rounded),
                 const SizedBox(height: 20),
-
-                // Save button
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primary,
+                      backgroundColor: _kNavy,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14)),
@@ -870,8 +853,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: const Text('Transaksi diperbarui'),
-                            backgroundColor: AppTheme.primary,
+                            content: const Text('Transaction updated'),
+                            backgroundColor: _kNavy,
                             behavior: SnackBarBehavior.floating,
                             shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10)),
@@ -879,7 +862,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         );
                       }
                     },
-                    child: const Text('Simpan Perubahan',
+                    child: const Text('Save Changes',
                         style: TextStyle(fontWeight: FontWeight.w700)),
                   ),
                 ),
@@ -902,9 +885,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: AppTheme.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Hapus Transaksi?',
-            style: TextStyle(
-                color: AppTheme.onSurface, fontWeight: FontWeight.w700)),
+        title: const Text('Delete Transaction?',
+            style: TextStyle(color: _kNavy, fontWeight: FontWeight.w700)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -915,7 +897,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
             ),
             const SizedBox(height: 8),
             const Text(
-              'Tindakan ini tidak bisa dibatalkan.',
+              'This action cannot be undone.',
               style: TextStyle(color: AppTheme.onSurfaceVariant, fontSize: 12),
             ),
           ],
@@ -923,7 +905,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Batal',
+            child: const Text('Cancel',
                 style: TextStyle(color: AppTheme.onSurfaceVariant)),
           ),
           ElevatedButton(
@@ -939,7 +921,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: const Text('Transaksi dihapus'),
+                    content: const Text('Transaction deleted'),
                     backgroundColor: AppTheme.error,
                     behavior: SnackBarBehavior.floating,
                     shape: RoundedRectangleBorder(
@@ -948,7 +930,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 );
               }
             },
-            child: const Text('Hapus',
+            child: const Text('Delete',
                 style: TextStyle(fontWeight: FontWeight.w700)),
           ),
         ],
@@ -969,18 +951,18 @@ class _HistoryScreenState extends State<HistoryScreen> {
       if (byteData == null) return;
       final bytes = byteData.buffer.asUint8List();
       final dir = await getTemporaryDirectory();
-      final file = File('${dir.path}/struk_${t.id}.png');
+      final file = File('${dir.path}/receipt_${t.id}.png');
       await file.writeAsBytes(bytes);
       await Share.shareXFiles(
         [XFile(file.path)],
-        subject: 'Struk: ${t.title}',
+        subject: 'Receipt: ${t.title}',
         text: '${t.title} — ${fmt.format(t.amount)}',
       );
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Gagal membuat struk: $e'),
+            content: Text('Failed to create receipt: $e'),
             backgroundColor: AppTheme.error,
             behavior: SnackBarBehavior.floating,
           ),
@@ -997,18 +979,18 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final isTransfer = t.type == 'transfer';
     final text = '''
 ━━━━━━━━━━━━━━━━━━━━
-🧾 STRUK TRANSAKSI
+🧾 TRANSACTION RECEIPT
 ━━━━━━━━━━━━━━━━━━━━
 📌 ${t.title}
 💰 ${isTransfer ? '' : isIncome ? '+' : '-'}${fmt.format(t.amount)}
-🏷  Kategori : ${t.category}
-🏦 Akun     : $accountName
-📅 Tanggal  : ${DateFormat('d MMMM yyyy, HH:mm', 'id').format(t.date)}
-${t.note != null && t.note!.isNotEmpty ? '📝 Catatan  : ${t.note}' : ''}
+🏷  Category : ${t.category}
+🏦 Account  : $accountName
+📅 Date     : ${DateFormat('d MMMM yyyy, HH:mm').format(t.date)}
+${t.note != null && t.note!.isNotEmpty ? '📝 Note     : ${t.note}' : ''}
 ━━━━━━━━━━━━━━━━━━━━
-Dibuat dengan WalletScript ✦
+Created with WalletScript ✦
 ''';
-    Share.share(text.trim(), subject: 'Struk: ${t.title}');
+    Share.share(text.trim(), subject: 'Receipt: ${t.title}');
   }
 
   // ── Filter Sheet ──────────────────────────────────────────────────────────
@@ -1038,18 +1020,18 @@ Dibuat dengan WalletScript ✦
               ),
               const SizedBox(height: 20),
               Row(children: [
-                const Text('Filter Transaksi',
+                const Text('Filter Transactions',
                     style: TextStyle(
-                        color: AppTheme.onSurface,
+                        color: _kNavy,
                         fontWeight: FontWeight.w800,
                         fontSize: 16)),
                 const Spacer(),
-                if (_typeFilter != 'Semua' || _categoryFilter != 'Semua')
+                if (_typeFilter != 'All' || _categoryFilter != 'All')
                   TextButton(
                     onPressed: () {
                       setState(() {
-                        _typeFilter = 'Semua';
-                        _categoryFilter = 'Semua';
+                        _typeFilter = 'All';
+                        _categoryFilter = 'All';
                       });
                       setLocal(() {});
                     },
@@ -1058,14 +1040,14 @@ Dibuat dengan WalletScript ✦
                   ),
               ]),
               const SizedBox(height: 4),
-              const Text('Tipe',
+              const Text('Type',
                   style: TextStyle(
                       color: AppTheme.onSurfaceVariant,
                       fontSize: 12,
                       fontWeight: FontWeight.w600)),
               const SizedBox(height: 10),
               Wrap(spacing: 8, runSpacing: 8, children: [
-                for (final f in ['Semua', 'Income', 'Expense', 'Transfer'])
+                for (final f in ['All', 'Income', 'Expense', 'Transfer'])
                   GestureDetector(
                     onTap: () {
                       setState(() => _typeFilter = f);
@@ -1075,7 +1057,7 @@ Dibuat dengan WalletScript ✦
                   ),
               ]),
               const SizedBox(height: 16),
-              const Text('Kategori',
+              const Text('Category',
                   style: TextStyle(
                       color: AppTheme.onSurfaceVariant,
                       fontSize: 12,
@@ -1084,10 +1066,10 @@ Dibuat dengan WalletScript ✦
               Wrap(spacing: 8, runSpacing: 8, children: [
                 GestureDetector(
                   onTap: () {
-                    setState(() => _categoryFilter = 'Semua');
+                    setState(() => _categoryFilter = 'All');
                     setLocal(() {});
                   },
-                  child: _chip('Semua', _categoryFilter == 'Semua', () {},
+                  child: _chip('All', _categoryFilter == 'All', () {},
                       small: true),
                 ),
                 for (final cat in categories)
@@ -1105,14 +1087,14 @@ Dibuat dengan WalletScript ✦
                 width: double.infinity,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primary,
+                    backgroundColor: _kNavy,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14)),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
                   onPressed: () => Navigator.pop(ctx2),
-                  child: const Text('Terapkan',
+                  child: const Text('Apply',
                       style: TextStyle(fontWeight: FontWeight.w700)),
                 ),
               ),
@@ -1135,16 +1117,12 @@ Dibuat dengan WalletScript ✦
       child: Container(
         padding: const EdgeInsets.all(7),
         decoration: BoxDecoration(
-          color: active
-              ? AppTheme.primary.withOpacity(0.1)
-              : AppTheme.surfaceContainer,
+          color: active ? _kNavy.withOpacity(0.1) : AppTheme.surfaceContainer,
           borderRadius: BorderRadius.circular(10),
-          border:
-              Border.all(color: active ? AppTheme.primary : Colors.transparent),
+          border: Border.all(color: active ? _kNavy : Colors.transparent),
         ),
         child: Icon(icon,
-            color: active ? AppTheme.primary : AppTheme.onSurfaceVariant,
-            size: 19),
+            color: active ? _kNavy : AppTheme.onSurfaceVariant, size: 19),
       ),
     );
   }
@@ -1158,7 +1136,7 @@ Dibuat dengan WalletScript ✦
         padding: EdgeInsets.symmetric(
             horizontal: small ? 10 : 14, vertical: small ? 5 : 7),
         decoration: BoxDecoration(
-          color: selected ? AppTheme.primary : AppTheme.surfaceContainer,
+          color: selected ? _kNavy : AppTheme.surfaceContainer,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [

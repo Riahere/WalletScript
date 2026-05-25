@@ -11,13 +11,20 @@ import '../providers/account_provider.dart';
 import '../theme/app_theme.dart';
 
 class AddTransactionScreen extends StatefulWidget {
-  const AddTransactionScreen({super.key});
+  /// Pre-select a transaction type: 'expense' | 'income' | 'transfer'
+  final String initialType;
+
+  const AddTransactionScreen({
+    super.key,
+    this.initialType = 'expense',
+  });
+
   @override
   State<AddTransactionScreen> createState() => _AddTransactionScreenState();
 }
 
 class _AddTransactionScreenState extends State<AddTransactionScreen> {
-  String _type = 'expense';
+  late String _type;
   final _amountController = TextEditingController();
   final _noteController = TextEditingController();
 
@@ -103,6 +110,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   @override
   void initState() {
     super.initState();
+    _type = widget.initialType;
+    if (_type == 'income') _category = 'Gaji';
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final ap = context.read<AccountProvider>();
       ap.loadAccounts().then((_) {
@@ -137,13 +147,12 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal ambil gambar: $e')),
+          SnackBar(content: Text('Failed to pick image: $e')),
         );
       }
     }
   }
 
-  // ── FIX: Custom category dialog — GridView di dalam SizedBox, bukan ListView
   void _showAddCustomCategoryDialog() {
     final ctrl = TextEditingController();
     IconData selectedIcon = Icons.label_rounded;
@@ -177,15 +186,13 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: const Text(
-            'Buat Kategori Baru',
+            'Create New Category',
             style: TextStyle(
               color: AppTheme.onSurface,
               fontWeight: FontWeight.w800,
               fontSize: 16,
             ),
           ),
-          // FIX: Pakai Column dengan mainAxisSize.min, GridView pakai shrinkWrap
-          // tapi dibungkus SizedBox agar tidak trigger intrinsic dimensions error
           content: SizedBox(
             width: double.maxFinite,
             child: Column(
@@ -198,7 +205,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                   style:
                       const TextStyle(color: AppTheme.onSurface, fontSize: 14),
                   decoration: InputDecoration(
-                    hintText: 'Nama kategori...',
+                    hintText: 'Category name...',
                     hintStyle:
                         const TextStyle(color: AppTheme.onSurfaceVariant),
                     filled: true,
@@ -215,7 +222,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                 ),
                 const SizedBox(height: 16),
                 const Text(
-                  'Pilih Icon',
+                  'Choose Icon',
                   style: TextStyle(
                     color: AppTheme.onSurfaceVariant,
                     fontSize: 12,
@@ -223,8 +230,6 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                   ),
                 ),
                 const SizedBox(height: 10),
-                // FIX: GridView.count langsung dengan shrinkWrap, bukan GridView.builder
-                // agar tidak trigger intrinsic dimensions dari AlertDialog
                 GridView.count(
                   crossAxisCount: 6,
                   crossAxisSpacing: 8,
@@ -260,7 +265,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Batal',
+              child: const Text('Cancel',
                   style: TextStyle(color: AppTheme.onSurfaceVariant)),
             ),
             ElevatedButton(
@@ -283,8 +288,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                 });
                 Navigator.pop(ctx);
               },
-              child:
-                  const Text('Simpan', style: TextStyle(color: Colors.white)),
+              child: const Text('Save', style: TextStyle(color: Colors.white)),
             ),
           ],
         ),
@@ -296,7 +300,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     final raw = _amountController.text.replaceAll('.', '').replaceAll(',', '');
     if (raw.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Nominal tidak boleh kosong!')));
+          const SnackBar(content: Text('Amount cannot be empty!')));
       return;
     }
 
@@ -306,23 +310,24 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
     if (_type == 'transfer') {
       if (_fromAccount == null || _toAccount == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Pilih akun asal dan tujuan!')));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Select source and destination accounts!')));
         return;
       }
       if (_fromAccount!.id == _toAccount!.id) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Akun asal dan tujuan tidak boleh sama!')));
+            content:
+                Text('Source and destination accounts cannot be the same!')));
         return;
       }
       if (amount > _fromAccount!.balance) {
         ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Saldo tidak mencukupi!')));
+            const SnackBar(content: Text('Insufficient balance!')));
         return;
       }
 
       final tx = AppTransaction(
-        title: 'Transfer ke ${_toAccount!.name}',
+        title: 'Transfer to ${_toAccount!.name}',
         amount: amount,
         type: 'transfer',
         category: 'Transfer',
@@ -339,7 +344,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     } else {
       if (_selectedAccount == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Pilih wallet terlebih dahulu!')));
+            const SnackBar(content: Text('Please select a wallet first!')));
         return;
       }
 
@@ -364,7 +369,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
     Navigator.pop(context);
     ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text('Transaksi tersimpan ✓')));
+        .showSnackBar(const SnackBar(content: Text('Transaction saved ✓')));
   }
 
   @override
@@ -374,7 +379,6 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     final formatter =
         NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
 
-    // Auto-select — ambil dari accounts list biar instance-nya sama
     if (accounts.isNotEmpty) {
       if (_selectedAccount == null ||
           !accounts.any((a) => a.id == _selectedAccount!.id)) {
@@ -397,6 +401,12 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       }
     }
 
+    final Color accentColor = _type == 'income'
+        ? const Color(0xFF1DB87A)
+        : _type == 'transfer'
+            ? const Color(0xFF6C63FF)
+            : const Color(0xFFEF4444);
+
     return Scaffold(
       backgroundColor: AppTheme.background,
       appBar: AppBar(
@@ -405,11 +415,17 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           icon: const Icon(Icons.close_rounded, color: AppTheme.onSurface),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('Add Transaction',
-            style: TextStyle(
-                color: AppTheme.onSurface,
-                fontWeight: FontWeight.w700,
-                fontSize: 18)),
+        title: Text(
+          _type == 'income'
+              ? 'Add Income'
+              : _type == 'transfer'
+                  ? 'Add Transfer'
+                  : 'Add Expense',
+          style: const TextStyle(
+              color: AppTheme.onSurface,
+              fontWeight: FontWeight.w700,
+              fontSize: 18),
+        ),
         actions: [
           Container(
             margin: const EdgeInsets.only(right: 12),
@@ -417,11 +433,10 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
             height: 36,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              border: Border.all(color: AppTheme.primary, width: 2),
+              border: Border.all(color: accentColor, width: 2),
               color: AppTheme.surfaceContainer,
             ),
-            child: const Icon(Icons.person_rounded,
-                color: AppTheme.primary, size: 20),
+            child: Icon(Icons.person_rounded, color: accentColor, size: 20),
           ),
         ],
       ),
@@ -430,7 +445,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Type toggle
+            // ── Type toggle ──────────────────────────────────────────────────
             Container(
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
@@ -445,24 +460,26 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
             ),
             const SizedBox(height: 28),
 
-            // Amount
+            // ── Amount ───────────────────────────────────────────────────────
             Center(
               child: Column(children: [
-                const Text('ENTER AMOUNT',
-                    style: TextStyle(
-                        color: AppTheme.onSurfaceVariant,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1)),
+                Text(
+                  'ENTER AMOUNT',
+                  style: TextStyle(
+                      color: accentColor,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1),
+                ),
                 const SizedBox(height: 8),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.baseline,
                   textBaseline: TextBaseline.alphabetic,
                   children: [
-                    const Text('Rp ',
+                    Text('Rp ',
                         style: TextStyle(
-                            color: AppTheme.primary,
+                            color: accentColor,
                             fontSize: 28,
                             fontWeight: FontWeight.w700)),
                     IntrinsicWidth(
@@ -505,7 +522,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
             const SizedBox(height: 20),
 
-            // Date picker
+            // ── Date picker ──────────────────────────────────────────────────
             GestureDetector(
               onTap: () async {
                 final picked = await showDatePicker(
@@ -524,8 +541,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                   border: Border.all(color: AppTheme.outline),
                 ),
                 child: Row(children: [
-                  const Icon(Icons.calendar_month_rounded,
-                      color: AppTheme.primary, size: 20),
+                  Icon(Icons.calendar_month_rounded,
+                      color: accentColor, size: 20),
                   const SizedBox(width: 10),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -550,7 +567,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
             ),
             const SizedBox(height: 12),
 
-            // Note
+            // ── Note ─────────────────────────────────────────────────────────
             Container(
               decoration: BoxDecoration(
                 color: AppTheme.surface,
@@ -585,7 +602,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
             ),
             const SizedBox(height: 12),
 
-            // Receipt Attachment
+            // ── Receipt Attachment ───────────────────────────────────────────
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -653,22 +670,28 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
             ),
             const SizedBox(height: 24),
 
-            // Save button
+            // ── Save button ──────────────────────────────────────────────────
             SizedBox(
               width: double.infinity,
               height: 54,
               child: ElevatedButton(
                 onPressed: _save,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primary,
+                  backgroundColor: accentColor,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16)),
                 ),
-                child: const Text('Save Transaction',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700)),
+                child: Text(
+                  _type == 'income'
+                      ? 'Save Income'
+                      : _type == 'transfer'
+                          ? 'Save Transfer'
+                          : 'Save Expense',
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700),
+                ),
               ),
             ),
           ],
@@ -691,7 +714,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           SizedBox(width: 8),
           Expanded(
             child: Text(
-              'Butuh minimal 2 wallet untuk transfer. Tambah di halaman Wallet.',
+              'You need at least 2 wallets to transfer. Add one in the Wallet page.',
               style: TextStyle(color: AppTheme.onSurfaceVariant, fontSize: 13),
             ),
           ),
@@ -699,7 +722,6 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       );
     }
 
-    // FIX: Resolve _fromAccount & _toAccount ke instance dari accounts list
     final resolvedFrom = accounts.firstWhere((a) => a.id == _fromAccount?.id,
         orElse: () => accounts.first);
     final resolvedTo = accounts.firstWhere(
@@ -725,8 +747,6 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           formatter: formatter,
         ),
         const SizedBox(height: 12),
-
-        // Swap button
         Center(
           child: GestureDetector(
             onTap: () => setState(() {
@@ -748,7 +768,6 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           ),
         ),
         const SizedBox(height: 12),
-
         const Text('To',
             style: TextStyle(
                 color: AppTheme.onSurface,
@@ -764,32 +783,28 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           },
           formatter: formatter,
         ),
-
-        if (resolvedFrom != null) ...[
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
-              color: AppTheme.surfaceContainer,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Row(children: [
-              const Icon(Icons.info_outline,
-                  color: AppTheme.onSurfaceVariant, size: 16),
-              const SizedBox(width: 8),
-              Text(
-                'Saldo ${resolvedFrom.name}: ${formatter.format(resolvedFrom.balance)}',
-                style: const TextStyle(
-                    color: AppTheme.onSurfaceVariant, fontSize: 12),
-              ),
-            ]),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: AppTheme.surfaceContainer,
+            borderRadius: BorderRadius.circular(10),
           ),
-        ],
+          child: Row(children: [
+            const Icon(Icons.info_outline,
+                color: AppTheme.onSurfaceVariant, size: 16),
+            const SizedBox(width: 8),
+            Text(
+              '${resolvedFrom.name} balance: ${formatter.format(resolvedFrom.balance)}',
+              style: const TextStyle(
+                  color: AppTheme.onSurfaceVariant, fontSize: 12),
+            ),
+          ]),
+        ),
       ],
     );
   }
 
-  // FIX: DropdownButton value harus dari list items (same instance by id)
   Widget _walletDropdown({
     required AppAccount? selected,
     required List<AppAccount> accounts,
@@ -799,7 +814,6 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   }) {
     final available = accounts.where((a) => a.id != exclude?.id).toList();
 
-    // Resolve value ke instance yang ada di available list
     AppAccount? resolvedValue;
     if (selected != null) {
       final match = available.where((a) => a.id == selected.id);
@@ -819,7 +833,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         isExpanded: true,
         underline: const SizedBox(),
         dropdownColor: AppTheme.surface,
-        hint: const Text('Pilih wallet',
+        hint: const Text('Select wallet',
             style: TextStyle(color: AppTheme.onSurfaceVariant, fontSize: 14)),
         items: available
             .map((acc) => DropdownMenuItem<AppAccount>(
@@ -863,7 +877,6 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
   Widget _buildWalletSection(
       List<AppAccount> accounts, NumberFormat formatter) {
-    // Resolve _selectedAccount ke instance dari accounts list
     if (accounts.isNotEmpty && _selectedAccount != null) {
       final match = accounts.where((a) => a.id == _selectedAccount!.id);
       if (match.isNotEmpty) _selectedAccount = match.first;
@@ -889,7 +902,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                   Icon(Icons.info_outline,
                       color: AppTheme.onSurfaceVariant, size: 18),
                   SizedBox(width: 8),
-                  Text('Belum ada wallet. Tambah dulu di halaman Wallet.',
+                  Text('No wallets yet. Add one in the Wallet page.',
                       style: TextStyle(
                           color: AppTheme.onSurfaceVariant, fontSize: 13)),
                 ]),
@@ -1069,6 +1082,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         onTap: () => setState(() {
           _type = type;
           _selectedAccount = null;
+          _category = type == 'income' ? 'Gaji' : 'Makanan';
         }),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
