@@ -65,12 +65,17 @@ class _WalletScriptAppState extends State<WalletScriptApp> {
     Supabase.instance.client.auth.onAuthStateChange.listen((data) {
       final event = data.event;
       debugPrint('>>> Auth event: $event');
+
+      // Hanya handle password recovery
+      // signedOut TIDAK trigger navigasi otomatis —
+      // login_screen dan settings_screen yang handle navigate secara eksplisit
       if (event == AuthChangeEvent.passwordRecovery) {
         _navigatorKey.currentState?.pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => const ResetPasswordScreen()),
           (route) => false,
         );
       }
+      // signedIn dan signedOut: dibiarkan — masing-masing flow handle sendiri
     });
   }
 

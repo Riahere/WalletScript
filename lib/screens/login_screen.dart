@@ -4,8 +4,14 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import '../services/sync_service.dart';
+import '../services/database_service.dart';
+import '../providers/transaction_provider.dart';
+import '../providers/account_provider.dart';
+import '../providers/note_provider.dart';
+import '../providers/budget_provider.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -148,9 +154,40 @@ class _LoginScreenState extends State<LoginScreen>
     _cardCtrl.forward(from: 0);
   }
 
-  // FIX: pakai pushNamedAndRemoveUntil supaya tidak ada duplicate LoginScreen di stack
+  // ── Navigate setelah login/signup sukses ────────────────────────────────
   void _goToHome() {
     if (!mounted) return;
+    Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
+  }
+
+  // ── Continue as guest: hapus semua data SQLite + clear memory ─────────
+  // Fix lengkap:
+  // - TIDAK signOut() supaya tidak trigger auth listener dua kali
+  // - deleteAllUserData() hapus dari SQLite langsung
+  // - clearAll() di provider bersihkan memory
+  // - data guest tidak pernah tersimpan (tidak ada userId = tidak sync)
+  Future<void> _continueAsGuest() async {
+    if (!mounted) return;
+
+    setState(() => _loading = true);
+
+    try {
+      // Hapus semua data dari SQLite — ini yang paling penting
+      await DatabaseService.instance.deleteAllUserData();
+    } catch (_) {}
+
+    if (!mounted) return;
+
+    // Clear semua provider memory
+    context.read<TransactionProvider>().clearAll();
+    context.read<AccountProvider>().clearAll();
+    context.read<NoteProvider>().clearAll();
+    context.read<BudgetProvider>().clearAll();
+
+    setState(() => _loading = false);
+
+    if (!mounted) return;
+
     Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
   }
 
@@ -603,14 +640,24 @@ class _LoginScreenState extends State<LoginScreen>
                       ),
                     ),
                     const SizedBox(height: 28),
+
+                    // ── "Continue without account" — sekarang pakai _continueAsGuest ──
                     GestureDetector(
-                      onTap: _goToHome,
-                      child: Text(
-                        'Continue without account →',
-                        style: GoogleFonts.dmSans(
-                            color: Colors.grey[400], fontSize: 13),
-                      ),
+                      onTap: _loading ? null : _continueAsGuest,
+                      child: _loading
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: Color(0xFF0D1B3E)),
+                            )
+                          : Text(
+                              'Continue without account →',
+                              style: GoogleFonts.dmSans(
+                                  color: Colors.grey[400], fontSize: 13),
+                            ),
                     ),
+
                     const SizedBox(height: 36),
                   ],
                 ),

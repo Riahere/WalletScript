@@ -63,26 +63,42 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         CurvedAnimation(parent: _balanceCtrl, curve: Curves.easeOutCubic);
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      context.read<TransactionProvider>().loadTransactions();
-      context.read<NoteProvider>().loadNotes();
-      context.read<AccountProvider>().loadAccounts();
-
       final userId = AuthService().userId;
+
       if (userId != null) {
+        // ── Login: load lokal dulu (await), lalu sync cloud ───────────
         setState(() => _syncing = true);
         try {
+          // 1. Load dari SQLite lokal dulu — harus await supaya data ada
+          await context.read<TransactionProvider>().loadTransactions();
+          await context.read<NoteProvider>().loadNotes();
+          await context.read<AccountProvider>().loadAccounts();
+
+          // 2. Push data lokal ke Supabase (upload data yang belum di-cloud)
+          final localAccounts = context.read<AccountProvider>().accounts;
+          final localTxs = context.read<TransactionProvider>().transactions;
+          if (localAccounts.isNotEmpty || localTxs.isNotEmpty) {
+            await SyncService().pushAllToCloud(
+              accounts: localAccounts,
+              transactions: localTxs,
+            );
+          }
+
+          // 3. Pull dari cloud — merge ke SQLite lokal, lalu reload
+          // pullFromCloud() sudah otomatis merge data cloud ke SQLite
           final result = await SyncService().pullFromCloud();
           if (mounted && !result.hasError) {
-            if (result.accounts.isNotEmpty) {
-              context.read<AccountProvider>().loadAccounts();
-            }
-            if (result.transactions.isNotEmpty) {
-              context.read<TransactionProvider>().loadTransactions();
-            }
+            // Reload dari SQLite yang sudah di-merge dengan data cloud
+            await context.read<AccountProvider>().loadAccounts();
+            await context.read<TransactionProvider>().loadTransactions();
           }
-        } catch (_) {}
+        } catch (e) {
+          debugPrint('[HomeScreen] Sync error: $e');
+        }
         if (mounted) setState(() => _syncing = false);
       }
+      // ── Guest: tidak load SQLite — provider sudah clearAll() dari login_screen
+
       _staggerCtrl.forward();
       await Future.delayed(const Duration(milliseconds: 300));
       if (mounted) _balanceCtrl.forward();
@@ -622,36 +638,44 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           children: [
                             // ── NOTICE CARDS ─────────────────────────────
                             _anim(
-                              Row(children: [
-                                Expanded(
-                                    child: _noticeCard(
-                                  icon: Icons.notifications_active_rounded,
-                                  iconBg: const Color(0xFFFFF3C2),
-                                  iconColor: const Color(0xFFB8860B),
-                                  title: 'Reminder',
-                                  subtitle: _reminderSubtitle(nextReminder),
-                                  hasBadge: nextReminder != null,
-                                  onTap: () => Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                          builder: (_) =>
-                                              const NotificationScreen())),
-                                )),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                    child: _noticeCard(
-                                  icon: Icons.lightbulb_outline_rounded,
-                                  iconBg: const Color(0xFFE3F0FF),
-                                  iconColor: const Color(0xFF3A7BD5),
-                                  title: 'Insight',
-                                  subtitle: _insightSubtitle(txP),
-                                  onTap: () => Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                          builder: (_) =>
-                                              const NotificationScreen())),
-                                )),
-                              ]),
+                              // IntrinsicHeight memaksa kedua card sama tinggi
+                              IntrinsicHeight(
+                                child: Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: [
+                                      Expanded(
+                                          child: _noticeCard(
+                                        icon:
+                                            Icons.notifications_active_rounded,
+                                        iconBg: const Color(0xFFFFF3C2),
+                                        iconColor: const Color(0xFFB8860B),
+                                        title: 'Reminder',
+                                        subtitle:
+                                            _reminderSubtitle(nextReminder),
+                                        hasBadge: nextReminder != null,
+                                        onTap: () => Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                                builder: (_) =>
+                                                    const NotificationScreen())),
+                                      )),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                          child: _noticeCard(
+                                        icon: Icons.lightbulb_outline_rounded,
+                                        iconBg: const Color(0xFFE3F0FF),
+                                        iconColor: const Color(0xFF3A7BD5),
+                                        title: 'Insight',
+                                        subtitle: _insightSubtitle(txP),
+                                        onTap: () => Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                                builder: (_) =>
+                                                    const NotificationScreen())),
+                                      )),
+                                    ]),
+                              ),
                               _stagger(3),
                             ),
                             const SizedBox(height: 10),
@@ -674,7 +698,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   mainAxisAlignment:
                                       MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Text('MY WALLETS',
+                                    Text('WALLETS',
                                         style: GoogleFonts.dmSans(
                                             color: _navy,
                                             fontSize: 13,
@@ -1176,6 +1200,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             color: const Color(0xFF222222),
                             fontWeight: FontWeight.w700,
                             fontSize: 10)),
+                    const SizedBox(height: 2),
                     Text(subtitle,
                         style: GoogleFonts.dmSans(
                             color: const Color(0xFF555555),

@@ -12,13 +12,19 @@ class SpendingDetailScreen extends StatefulWidget {
 }
 
 class _SpendingDetailScreenState extends State<SpendingDetailScreen> {
-  String _filter = 'Bulan Ini';
+  String _filter = 'This Month';
+
+  // ── Colors ────────────────────────────────────────────────────────────────
+  static const Color _navy = Color(0xFF0D1B3E); // primary / dark
+  static const Color _gold = Color(0xFFF5C842); // accent / yellow
+  static const Color _white = Color(0xFFFFFFFF); // background
+  static const Color _error = Color(0xFFEF4444); // keep red for expenses
 
   static const List<Color> _catColors = [
-    AppTheme.primary,
+    _navy,
     Color(0xFF6C63FF),
-    Color(0xFFF59E0B),
-    Color(0xFFEF4444),
+    _gold,
+    _error,
     Color(0xFF0EA5E9),
     Color(0xFF10B981),
     Color(0xFFEC4899),
@@ -28,11 +34,11 @@ class _SpendingDetailScreenState extends State<SpendingDetailScreen> {
 
   List<AppTransaction> _applyFilter(List<AppTransaction> all) {
     final now = DateTime.now();
-    if (_filter == 'Bulan Ini') {
+    if (_filter == 'This Month') {
       return all
           .where((t) => t.date.year == now.year && t.date.month == now.month)
           .toList();
-    } else if (_filter == '3 Bulan') {
+    } else if (_filter == '3 Months') {
       final cutoff = DateTime(now.year, now.month - 2, 1);
       return all.where((t) => t.date.isAfter(cutoff)).toList();
     }
@@ -74,25 +80,26 @@ class _SpendingDetailScreenState extends State<SpendingDetailScreen> {
     final dailySeries = _dailySeries(filtered);
     final expenseTxs = filtered.where((t) => t.type == 'expense').toList();
 
+    // Filter labels mapped to English
+    const filters = ['This Month', '3 Months', 'All'];
+
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: _white,
       appBar: AppBar(
-        backgroundColor: AppTheme.background,
+        backgroundColor: _white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: AppTheme.onSurface),
+          icon: const Icon(Icons.arrow_back_rounded, color: _navy),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text('Spending Detail',
             style: TextStyle(
-                color: AppTheme.onSurface,
-                fontWeight: FontWeight.w800,
-                fontSize: 20)),
+                color: _navy, fontWeight: FontWeight.w800, fontSize: 20)),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 12),
             child: Row(
-              children: ['Bulan Ini', '3 Bulan', 'Semua'].map((f) {
+              children: filters.map((f) {
                 final sel = _filter == f;
                 return Padding(
                   padding: const EdgeInsets.only(left: 4),
@@ -103,16 +110,14 @@ class _SpendingDetailScreenState extends State<SpendingDetailScreen> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: sel ? AppTheme.primary : Colors.transparent,
+                        color: sel ? _navy : Colors.transparent,
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                            color: sel ? AppTheme.primary : AppTheme.outline),
+                            color: sel ? _navy : _navy.withOpacity(0.25)),
                       ),
                       child: Text(f,
                           style: TextStyle(
-                              color: sel
-                                  ? Colors.white
-                                  : AppTheme.onSurfaceVariant,
+                              color: sel ? _white : _navy.withOpacity(0.6),
                               fontSize: 11,
                               fontWeight: FontWeight.w600)),
                     ),
@@ -129,12 +134,11 @@ class _SpendingDetailScreenState extends State<SpendingDetailScreen> {
           // ── Summary chips ───────────────────────────────────────────────────
           Row(children: [
             Expanded(
-                child: _summaryChip('Total Pengeluaran',
-                    fmt.format(totalExpense), AppTheme.error)),
+                child: _summaryChip(
+                    'Total Spending', fmt.format(totalExpense), _error)),
             const SizedBox(width: 10),
             Expanded(
-                child: _summaryChip(
-                    'Kategori', '${catList.length}', AppTheme.primary)),
+                child: _summaryChip('Categories', '${catList.length}', _navy)),
           ]),
           const SizedBox(height: 20),
 
@@ -142,24 +146,22 @@ class _SpendingDetailScreenState extends State<SpendingDetailScreen> {
           _card(
             child:
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Text('Pengeluaran Harian',
+              const Text('Daily Spending',
                   style: TextStyle(
-                      color: AppTheme.onSurface,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 15)),
+                      color: _navy, fontWeight: FontWeight.w700, fontSize: 15)),
               const SizedBox(height: 4),
-              Text('${expenseTxs.length} transaksi',
-                  style: const TextStyle(
-                      color: AppTheme.onSurfaceVariant, fontSize: 12)),
+              Text('${expenseTxs.length} transactions',
+                  style:
+                      TextStyle(color: _navy.withOpacity(0.5), fontSize: 12)),
               const SizedBox(height: 20),
               dailySeries.isEmpty
-                  ? const _EmptyState(label: 'Tidak ada data pengeluaran')
+                  ? const _EmptyState(label: 'No spending data')
                   : Column(children: [
                       SizedBox(
                         height: 120,
                         child: CustomPaint(
                           size: const Size(double.infinity, 120),
-                          painter: _BarChartPainter(dailySeries),
+                          painter: _BarChartPainter(dailySeries, _navy),
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -182,14 +184,12 @@ class _SpendingDetailScreenState extends State<SpendingDetailScreen> {
           _card(
             child:
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Text('Breakdown Kategori',
+              const Text('Category Breakdown',
                   style: TextStyle(
-                      color: AppTheme.onSurface,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 15)),
+                      color: _navy, fontWeight: FontWeight.w700, fontSize: 15)),
               const SizedBox(height: 20),
               catList.isEmpty
-                  ? const _EmptyState(label: 'Belum ada pengeluaran')
+                  ? const _EmptyState(label: 'No spending yet')
                   : Column(children: [
                       // donut
                       Center(
@@ -208,17 +208,17 @@ class _SpendingDetailScreenState extends State<SpendingDetailScreen> {
                               ),
                             ),
                             Column(mainAxisSize: MainAxisSize.min, children: [
-                              const Text('TOTAL',
+                              Text('TOTAL',
                                   style: TextStyle(
                                       fontSize: 9,
-                                      color: AppTheme.onSurfaceVariant,
+                                      color: _navy.withOpacity(0.5),
                                       fontWeight: FontWeight.w700,
                                       letterSpacing: 0.5)),
                               const SizedBox(height: 2),
                               Text(fmt.format(totalExpense),
                                   style: const TextStyle(
                                       fontSize: 12,
-                                      color: AppTheme.onSurface,
+                                      color: _navy,
                                       fontWeight: FontWeight.w800),
                                   textAlign: TextAlign.center),
                             ]),
@@ -228,7 +228,7 @@ class _SpendingDetailScreenState extends State<SpendingDetailScreen> {
                       const SizedBox(height: 20),
                       // rows
                       for (int i = 0; i < catList.length; i++) ...[
-                        if (i > 0) const Divider(color: AppTheme.outline),
+                        if (i > 0) Divider(color: _navy.withOpacity(0.1)),
                         _catDetailRow(
                           color: _colorForIndex(i),
                           label: catList[i].key,
@@ -251,14 +251,12 @@ class _SpendingDetailScreenState extends State<SpendingDetailScreen> {
           _card(
             child:
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Text('Transaksi Pengeluaran',
+              const Text('Expense Transactions',
                   style: TextStyle(
-                      color: AppTheme.onSurface,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 15)),
+                      color: _navy, fontWeight: FontWeight.w700, fontSize: 15)),
               const SizedBox(height: 16),
               expenseTxs.isEmpty
-                  ? const _EmptyState(label: 'Tidak ada transaksi')
+                  ? const _EmptyState(label: 'No transactions')
                   : Column(
                       children: expenseTxs
                           .take(20)
@@ -277,15 +275,22 @@ class _SpendingDetailScreenState extends State<SpendingDetailScreen> {
         width: double.infinity,
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: AppTheme.surface,
+          color: _white,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppTheme.outline),
+          border: Border.all(color: _navy.withOpacity(0.12)),
+          boxShadow: [
+            BoxShadow(
+              color: _navy.withOpacity(0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: child,
       );
 
-  static Widget _axisLabel(String text) => Text(text,
-      style: const TextStyle(color: AppTheme.onSurfaceVariant, fontSize: 10));
+  static Widget _axisLabel(String text) =>
+      Text(text, style: TextStyle(color: _navy.withOpacity(0.4), fontSize: 10));
 
   Widget _summaryChip(String label, String value, Color color) {
     return Container(
@@ -297,8 +302,7 @@ class _SpendingDetailScreenState extends State<SpendingDetailScreen> {
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(label,
-            style: const TextStyle(
-                color: AppTheme.onSurfaceVariant, fontSize: 12)),
+            style: TextStyle(color: _navy.withOpacity(0.55), fontSize: 12)),
         const SizedBox(height: 4),
         Text(value,
             style: TextStyle(
@@ -326,7 +330,7 @@ class _SpendingDetailScreenState extends State<SpendingDetailScreen> {
           Expanded(
               child: Text(label,
                   style: const TextStyle(
-                      color: AppTheme.onSurface,
+                      color: _navy,
                       fontWeight: FontWeight.w600,
                       fontSize: 13))),
           Text('$percent%',
@@ -334,8 +338,7 @@ class _SpendingDetailScreenState extends State<SpendingDetailScreen> {
                   color: color, fontWeight: FontWeight.w700, fontSize: 13)),
           const SizedBox(width: 8),
           Text(amount,
-              style: const TextStyle(
-                  color: AppTheme.onSurfaceVariant, fontSize: 12)),
+              style: TextStyle(color: _navy.withOpacity(0.5), fontSize: 12)),
         ]),
         const SizedBox(height: 8),
         ClipRRect(
@@ -359,10 +362,10 @@ class _SpendingDetailScreenState extends State<SpendingDetailScreen> {
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-              color: AppTheme.error.withOpacity(0.08),
+              color: _error.withOpacity(0.08),
               borderRadius: BorderRadius.circular(12)),
-          child: const Icon(Icons.arrow_upward_rounded,
-              color: AppTheme.error, size: 18),
+          child:
+              const Icon(Icons.arrow_upward_rounded, color: _error, size: 18),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -370,18 +373,13 @@ class _SpendingDetailScreenState extends State<SpendingDetailScreen> {
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(t.title,
               style: const TextStyle(
-                  color: AppTheme.onSurface,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13)),
+                  color: _navy, fontWeight: FontWeight.w600, fontSize: 13)),
           Text('${t.category} · ${DateFormat('d MMM').format(t.date)}',
-              style: const TextStyle(
-                  color: AppTheme.onSurfaceVariant, fontSize: 11)),
+              style: TextStyle(color: _navy.withOpacity(0.5), fontSize: 11)),
         ])),
         Text('-${fmt.format(t.amount)}',
             style: const TextStyle(
-                color: AppTheme.error,
-                fontWeight: FontWeight.w700,
-                fontSize: 13)),
+                color: _error, fontWeight: FontWeight.w700, fontSize: 13)),
       ]),
     );
   }
@@ -403,15 +401,17 @@ class _EmptyState extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 20),
         child: Center(
           child: Text(label,
-              style: const TextStyle(
-                  color: AppTheme.onSurfaceVariant, fontSize: 13)),
+              style: TextStyle(
+                  color: const Color(0xFF0D1B3E).withOpacity(0.4),
+                  fontSize: 13)),
         ),
       );
 }
 
 class _BarChartPainter extends CustomPainter {
   final List<_DailyData> data;
-  const _BarChartPainter(this.data);
+  final Color barColor;
+  const _BarChartPainter(this.data, this.barColor);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -427,7 +427,7 @@ class _BarChartPainter extends CustomPainter {
         RRect.fromRectAndRadius(Rect.fromLTWH(x, size.height - h, barW, h),
             const Radius.circular(4)),
         Paint()
-          ..color = AppTheme.primary.withOpacity(0.75)
+          ..color = barColor.withOpacity(0.75)
           ..style = PaintingStyle.fill,
       );
     }

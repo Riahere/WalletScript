@@ -11,6 +11,11 @@ import '../providers/budget_provider.dart';
 import '../providers/account_provider.dart';
 import '../theme/app_theme.dart';
 
+// ─── COLOR CONSTANTS ──────────────────────────────────────────────────────────
+const Color _navy = Color(0xFF0D1B3E);
+const Color _yellow = Color(0xFFF5C842);
+const Color _white = Colors.white;
+
 class GoalDetailScreen extends StatefulWidget {
   final AppBudget budget;
   const GoalDetailScreen({super.key, required this.budget});
@@ -106,7 +111,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppTheme.surface,
+      backgroundColor: _white,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
       builder: (ctx) => StatefulBuilder(
@@ -128,24 +133,24 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                     height: 4,
                     margin: const EdgeInsets.only(bottom: 20),
                     decoration: BoxDecoration(
-                      color: AppTheme.outline,
+                      color: _navy.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
                 ),
-                const Text('Tambah Setoran',
+                const Text('Add Deposit',
                     style: TextStyle(
-                        color: AppTheme.onSurface,
+                        color: _navy,
                         fontSize: 20,
                         fontWeight: FontWeight.w800)),
                 const SizedBox(height: 6),
-                Text('Nabung ke: ${_budget.title}',
-                    style: const TextStyle(
-                        color: AppTheme.onSurfaceVariant, fontSize: 13)),
+                Text('Saving to: ${_budget.title}',
+                    style:
+                        TextStyle(color: _navy.withOpacity(0.5), fontSize: 13)),
                 const SizedBox(height: 24),
-                const Text('Jumlah',
+                const Text('Amount',
                     style: TextStyle(
-                        color: AppTheme.onSurface,
+                        color: _navy,
                         fontWeight: FontWeight.w700,
                         fontSize: 13)),
                 const SizedBox(height: 8),
@@ -154,31 +159,28 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                   keyboardType: TextInputType.number,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   style: const TextStyle(
-                      color: AppTheme.onSurface,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700),
+                      color: _navy, fontSize: 20, fontWeight: FontWeight.w700),
                   decoration: InputDecoration(
                     prefixText: 'Rp ',
                     prefixStyle: const TextStyle(
-                        color: AppTheme.primary,
+                        color: _navy,
                         fontWeight: FontWeight.w700,
                         fontSize: 20),
                     hintText: '0',
                     filled: true,
-                    fillColor: AppTheme.surfaceContainer,
+                    fillColor: _navy.withOpacity(0.06),
                     border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
                         borderSide: BorderSide.none),
                     focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: const BorderSide(
-                            color: AppTheme.primary, width: 1.5)),
+                        borderSide: const BorderSide(color: _yellow, width: 2)),
                   ),
                 ),
                 const SizedBox(height: 20),
-                const Text('Sumber Dana',
+                const Text('Fund Source',
                     style: TextStyle(
-                        color: AppTheme.onSurface,
+                        color: _navy,
                         fontWeight: FontWeight.w700,
                         fontSize: 13)),
                 const SizedBox(height: 8),
@@ -186,19 +188,20 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: AppTheme.surfaceContainer,
+                      color: _navy.withOpacity(0.06),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Text('Belum ada wallet',
-                        style: TextStyle(color: AppTheme.onSurfaceVariant)),
+                    child: Text('No wallets available',
+                        style: TextStyle(color: _navy.withOpacity(0.5))),
                   )
                 else
                   DropdownButtonFormField<AppAccount>(
                     value: selectedAccount,
-                    hint: const Text('Pilih wallet sumber'),
+                    hint: Text('Select source wallet',
+                        style: TextStyle(color: _navy.withOpacity(0.5))),
                     decoration: InputDecoration(
                       filled: true,
-                      fillColor: AppTheme.surfaceContainer,
+                      fillColor: _navy.withOpacity(0.06),
                       border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
                           borderSide: BorderSide.none),
@@ -210,13 +213,14 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                                 children: [
                                   Text(a.name,
                                       style: const TextStyle(
-                                          color: AppTheme.onSurface,
+                                          color: _navy,
                                           fontWeight: FontWeight.w600)),
                                   const SizedBox(width: 8),
                                   Text(_fmt.format(a.balance),
                                       style: const TextStyle(
-                                          color: AppTheme.primary,
-                                          fontSize: 12)),
+                                          color: _yellow,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w700)),
                                 ],
                               ),
                             ))
@@ -228,33 +232,37 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                   children: [
                     Switch(
                       value: deductWallet,
-                      activeColor: AppTheme.primary,
+                      activeColor: _yellow,
+                      activeTrackColor: _navy,
                       onChanged: (v) => setSheet(() => deductWallet = v),
                     ),
                     const SizedBox(width: 8),
-                    const Text('Potong saldo wallet',
-                        style:
-                            TextStyle(color: AppTheme.onSurface, fontSize: 13)),
+                    const Text('Deduct wallet balance',
+                        style: TextStyle(color: _navy, fontSize: 13)),
                   ],
                 ),
                 const SizedBox(height: 20),
-                const Text('Catatan (opsional)',
+                const Text('Note (optional)',
                     style: TextStyle(
-                        color: AppTheme.onSurface,
+                        color: _navy,
                         fontWeight: FontWeight.w700,
                         fontSize: 13)),
                 const SizedBox(height: 8),
                 TextField(
                   controller: noteCtrl,
                   maxLines: 2,
-                  style: const TextStyle(color: AppTheme.onSurface),
+                  style: const TextStyle(color: _navy),
                   decoration: InputDecoration(
-                    hintText: 'Misalnya: gajian bulan ini',
+                    hintText: 'e.g. Monthly salary deposit',
+                    hintStyle: TextStyle(color: _navy.withOpacity(0.4)),
                     filled: true,
-                    fillColor: AppTheme.surfaceContainer,
+                    fillColor: _navy.withOpacity(0.06),
                     border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
                         borderSide: BorderSide.none),
+                    focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: const BorderSide(color: _yellow, width: 2)),
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -272,12 +280,12 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                   child: Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: AppTheme.surfaceContainer,
+                      color: _navy.withOpacity(0.06),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
                           color: attachmentPath != null
-                              ? AppTheme.primary
-                              : AppTheme.outline),
+                              ? _yellow
+                              : _navy.withOpacity(0.2)),
                     ),
                     child: Row(
                       children: [
@@ -286,19 +294,19 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                               ? Icons.attach_file_rounded
                               : Icons.add_photo_alternate_outlined,
                           color: attachmentPath != null
-                              ? AppTheme.primary
-                              : AppTheme.onSurfaceVariant,
+                              ? _yellow
+                              : _navy.withOpacity(0.5),
                         ),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
                             attachmentPath != null
                                 ? attachmentPath!.split('/').last
-                                : 'Lampirkan bukti foto',
+                                : 'Attach receipt photo',
                             style: TextStyle(
                               color: attachmentPath != null
-                                  ? AppTheme.primary
-                                  : AppTheme.onSurfaceVariant,
+                                  ? _navy
+                                  : _navy.withOpacity(0.5),
                               fontSize: 13,
                             ),
                             overflow: TextOverflow.ellipsis,
@@ -307,8 +315,8 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                         if (attachmentPath != null)
                           GestureDetector(
                             onTap: () => setSheet(() => attachmentPath = null),
-                            child: const Icon(Icons.close_rounded,
-                                size: 16, color: AppTheme.onSurfaceVariant),
+                            child: Icon(Icons.close_rounded,
+                                size: 16, color: _navy.withOpacity(0.5)),
                           ),
                       ],
                     ),
@@ -320,7 +328,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                   height: 54,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primary,
+                      backgroundColor: _navy,
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16)),
                     ),
@@ -342,9 +350,9 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                           );
                       await _loadDeposits();
                     },
-                    child: const Text('Simpan Setoran',
+                    child: const Text('Save Deposit',
                         style: TextStyle(
-                            color: Colors.white,
+                            color: _yellow,
                             fontWeight: FontWeight.w700,
                             fontSize: 16)),
                   ),
@@ -366,7 +374,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppTheme.surface,
+      backgroundColor: _white,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
       builder: (ctx) => Padding(
@@ -379,18 +387,15 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
               height: 4,
               margin: const EdgeInsets.only(bottom: 20),
               decoration: BoxDecoration(
-                  color: AppTheme.outline,
+                  color: _navy.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(2)),
             ),
-            const Text('Bagikan Progress',
+            const Text('Share Progress',
                 style: TextStyle(
-                    color: AppTheme.onSurface,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800)),
+                    color: _navy, fontSize: 18, fontWeight: FontWeight.w800)),
             const SizedBox(height: 4),
-            const Text('Tunjukkan perkembangan goalmu ke teman!',
-                style:
-                    TextStyle(color: AppTheme.onSurfaceVariant, fontSize: 12)),
+            Text('Show your goal progress to friends!',
+                style: TextStyle(color: _navy.withOpacity(0.5), fontSize: 12)),
             const SizedBox(height: 20),
 
             // Share card preview
@@ -402,8 +407,8 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    AppTheme.primary,
-                    AppTheme.primary.withOpacity(0.7),
+                    _navy,
+                    _navy.withOpacity(0.75),
                   ],
                 ),
                 borderRadius: BorderRadius.circular(20),
@@ -411,19 +416,18 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Header
                   Row(
                     children: [
                       Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
+                          color: _yellow.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: const Text('WalletScript',
                             style: TextStyle(
-                                color: Colors.white,
+                                color: _yellow,
                                 fontSize: 11,
                                 fontWeight: FontWeight.w700)),
                       ),
@@ -431,48 +435,41 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                       const Text('✦',
                           style: TextStyle(
                               fontSize: 18,
-                              color: Colors.white,
+                              color: _yellow,
                               fontWeight: FontWeight.w300)),
                     ],
                   ),
                   const SizedBox(height: 16),
-
-                  // Goal name
                   Text(_budget.title,
                       style: const TextStyle(
-                          color: Colors.white,
+                          color: _white,
                           fontSize: 22,
                           fontWeight: FontWeight.w800)),
                   if (_budget.description != null) ...[
                     const SizedBox(height: 2),
                     Text(_budget.description!,
                         style: TextStyle(
-                            color: Colors.white.withOpacity(0.8), fontSize: 12),
+                            color: _white.withOpacity(0.7), fontSize: 12),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis),
                   ],
                   const SizedBox(height: 16),
-
-                  // Progress bar
                   ClipRRect(
                     borderRadius: BorderRadius.circular(6),
                     child: LinearProgressIndicator(
                       value: progress,
                       minHeight: 10,
-                      backgroundColor: Colors.white.withOpacity(0.2),
-                      valueColor:
-                          const AlwaysStoppedAnimation<Color>(Colors.white),
+                      backgroundColor: _white.withOpacity(0.15),
+                      valueColor: const AlwaysStoppedAnimation<Color>(_yellow),
                     ),
                   ),
                   const SizedBox(height: 8),
-
-                  // Stats
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('$percent% tercapai',
+                      Text('$percent% achieved',
                           style: const TextStyle(
-                              color: Colors.white,
+                              color: _yellow,
                               fontWeight: FontWeight.w800,
                               fontSize: 18)),
                       Column(
@@ -480,32 +477,30 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                         children: [
                           Text(_fmt.format(_budget.currentAmount),
                               style: TextStyle(
-                                  color: Colors.white.withOpacity(0.9),
+                                  color: _white.withOpacity(0.9),
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600)),
-                          Text('dari ${_fmt.format(_budget.targetAmount)}',
+                          Text('of ${_fmt.format(_budget.targetAmount)}',
                               style: TextStyle(
-                                  color: Colors.white.withOpacity(0.6),
+                                  color: _white.withOpacity(0.55),
                                   fontSize: 10)),
                         ],
                       ),
                     ],
                   ),
                   const SizedBox(height: 12),
-
-                  // Badges row
                   Row(
                     children: [
                       if (streak >= 2) ...[
-                        _shareBadge('◈ $streak bln streak'),
+                        _shareBadge('◈ $streak mo streak'),
                         const SizedBox(width: 8),
                       ],
                       if (_budget.deadline != null &&
                           _budget.daysLeft != null) ...[
-                        _shareBadge('⏳ ${_budget.daysLeft} hari lagi'),
+                        _shareBadge('⏳ ${_budget.daysLeft} days left'),
                         const SizedBox(width: 8),
                       ],
-                      if (_budget.isCompleted) _shareBadge('★ SELESAI!'),
+                      if (_budget.isCompleted) _shareBadge('★ COMPLETED!'),
                     ],
                   ),
                 ],
@@ -519,16 +514,16 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                 Expanded(
                   child: _shareButton(
                     icon: Icons.copy_rounded,
-                    label: 'Salin Teks',
-                    color: AppTheme.surfaceContainer,
-                    textColor: AppTheme.onSurface,
+                    label: 'Copy Text',
+                    color: _navy.withOpacity(0.08),
+                    textColor: _navy,
                     onTap: () {
                       final text = _buildShareText(percent, streak);
                       Clipboard.setData(ClipboardData(text: text));
                       Navigator.pop(ctx);
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text('Teks berhasil disalin!'),
+                          content: Text('Text copied to clipboard!'),
                           behavior: SnackBarBehavior.floating,
                         ),
                       );
@@ -539,9 +534,9 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                 Expanded(
                   child: _shareButton(
                     icon: Icons.share_rounded,
-                    label: 'Bagikan',
-                    color: AppTheme.primary,
-                    textColor: Colors.white,
+                    label: 'Share',
+                    color: _navy,
+                    textColor: _yellow,
                     onTap: () async {
                       Navigator.pop(ctx);
                       final text = _buildShareText(percent, streak);
@@ -563,21 +558,21 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
   String _buildShareText(String percent, int streak) {
     return '★ Financial Goal: ${_budget.title}\n'
         '◈ Progress: $percent% (${_fmt.format(_budget.currentAmount)} / ${_fmt.format(_budget.targetAmount)})\n'
-        '${streak >= 2 ? '◈ Streak $streak bulan berturut-turut!\n' : ''}'
-        '${_budget.deadline != null ? '⏳ Deadline: ${DateFormat('dd MMM yyyy', 'id').format(_budget.deadline!)}\n' : ''}'
-        '\nDibuat dengan WalletScript ✦';
+        '${streak >= 2 ? '◈ $streak month streak!\n' : ''}'
+        '${_budget.deadline != null ? '⏳ Deadline: ${DateFormat('dd MMM yyyy', 'en').format(_budget.deadline!)}\n' : ''}'
+        '\nMade with WalletScript ✦';
   }
 
   Widget _shareBadge(String label) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.2),
+        color: _yellow.withOpacity(0.2),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(label,
           style: const TextStyle(
-              color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700)),
+              color: _yellow, fontSize: 10, fontWeight: FontWeight.w700)),
     );
   }
 
@@ -630,7 +625,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppTheme.surface,
+      backgroundColor: _white,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
       builder: (ctx) => StatefulBuilder(
@@ -652,32 +647,32 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                     height: 4,
                     margin: const EdgeInsets.only(bottom: 20),
                     decoration: BoxDecoration(
-                        color: AppTheme.outline,
+                        color: _navy.withOpacity(0.15),
                         borderRadius: BorderRadius.circular(2)),
                   ),
                 ),
                 Row(
                   children: [
-                    const Expanded(
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Auto-Deduct Bulanan',
+                          const Text('Monthly Auto-Deduct',
                               style: TextStyle(
-                                  color: AppTheme.onSurface,
+                                  color: _navy,
                                   fontSize: 18,
                                   fontWeight: FontWeight.w800)),
-                          SizedBox(height: 2),
-                          Text('Potong otomatis setiap bulan',
+                          const SizedBox(height: 2),
+                          Text('Automatically deduct every month',
                               style: TextStyle(
-                                  color: AppTheme.onSurfaceVariant,
-                                  fontSize: 12)),
+                                  color: _navy.withOpacity(0.5), fontSize: 12)),
                         ],
                       ),
                     ),
                     Switch(
                       value: isEnabled,
-                      activeColor: AppTheme.primary,
+                      activeColor: _yellow,
+                      activeTrackColor: _navy,
                       onChanged: (v) => setSheet(() => isEnabled = v),
                     ),
                   ],
@@ -691,9 +686,9 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Nominal per Bulan',
+                        const Text('Amount per Month',
                             style: TextStyle(
-                                color: AppTheme.onSurface,
+                                color: _navy,
                                 fontWeight: FontWeight.w700,
                                 fontSize: 13)),
                         const SizedBox(height: 8),
@@ -714,10 +709,10 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 12, vertical: 8),
                                 decoration: BoxDecoration(
-                                  color: AppTheme.primary.withOpacity(0.08),
+                                  color: _yellow.withOpacity(0.12),
                                   borderRadius: BorderRadius.circular(10),
                                   border: Border.all(
-                                      color: AppTheme.primary.withOpacity(0.3)),
+                                      color: _yellow.withOpacity(0.4)),
                                 ),
                                 child: Row(
                                   children: [
@@ -725,16 +720,16 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                                         color: Colors.amber, size: 14),
                                     const SizedBox(width: 6),
                                     Text(
-                                      'Saran: ${_fmt.format(suggested.toDouble())}/bln biar tepat waktu',
+                                      'Suggestion: ${_fmt.format(suggested.toDouble())}/mo to stay on track',
                                       style: const TextStyle(
-                                          color: AppTheme.onSurface,
+                                          color: _navy,
                                           fontSize: 12,
                                           fontWeight: FontWeight.w600),
                                     ),
                                     const Spacer(),
-                                    const Text('Pakai →',
+                                    const Text('Use →',
                                         style: TextStyle(
-                                            color: AppTheme.primary,
+                                            color: _navy,
                                             fontSize: 11,
                                             fontWeight: FontWeight.w700)),
                                   ],
@@ -750,31 +745,31 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                             FilteringTextInputFormatter.digitsOnly
                           ],
                           style: const TextStyle(
-                              color: AppTheme.onSurface,
+                              color: _navy,
                               fontSize: 20,
                               fontWeight: FontWeight.w700),
                           decoration: InputDecoration(
                             prefixText: 'Rp ',
                             prefixStyle: const TextStyle(
-                                color: AppTheme.primary,
+                                color: _navy,
                                 fontWeight: FontWeight.w700,
                                 fontSize: 20),
                             hintText: '0',
                             filled: true,
-                            fillColor: AppTheme.surfaceContainer,
+                            fillColor: _navy.withOpacity(0.06),
                             border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(16),
                                 borderSide: BorderSide.none),
                             focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(16),
-                                borderSide: const BorderSide(
-                                    color: AppTheme.primary, width: 1.5)),
+                                borderSide:
+                                    const BorderSide(color: _yellow, width: 2)),
                           ),
                         ),
                         const SizedBox(height: 16),
-                        const Text('Tanggal Potong Setiap Bulan',
+                        const Text('Deduction Date Each Month',
                             style: TextStyle(
-                                color: AppTheme.onSurface,
+                                color: _navy,
                                 fontWeight: FontWeight.w700,
                                 fontSize: 13)),
                         const SizedBox(height: 8),
@@ -795,16 +790,17 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                                   margin: const EdgeInsets.only(right: 6),
                                   decoration: BoxDecoration(
                                     color: isSelected
-                                        ? AppTheme.primary
-                                        : AppTheme.surfaceContainer,
+                                        ? _navy
+                                        : _navy.withOpacity(0.07),
                                     borderRadius: BorderRadius.circular(10),
+                                    border: isSelected
+                                        ? Border.all(color: _yellow, width: 2)
+                                        : null,
                                   ),
                                   child: Center(
                                     child: Text('$day',
                                         style: TextStyle(
-                                            color: isSelected
-                                                ? Colors.white
-                                                : AppTheme.onSurface,
+                                            color: isSelected ? _yellow : _navy,
                                             fontWeight: FontWeight.w700,
                                             fontSize: 13)),
                                   ),
@@ -815,14 +811,14 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Potongan dilakukan setiap tanggal $selectedDay',
-                          style: const TextStyle(
-                              color: AppTheme.onSurfaceVariant, fontSize: 12),
+                          'Deduction runs every $selectedDay${_ordinal(selectedDay)} of the month',
+                          style: TextStyle(
+                              color: _navy.withOpacity(0.5), fontSize: 12),
                         ),
                         const SizedBox(height: 16),
-                        const Text('Wallet Sumber',
+                        const Text('Source Wallet',
                             style: TextStyle(
-                                color: AppTheme.onSurface,
+                                color: _navy,
                                 fontWeight: FontWeight.w700,
                                 fontSize: 13)),
                         const SizedBox(height: 8),
@@ -830,20 +826,22 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                           Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: AppTheme.surfaceContainer,
+                              color: _navy.withOpacity(0.06),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: const Text('Belum ada wallet',
-                                style: TextStyle(
-                                    color: AppTheme.onSurfaceVariant)),
+                            child: Text('No wallets available',
+                                style:
+                                    TextStyle(color: _navy.withOpacity(0.5))),
                           )
                         else
                           DropdownButtonFormField<AppAccount>(
                             value: selectedAccount,
-                            hint: const Text('Pilih wallet'),
+                            hint: Text('Select wallet',
+                                style:
+                                    TextStyle(color: _navy.withOpacity(0.5))),
                             decoration: InputDecoration(
                               filled: true,
-                              fillColor: AppTheme.surfaceContainer,
+                              fillColor: _navy.withOpacity(0.06),
                               border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(14),
                                   borderSide: BorderSide.none),
@@ -854,13 +852,14 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                                       child: Row(children: [
                                         Text(a.name,
                                             style: const TextStyle(
-                                                color: AppTheme.onSurface,
+                                                color: _navy,
                                                 fontWeight: FontWeight.w600)),
                                         const SizedBox(width: 8),
                                         Text(_fmt.format(a.balance),
                                             style: const TextStyle(
-                                                color: AppTheme.primary,
-                                                fontSize: 12)),
+                                                color: _yellow,
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w700)),
                                       ]),
                                     ))
                                 .toList(),
@@ -871,21 +870,21 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Colors.amber.withOpacity(0.08),
+                            color: _yellow.withOpacity(0.08),
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                                color: Colors.amber.withOpacity(0.3)),
+                            border:
+                                Border.all(color: _yellow.withOpacity(0.35)),
                           ),
-                          child: const Row(
+                          child: Row(
                             children: [
-                              Icon(Icons.info_outline_rounded,
+                              const Icon(Icons.info_outline_rounded,
                                   color: Colors.amber, size: 16),
-                              SizedBox(width: 8),
+                              const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
-                                  'Auto-deduct akan berjalan saat kamu membuka aplikasi pada atau setelah tanggal yang ditentukan.',
+                                  'Auto-deduct runs when you open the app on or after the scheduled date.',
                                   style: TextStyle(
-                                      color: AppTheme.onSurfaceVariant,
+                                      color: _navy.withOpacity(0.6),
                                       fontSize: 11),
                                 ),
                               ),
@@ -902,7 +901,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                   height: 54,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primary,
+                      backgroundColor: _navy,
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16)),
                     ),
@@ -925,16 +924,16 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text(isEnabled
-                                ? 'Auto-deduct diaktifkan setiap tgl $selectedDay'
-                                : 'Auto-deduct dinonaktifkan'),
+                                ? 'Auto-deduct enabled on the $selectedDay${_ordinal(selectedDay)} each month'
+                                : 'Auto-deduct disabled'),
                             behavior: SnackBarBehavior.floating,
                           ),
                         );
                       }
                     },
-                    child: const Text('Simpan Jadwal',
+                    child: const Text('Save Schedule',
                         style: TextStyle(
-                            color: Colors.white,
+                            color: _yellow,
                             fontWeight: FontWeight.w700,
                             fontSize: 16)),
                   ),
@@ -947,30 +946,45 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
     );
   }
 
+  String _ordinal(int day) {
+    if (day >= 11 && day <= 13) return 'th';
+    switch (day % 10) {
+      case 1:
+        return 'st';
+      case 2:
+        return 'nd';
+      case 3:
+        return 'rd';
+      default:
+        return 'th';
+    }
+  }
+
   // ─── ARCHIVE ──────────────────────────────────────────────────────────────
   void _confirmArchive() {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.surface,
+        backgroundColor: _white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Arsipkan Goal?',
-            style: TextStyle(color: AppTheme.onSurface)),
+        title: const Text('Archive Goal?',
+            style: TextStyle(color: _navy, fontWeight: FontWeight.w800)),
         content: Text(
-          'Goal "${_budget.title}" akan dipindah ke arsip. '
-          'Kamu bisa memulihkannya kapan saja.',
-          style: const TextStyle(color: AppTheme.onSurfaceVariant),
+          '"${_budget.title}" will be moved to archive. You can restore it anytime.',
+          style: TextStyle(color: _navy.withOpacity(0.6)),
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
+              onPressed: () => Navigator.pop(ctx),
+              child: Text('Cancel',
+                  style: TextStyle(color: _navy.withOpacity(0.5)))),
           TextButton(
             onPressed: () async {
               Navigator.pop(ctx);
               await context.read<BudgetProvider>().archiveBudget(_budget.id!);
               if (mounted) Navigator.pop(context);
             },
-            child: const Text('Arsipkan', style: TextStyle(color: Colors.grey)),
+            child: const Text('Archive', style: TextStyle(color: Colors.grey)),
           ),
         ],
       ),
@@ -982,24 +996,26 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.surface,
+        backgroundColor: _white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Hapus Goal?',
-            style: TextStyle(color: AppTheme.onSurface)),
+        title: const Text('Delete Goal?',
+            style: TextStyle(color: _navy, fontWeight: FontWeight.w800)),
         content: Text(
-          'Goal "${_budget.title}" dan semua setoran akan dihapus permanen.',
-          style: const TextStyle(color: AppTheme.onSurfaceVariant),
+          '"${_budget.title}" and all its deposits will be permanently deleted.',
+          style: TextStyle(color: _navy.withOpacity(0.6)),
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
+              onPressed: () => Navigator.pop(ctx),
+              child: Text('Cancel',
+                  style: TextStyle(color: _navy.withOpacity(0.5)))),
           TextButton(
             onPressed: () async {
               Navigator.pop(ctx);
               await context.read<BudgetProvider>().deleteBudget(_budget.id!);
               if (mounted) Navigator.pop(context);
             },
-            child: const Text('Hapus', style: TextStyle(color: Colors.red)),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -1010,7 +1026,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
   void _showEditVisionBoard() async {
     final choice = await showModalBottomSheet<String>(
       context: context,
-      backgroundColor: AppTheme.surface,
+      backgroundColor: _white,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (ctx) => Padding(
@@ -1023,34 +1039,31 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
               height: 4,
               margin: const EdgeInsets.only(bottom: 20),
               decoration: BoxDecoration(
-                color: AppTheme.outline,
+                color: _navy.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-            const Text('Foto Vision Board',
+            const Text('Vision Board Photo',
                 style: TextStyle(
-                    color: AppTheme.onSurface,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w800)),
+                    color: _navy, fontSize: 17, fontWeight: FontWeight.w800)),
             const SizedBox(height: 6),
-            const Text('Pilih foto impianmu untuk goal ini',
-                style:
-                    TextStyle(color: AppTheme.onSurfaceVariant, fontSize: 13)),
+            Text('Choose a dream photo for this goal',
+                style: TextStyle(color: _navy.withOpacity(0.5), fontSize: 13)),
             const SizedBox(height: 24),
             _sheetOption(ctx,
                 icon: Icons.photo_library_rounded,
-                label: 'Pilih dari Galeri',
+                label: 'Choose from Gallery',
                 value: 'gallery'),
             const SizedBox(height: 10),
             _sheetOption(ctx,
                 icon: Icons.camera_alt_rounded,
-                label: 'Ambil Foto',
+                label: 'Take a Photo',
                 value: 'camera'),
             if (_budget.imagePath != null) ...[
               const SizedBox(height: 10),
               _sheetOption(ctx,
                   icon: Icons.delete_outline_rounded,
-                  label: 'Hapus Foto',
+                  label: 'Remove Photo',
                   value: 'remove',
                   color: Colors.red),
             ],
@@ -1103,16 +1116,16 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: AppTheme.surfaceContainer,
+          color: _navy.withOpacity(0.05),
           borderRadius: BorderRadius.circular(14),
         ),
         child: Row(
           children: [
-            Icon(icon, color: color ?? AppTheme.onSurface, size: 20),
+            Icon(icon, color: color ?? _navy, size: 20),
             const SizedBox(width: 12),
             Text(label,
                 style: TextStyle(
-                    color: color ?? AppTheme.onSurface,
+                    color: color ?? _navy,
                     fontWeight: FontWeight.w600,
                     fontSize: 14)),
           ],
@@ -1134,35 +1147,34 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
     final milestoneIcons = ['🌱', '🌿', '🌳', '🏆'];
 
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: _white,
       body: NestedScrollView(
         headerSliverBuilder: (ctx, _) => [
           SliverAppBar(
             expandedHeight: _budget.imagePath != null ? 280 : 200,
             pinned: true,
-            backgroundColor: AppTheme.surface,
+            backgroundColor: _white,
             leading: IconButton(
               icon: const Icon(Icons.arrow_back_ios_new_rounded),
-              color: AppTheme.onSurface,
+              color: _navy,
               onPressed: () => Navigator.pop(context),
             ),
             actions: [
               IconButton(
                 icon: const Icon(Icons.share_rounded),
-                color: AppTheme.onSurface,
-                tooltip: 'Bagikan',
+                color: _navy,
+                tooltip: 'Share',
                 onPressed: _showShareCard,
               ),
               IconButton(
                 icon: const Icon(Icons.add_photo_alternate_outlined),
-                color: AppTheme.onSurface,
-                tooltip: 'Ganti foto',
+                color: _navy,
+                tooltip: 'Change photo',
                 onPressed: _showEditVisionBoard,
               ),
               PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert_rounded,
-                    color: AppTheme.onSurface),
-                color: AppTheme.surface,
+                icon: const Icon(Icons.more_vert_rounded, color: _navy),
+                color: _white,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16)),
                 onSelected: (v) async {
@@ -1191,7 +1203,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                       child: Row(children: [
                         Icon(Icons.star_rounded, color: Colors.amber, size: 18),
                         SizedBox(width: 8),
-                        Text('Jadikan Prioritas'),
+                        Text('Set as Priority'),
                       ]),
                     ),
                   if (_budget.isPriority)
@@ -1200,7 +1212,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                       child: Row(children: [
                         Icon(Icons.star_border_rounded, size: 18),
                         SizedBox(width: 8),
-                        Text('Hapus dari Prioritas'),
+                        Text('Remove Priority'),
                       ]),
                     ),
                   PopupMenuItem(
@@ -1208,9 +1220,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                     child: Row(children: [
                       Icon(
                         Icons.autorenew_rounded,
-                        color: _budget.autoDeductEnabled
-                            ? AppTheme.primary
-                            : AppTheme.onSurfaceVariant,
+                        color: _budget.autoDeductEnabled ? _navy : Colors.grey,
                         size: 18,
                       ),
                       const SizedBox(width: 8),
@@ -1221,12 +1231,12 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                           const Text('Auto-Deduct'),
                           Text(
                             _budget.autoDeductEnabled
-                                ? 'Aktif · tgl ${_budget.autoDeductDay}'
-                                : 'Belum diatur',
+                                ? 'Active · day ${_budget.autoDeductDay}'
+                                : 'Not configured',
                             style: TextStyle(
                               color: _budget.autoDeductEnabled
-                                  ? AppTheme.primary
-                                  : AppTheme.onSurfaceVariant,
+                                  ? _navy
+                                  : Colors.grey,
                               fontSize: 11,
                             ),
                           ),
@@ -1239,7 +1249,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                     child: Row(children: [
                       Icon(Icons.archive_rounded, color: Colors.grey, size: 18),
                       SizedBox(width: 8),
-                      Text('Arsipkan Goal'),
+                      Text('Archive Goal'),
                     ]),
                   ),
                   const PopupMenuDivider(),
@@ -1249,7 +1259,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                       Icon(Icons.delete_outline_rounded,
                           color: Colors.red, size: 18),
                       SizedBox(width: 8),
-                      Text('Hapus Goal', style: TextStyle(color: Colors.red)),
+                      Text('Delete Goal', style: TextStyle(color: Colors.red)),
                     ]),
                   ),
                 ],
@@ -1268,8 +1278,8 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                           colors: [
-                            Color(int.parse(_budget.color)).withOpacity(0.22),
-                            Color(int.parse(_budget.color)).withOpacity(0.07),
+                            _navy.withOpacity(0.08),
+                            _yellow.withOpacity(0.12),
                           ],
                         ),
                       ),
@@ -1286,20 +1296,21 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 14, vertical: 7),
                                 decoration: BoxDecoration(
-                                  color: Colors.black.withOpacity(0.18),
+                                  color: _navy.withOpacity(0.08),
                                   borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(
-                                      color: Colors.white.withOpacity(0.3)),
+                                  border:
+                                      Border.all(color: _navy.withOpacity(0.2)),
                                 ),
-                                child: const Row(
+                                child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Icon(Icons.add_photo_alternate_outlined,
-                                        color: Colors.white, size: 15),
-                                    SizedBox(width: 6),
-                                    Text('Tambah foto vision board',
+                                        color: _navy.withOpacity(0.7),
+                                        size: 15),
+                                    const SizedBox(width: 6),
+                                    Text('Add vision board photo',
                                         style: TextStyle(
-                                            color: Colors.white,
+                                            color: _navy.withOpacity(0.7),
                                             fontSize: 12,
                                             fontWeight: FontWeight.w600)),
                                   ],
@@ -1322,7 +1333,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                           end: Alignment.bottomCenter,
                           colors: [
                             Colors.transparent,
-                            AppTheme.surface.withOpacity(0.9),
+                            _white.withOpacity(0.95),
                           ],
                         ),
                       ),
@@ -1336,17 +1347,17 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                         padding: const EdgeInsets.symmetric(
                             horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.5),
+                          color: _navy.withOpacity(0.6),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: const Row(
                           children: [
                             Icon(Icons.auto_awesome_rounded,
-                                color: Colors.white, size: 12),
+                                color: _yellow, size: 12),
                             SizedBox(width: 4),
                             Text('Vision Board',
                                 style: TextStyle(
-                                    color: Colors.white,
+                                    color: _white,
                                     fontSize: 11,
                                     fontWeight: FontWeight.w600)),
                           ],
@@ -1361,7 +1372,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
         body: Column(
           children: [
             Container(
-              color: AppTheme.surface,
+              color: _white,
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1371,7 +1382,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                       Expanded(
                         child: Text(_budget.title,
                             style: const TextStyle(
-                                color: AppTheme.onSurface,
+                                color: _navy,
                                 fontSize: 24,
                                 fontWeight: FontWeight.w800)),
                       ),
@@ -1383,20 +1394,19 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: Colors.teal.withOpacity(0.1),
+                              color: _navy.withOpacity(0.08),
                               borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                  color: Colors.teal.withOpacity(0.3)),
+                              border: Border.all(color: _navy.withOpacity(0.2)),
                             ),
                             child: const Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(Icons.autorenew_rounded,
-                                    color: Colors.teal, size: 12),
+                                    color: _navy, size: 12),
                                 SizedBox(width: 3),
                                 Text('Auto',
                                     style: TextStyle(
-                                        color: Colors.teal,
+                                        color: _navy,
                                         fontSize: 10,
                                         fontWeight: FontWeight.w700)),
                               ],
@@ -1410,17 +1420,17 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                           padding: const EdgeInsets.symmetric(
                               horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
-                            color: AppTheme.primary.withOpacity(0.12),
+                            color: _yellow.withOpacity(0.18),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: const Row(
                             children: [
                               Icon(Icons.star_rounded,
-                                  color: AppTheme.primary, size: 14),
+                                  color: _yellow, size: 14),
                               SizedBox(width: 4),
-                              Text('Prioritas',
+                              Text('Priority',
                                   style: TextStyle(
-                                      color: AppTheme.primary,
+                                      color: _navy,
                                       fontSize: 11,
                                       fontWeight: FontWeight.w700)),
                             ],
@@ -1432,21 +1442,21 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                   if (_budget.description != null) ...[
                     const SizedBox(height: 4),
                     Text(_budget.description!,
-                        style: const TextStyle(
-                            color: AppTheme.onSurfaceVariant, fontSize: 13)),
+                        style: TextStyle(
+                            color: _navy.withOpacity(0.5), fontSize: 13)),
                   ],
                   const SizedBox(height: 16),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('$percent% tercapai',
+                      Text('$percent% achieved',
                           style: const TextStyle(
-                              color: AppTheme.onSurface,
+                              color: _navy,
                               fontWeight: FontWeight.w700,
                               fontSize: 14)),
                       Text(_fmt.format(_budget.currentAmount),
                           style: const TextStyle(
-                              color: AppTheme.primary,
+                              color: _navy,
                               fontWeight: FontWeight.w800,
                               fontSize: 14)),
                     ],
@@ -1457,11 +1467,9 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                     child: LinearProgressIndicator(
                       value: progress,
                       minHeight: 12,
-                      backgroundColor: AppTheme.surfaceContainer,
+                      backgroundColor: _navy.withOpacity(0.1),
                       valueColor: AlwaysStoppedAnimation<Color>(
-                          _budget.isCompleted
-                              ? Colors.amber
-                              : AppTheme.primary),
+                          _budget.isCompleted ? _yellow : _navy),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -1470,14 +1478,14 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                       _statChip(Icons.flag_rounded, 'Target',
                           _fmt.format(_budget.targetAmount)),
                       const SizedBox(width: 8),
-                      _statChip(Icons.savings_outlined, 'Sisa',
+                      _statChip(Icons.savings_outlined, 'Remaining',
                           _fmt.format(remaining < 0 ? 0 : remaining)),
                       const SizedBox(width: 8),
                       if (daysLeft != null)
                         _statChip(
                           Icons.calendar_today_rounded,
-                          'Hari lagi',
-                          daysLeft < 0 ? 'Lewat!' : '$daysLeft hari',
+                          'Days left',
+                          daysLeft < 0 ? 'Overdue!' : '$daysLeft days',
                         ),
                     ],
                   ),
@@ -1488,17 +1496,18 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
               _monthlySuggestionBanner(),
             if (_budget.autoDeductEnabled) _autoDeductBanner(),
             Container(
-              color: AppTheme.surface,
+              color: _white,
               child: TabBar(
                 controller: _tabController,
-                labelColor: AppTheme.primary,
-                unselectedLabelColor: AppTheme.onSurfaceVariant,
-                indicatorColor: AppTheme.primary,
+                labelColor: _navy,
+                unselectedLabelColor: _navy.withOpacity(0.4),
+                indicatorColor: _yellow,
+                indicatorWeight: 3,
                 labelStyle:
                     const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
                 tabs: const [
-                  Tab(text: 'Riwayat'),
-                  Tab(text: 'Milestone'),
+                  Tab(text: 'History'),
+                  Tab(text: 'Milestones'),
                   Tab(text: 'Info'),
                 ],
               ),
@@ -1521,11 +1530,11 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
           ? null
           : FloatingActionButton.extended(
               onPressed: _showAddDeposit,
-              backgroundColor: AppTheme.primary,
-              icon: const Icon(Icons.add_rounded, color: Colors.white),
-              label: const Text('Setor Nabung',
-                  style: TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.w700)),
+              backgroundColor: _navy,
+              icon: const Icon(Icons.add_rounded, color: _yellow),
+              label: const Text('Add Deposit',
+                  style:
+                      TextStyle(color: _yellow, fontWeight: FontWeight.w700)),
             ),
     );
   }
@@ -1538,25 +1547,22 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
         margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: Colors.teal.withOpacity(0.08),
+          color: _navy.withOpacity(0.06),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.teal.withOpacity(0.25)),
+          border: Border.all(color: _navy.withOpacity(0.18)),
         ),
         child: Row(
           children: [
-            const Icon(Icons.autorenew_rounded, color: Colors.teal, size: 16),
+            const Icon(Icons.autorenew_rounded, color: _navy, size: 16),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                'Auto-deduct aktif · ${_fmt.format(_budget.autoDeductAmount ?? 0)}/bln setiap tgl ${_budget.autoDeductDay}',
+                'Auto-deduct active · ${_fmt.format(_budget.autoDeductAmount ?? 0)}/mo on day ${_budget.autoDeductDay}',
                 style: const TextStyle(
-                    color: Colors.teal,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600),
+                    color: _navy, fontSize: 12, fontWeight: FontWeight.w600),
               ),
             ),
-            const Icon(Icons.chevron_right_rounded,
-                color: Colors.teal, size: 16),
+            const Icon(Icons.chevron_right_rounded, color: _navy, size: 16),
           ],
         ),
       ),
@@ -1568,7 +1574,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
-          color: AppTheme.surfaceContainer,
+          color: _navy.withOpacity(0.06),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
@@ -1576,19 +1582,17 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
           children: [
             Row(
               children: [
-                Icon(icon, size: 12, color: AppTheme.onSurfaceVariant),
+                Icon(icon, size: 12, color: _navy.withOpacity(0.5)),
                 const SizedBox(width: 4),
                 Text(label,
-                    style: const TextStyle(
-                        color: AppTheme.onSurfaceVariant, fontSize: 10)),
+                    style:
+                        TextStyle(color: _navy.withOpacity(0.5), fontSize: 10)),
               ],
             ),
             const SizedBox(height: 2),
             Text(value,
                 style: const TextStyle(
-                    color: AppTheme.onSurface,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 12),
+                    color: _navy, fontWeight: FontWeight.w700, fontSize: 12),
                 overflow: TextOverflow.ellipsis),
           ],
         ),
@@ -1604,9 +1608,9 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppTheme.primary.withOpacity(0.08),
+        color: _yellow.withOpacity(0.12),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppTheme.primary.withOpacity(0.2)),
+        border: Border.all(color: _yellow.withOpacity(0.35)),
       ),
       child: Row(
         children: [
@@ -1614,11 +1618,9 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              'Nabung ${_fmt.format(monthly)}/bulan untuk capai target tepat waktu',
+              'Save ${_fmt.format(monthly)}/month to reach your target on time',
               style: const TextStyle(
-                  color: AppTheme.onSurface,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600),
+                  color: _navy, fontSize: 13, fontWeight: FontWeight.w600),
             ),
           ),
         ],
@@ -1629,21 +1631,20 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
   // ─── HISTORY TAB ──────────────────────────────────────────────────────────
   Widget _buildHistoryTab() {
     if (_loading) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(child: CircularProgressIndicator(color: _navy));
     }
     if (_deposits.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: const [
-            Text('🐷', style: TextStyle(fontSize: 48)),
-            SizedBox(height: 12),
-            Text('Belum ada setoran',
-                style: TextStyle(color: AppTheme.onSurfaceVariant)),
-            SizedBox(height: 6),
-            Text('Tap "Setor Nabung" untuk mulai',
-                style:
-                    TextStyle(color: AppTheme.onSurfaceVariant, fontSize: 12)),
+          children: [
+            const Text('🐷', style: TextStyle(fontSize: 48)),
+            const SizedBox(height: 12),
+            Text('No deposits yet',
+                style: TextStyle(color: _navy.withOpacity(0.5))),
+            const SizedBox(height: 6),
+            Text('Tap "Add Deposit" to get started',
+                style: TextStyle(color: _navy.withOpacity(0.35), fontSize: 12)),
           ],
         ),
       );
@@ -1674,15 +1675,18 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
             return await showDialog<bool>(
               context: context,
               builder: (c) => AlertDialog(
-                backgroundColor: AppTheme.surface,
-                title: const Text('Hapus setoran?'),
+                backgroundColor: _white,
+                title: const Text('Delete deposit?',
+                    style:
+                        TextStyle(color: _navy, fontWeight: FontWeight.w800)),
                 actions: [
                   TextButton(
                       onPressed: () => Navigator.pop(c, false),
-                      child: const Text('Batal')),
+                      child: Text('Cancel',
+                          style: TextStyle(color: _navy.withOpacity(0.5)))),
                   TextButton(
                       onPressed: () => Navigator.pop(c, true),
-                      child: const Text('Hapus',
+                      child: const Text('Delete',
                           style: TextStyle(color: Colors.red))),
                 ],
               ),
@@ -1700,9 +1704,16 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
             margin: const EdgeInsets.only(bottom: 10),
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: AppTheme.surface,
+              color: _white,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppTheme.outline),
+              border: Border.all(color: _navy.withOpacity(0.12)),
+              boxShadow: [
+                BoxShadow(
+                  color: _navy.withOpacity(0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1713,11 +1724,11 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: AppTheme.primary.withOpacity(0.1),
+                        color: _navy,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Icon(Icons.savings_rounded,
-                          color: AppTheme.primary, size: 20),
+                          color: _yellow, size: 20),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -1726,31 +1737,31 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                         children: [
                           Text(_fmt.format(d.amount),
                               style: const TextStyle(
-                                  color: AppTheme.primary,
+                                  color: _navy,
                                   fontWeight: FontWeight.w800,
                                   fontSize: 15)),
                           Text(
                             d.sourceAccountName != null
-                                ? 'dari ${d.sourceAccountName}'
+                                ? 'from ${d.sourceAccountName}'
                                 : 'Manual',
-                            style: const TextStyle(
-                                color: AppTheme.onSurfaceVariant, fontSize: 12),
+                            style: TextStyle(
+                                color: _navy.withOpacity(0.5), fontSize: 12),
                           ),
                         ],
                       ),
                     ),
                     Text(
-                      DateFormat('dd MMM yyyy', 'id').format(d.date),
-                      style: const TextStyle(
-                          color: AppTheme.onSurfaceVariant, fontSize: 11),
+                      DateFormat('dd MMM yyyy').format(d.date),
+                      style: TextStyle(
+                          color: _navy.withOpacity(0.45), fontSize: 11),
                     ),
                   ],
                 ),
                 if (d.note != null) ...[
                   const SizedBox(height: 8),
                   Text(d.note!,
-                      style: const TextStyle(
-                          color: AppTheme.onSurfaceVariant, fontSize: 13)),
+                      style: TextStyle(
+                          color: _navy.withOpacity(0.6), fontSize: 13)),
                 ],
                 if (d.attachmentPath != null) ...[
                   const SizedBox(height: 8),
@@ -1767,17 +1778,17 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
-                        color: AppTheme.surfaceContainer,
+                        color: _navy.withOpacity(0.06),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(
                         children: [
                           const Icon(Icons.attach_file_rounded,
-                              size: 14, color: AppTheme.primary),
+                              size: 14, color: _navy),
                           const SizedBox(width: 6),
                           Text(d.attachmentPath!.split('/').last,
-                              style: const TextStyle(
-                                  color: AppTheme.primary, fontSize: 12),
+                              style:
+                                  const TextStyle(color: _navy, fontSize: 12),
                               overflow: TextOverflow.ellipsis),
                         ],
                       ),
@@ -1803,13 +1814,20 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
           padding: const EdgeInsets.all(16),
           margin: const EdgeInsets.only(bottom: 16),
           decoration: BoxDecoration(
-            color: AppTheme.surface,
+            color: _white,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: streak >= 3
-                  ? Colors.orange.withOpacity(0.4)
-                  : AppTheme.outline,
+                  ? _yellow.withOpacity(0.5)
+                  : _navy.withOpacity(0.12),
             ),
+            boxShadow: [
+              BoxShadow(
+                color: _navy.withOpacity(0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1820,8 +1838,8 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
                       color: streak >= 1
-                          ? Colors.orange.withOpacity(0.1)
-                          : AppTheme.surfaceContainer,
+                          ? _yellow.withOpacity(0.15)
+                          : _navy.withOpacity(0.06),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
@@ -1840,19 +1858,19 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Streak Nabung',
+                        const Text('Saving Streak',
                             style: TextStyle(
-                                color: AppTheme.onSurface,
+                                color: _navy,
                                 fontWeight: FontWeight.w700,
                                 fontSize: 14)),
                         Text(
                           streak == 0
-                              ? 'Belum ada setoran bulan ini'
+                              ? 'No deposits yet this month'
                               : streak == 1
-                                  ? 'Baru mulai, terus nabung!'
-                                  : 'Nabung $streak bulan berturut-turut!',
-                          style: const TextStyle(
-                              color: AppTheme.onSurfaceVariant, fontSize: 12),
+                                  ? 'Just started, keep going!'
+                                  : '$streak months in a row!',
+                          style: TextStyle(
+                              color: _navy.withOpacity(0.5), fontSize: 12),
                         ),
                       ],
                     ),
@@ -1863,16 +1881,14 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                       Text(
                         '$streak',
                         style: TextStyle(
-                            color: streak >= 1
-                                ? Colors.orange
-                                : AppTheme.onSurfaceVariant,
+                            color: streak >= 1 ? _navy : _navy.withOpacity(0.3),
                             fontWeight: FontWeight.w800,
                             fontSize: 28),
                       ),
                       Text(
-                        streak == 1 ? 'bulan' : 'bulan 🔥',
-                        style: const TextStyle(
-                            color: AppTheme.onSurfaceVariant, fontSize: 11),
+                        streak == 1 ? 'month' : 'months 🔥',
+                        style: TextStyle(
+                            color: _navy.withOpacity(0.45), fontSize: 11),
                       ),
                     ],
                   ),
@@ -1887,19 +1903,19 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: AppTheme.surfaceContainer,
+                  color: _navy.withOpacity(0.05),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.receipt_long_rounded,
-                        size: 13, color: AppTheme.onSurfaceVariant),
+                    Icon(Icons.receipt_long_rounded,
+                        size: 13, color: _navy.withOpacity(0.45)),
                     const SizedBox(width: 6),
                     Text(
-                      '${_deposits.length}x total setoran · ${_fmt.format(_budget.currentAmount)} terkumpul',
-                      style: const TextStyle(
-                          color: AppTheme.onSurfaceVariant, fontSize: 11),
+                      '${_deposits.length}x total deposits · ${_fmt.format(_budget.currentAmount)} saved',
+                      style: TextStyle(
+                          color: _navy.withOpacity(0.5), fontSize: 11),
                     ),
                   ],
                 ),
@@ -1907,9 +1923,9 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
             ],
           ),
         ),
-        const Text('PENCAPAIAN',
+        Text('ACHIEVEMENTS',
             style: TextStyle(
-                color: AppTheme.onSurfaceVariant,
+                color: _navy.withOpacity(0.45),
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 0.8)),
@@ -1922,16 +1938,14 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
             margin: const EdgeInsets.only(bottom: 10),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: reached
-                  ? AppTheme.primary.withOpacity(0.08)
-                  : AppTheme.surface,
+              color: reached ? _navy.withOpacity(0.05) : _white,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: reached
-                    ? AppTheme.primary.withOpacity(0.3)
+                    ? _navy.withOpacity(0.2)
                     : isCurrent
-                        ? AppTheme.primary.withOpacity(0.2)
-                        : AppTheme.outline,
+                        ? _yellow.withOpacity(0.5)
+                        : _navy.withOpacity(0.1),
               ),
             ),
             child: Row(
@@ -1944,39 +1958,44 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                     children: [
                       Text('Milestone ${labels[i]}',
                           style: TextStyle(
-                              color: reached
-                                  ? AppTheme.primary
-                                  : AppTheme.onSurface,
+                              color: reached ? _navy : _navy,
                               fontWeight: FontWeight.w700,
                               fontSize: 14)),
                       Text(
                         _fmt.format(_budget.targetAmount * milestones[i]),
-                        style: const TextStyle(
-                            color: AppTheme.onSurfaceVariant, fontSize: 12),
+                        style: TextStyle(
+                            color: _navy.withOpacity(0.5), fontSize: 12),
                       ),
                     ],
                   ),
                 ),
                 if (reached)
-                  const Icon(Icons.check_circle_rounded,
-                      color: AppTheme.primary, size: 24)
+                  Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: _yellow,
+                      shape: BoxShape.circle,
+                    ),
+                    child:
+                        const Icon(Icons.check_rounded, color: _navy, size: 16),
+                  )
                 else if (isCurrent)
                   Container(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: AppTheme.primary.withOpacity(0.1),
+                      color: _navy,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: const Text('Next',
                         style: TextStyle(
-                            color: AppTheme.primary,
+                            color: _yellow,
                             fontSize: 11,
                             fontWeight: FontWeight.w700)),
                   )
                 else
-                  const Icon(Icons.lock_outline_rounded,
-                      color: AppTheme.onSurfaceVariant, size: 20),
+                  Icon(Icons.lock_outline_rounded,
+                      color: _navy.withOpacity(0.25), size: 20),
               ],
             ),
           );
@@ -1988,26 +2007,26 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  Colors.amber.withOpacity(0.2),
-                  AppTheme.primary.withOpacity(0.1)
+                  _yellow.withOpacity(0.2),
+                  _navy.withOpacity(0.06),
                 ],
               ),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.amber.withOpacity(0.4)),
+              border: Border.all(color: _yellow.withOpacity(0.5)),
             ),
-            child: const Column(
+            child: Column(
               children: [
-                Text('🎉', style: TextStyle(fontSize: 48)),
-                SizedBox(height: 8),
-                Text('Goal Tercapai!',
+                const Text('🎉', style: TextStyle(fontSize: 48)),
+                const SizedBox(height: 8),
+                const Text('Goal Achieved!',
                     style: TextStyle(
-                        color: AppTheme.onSurface,
+                        color: _navy,
                         fontSize: 20,
                         fontWeight: FontWeight.w800)),
-                SizedBox(height: 4),
-                Text('Selamat! Kamu berhasil mencapai targetmu.',
-                    style: TextStyle(
-                        color: AppTheme.onSurfaceVariant, fontSize: 13),
+                const SizedBox(height: 4),
+                Text('Congratulations! You have reached your target.',
+                    style:
+                        TextStyle(color: _navy.withOpacity(0.6), fontSize: 13),
                     textAlign: TextAlign.center),
               ],
             ),
@@ -2032,7 +2051,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
         final isCurrentMonth =
             month.year == now.year && month.month == now.month;
         return Tooltip(
-          message: DateFormat('MMM yyyy', 'id').format(month),
+          message: DateFormat('MMM yyyy').format(month),
           child: Container(
             margin: const EdgeInsets.symmetric(horizontal: 4),
             child: Column(
@@ -2042,13 +2061,13 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                   height: 32,
                   decoration: BoxDecoration(
                     color: hasDeposit
-                        ? Colors.orange
+                        ? _navy
                         : isCurrentMonth
-                            ? AppTheme.primary.withOpacity(0.15)
-                            : AppTheme.surfaceContainer,
+                            ? _yellow.withOpacity(0.2)
+                            : _navy.withOpacity(0.07),
                     shape: BoxShape.circle,
                     border: isCurrentMonth
-                        ? Border.all(color: AppTheme.primary, width: 1.5)
+                        ? Border.all(color: _yellow, width: 2)
                         : null,
                   ),
                   child: Center(
@@ -2056,18 +2075,15 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
                       hasDeposit ? '🔥' : (isCurrentMonth ? '?' : '○'),
                       style: TextStyle(
                         fontSize: hasDeposit ? 14 : 11,
-                        color: hasDeposit
-                            ? Colors.white
-                            : AppTheme.onSurfaceVariant,
+                        color: hasDeposit ? _white : _navy.withOpacity(0.4),
                       ),
                     ),
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  DateFormat('MMM', 'id').format(month),
-                  style: const TextStyle(
-                      color: AppTheme.onSurfaceVariant, fontSize: 9),
+                  DateFormat('MMM').format(month),
+                  style: TextStyle(color: _navy.withOpacity(0.45), fontSize: 9),
                 ),
               ],
             ),
@@ -2082,47 +2098,42 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 100),
       children: [
-        _infoRow(Icons.track_changes_rounded, 'Goal', _budget.title,
-            AppTheme.primary),
+        _infoRow(Icons.track_changes_rounded, 'Goal', _budget.title, _navy),
         _infoRow(Icons.monetization_on_rounded, 'Target',
             _fmt.format(_budget.targetAmount), Colors.green),
-        _infoRow(Icons.savings_rounded, 'Terkumpul',
+        _infoRow(Icons.savings_rounded, 'Saved',
             _fmt.format(_budget.currentAmount), Colors.teal),
         _infoRow(
             Icons.remove_circle_outline_rounded,
-            'Sisa',
+            'Remaining',
             _fmt.format(_budget.remaining < 0 ? 0 : _budget.remaining),
             Colors.orange),
         if (_budget.deadline != null)
           _infoRow(
               Icons.event_rounded,
               'Deadline',
-              DateFormat('dd MMMM yyyy', 'id').format(_budget.deadline!),
+              DateFormat('dd MMMM yyyy').format(_budget.deadline!),
               Colors.blue),
         if (_budget.category != null)
-          _infoRow(Icons.label_rounded, 'Kategori', _budget.category!,
+          _infoRow(Icons.label_rounded, 'Category', _budget.category!,
               Colors.purple),
-        _infoRow(
-            Icons.bar_chart_rounded,
-            'Progress',
-            '${(_budget.progress * 100).toStringAsFixed(1)}%',
-            AppTheme.primary),
-        _infoRow(Icons.receipt_long_rounded, 'Total Setoran',
+        _infoRow(Icons.bar_chart_rounded, 'Progress',
+            '${(_budget.progress * 100).toStringAsFixed(1)}%', _navy),
+        _infoRow(Icons.receipt_long_rounded, 'Total Deposits',
             '${_deposits.length}x', Colors.indigo),
-        _infoRow(Icons.local_fire_department_rounded, 'Streak Nabung',
-            '${_calculateStreak()} bulan berturut-turut', Colors.orange),
+        _infoRow(Icons.local_fire_department_rounded, 'Saving Streak',
+            '${_calculateStreak()} months in a row', Colors.orange),
         if (_budget.autoDeductEnabled)
           _infoRow(
               Icons.autorenew_rounded,
               'Auto-Deduct',
-              '${_fmt.format(_budget.autoDeductAmount ?? 0)}/bln · tgl ${_budget.autoDeductDay}',
-              Colors.teal),
+              '${_fmt.format(_budget.autoDeductAmount ?? 0)}/mo · day ${_budget.autoDeductDay}',
+              _navy),
         if (_deposits.isNotEmpty)
           _infoRow(
               Icons.calendar_month_rounded,
-              'Setoran Terakhir',
-              DateFormat('dd MMM yyyy HH:mm', 'id')
-                  .format(_deposits.first.date),
+              'Last Deposit',
+              DateFormat('dd MMM yyyy HH:mm').format(_deposits.first.date),
               Colors.grey),
       ],
     );
@@ -2133,9 +2144,16 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: AppTheme.surface,
+        color: _white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppTheme.outline),
+        border: Border.all(color: _navy.withOpacity(0.1)),
+        boxShadow: [
+          BoxShadow(
+            color: _navy.withOpacity(0.03),
+            blurRadius: 6,
+            offset: const Offset(0, 1),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -2150,15 +2168,12 @@ class _GoalDetailScreenState extends State<GoalDetailScreen>
           ),
           const SizedBox(width: 12),
           Text(label,
-              style: const TextStyle(
-                  color: AppTheme.onSurfaceVariant, fontSize: 13)),
+              style: TextStyle(color: _navy.withOpacity(0.55), fontSize: 13)),
           const Spacer(),
           Flexible(
             child: Text(value,
                 style: const TextStyle(
-                    color: AppTheme.onSurface,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13),
+                    color: _navy, fontWeight: FontWeight.w700, fontSize: 13),
                 textAlign: TextAlign.right),
           ),
         ],

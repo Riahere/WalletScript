@@ -6,15 +6,16 @@ import '../services/market_service.dart';
 import 'app_top_bar.dart';
 import 'market_detail_screen.dart';
 
-const _cPrimary = Color(0xFF10B981);
-const _cBackground = Color(0xFFF1F5F9);
-const _cSurface = Color(0xFFF8FAFC);
-const _cBorder = Color(0xFFE2E8F0);
-const _cText = Color(0xFF1E293B);
-const _cTextSub = Color(0xFF64748B);
-const _cExpense = Color(0xFFFC7C78);
-const _cChipOff = Color(0xFFE2E8F0);
-const _cGold = Color(0xFFF59E0B);
+const _cPrimary = Color(0xFF0D1B3E);
+const _cAccent = Color(0xFFF5C842);
+const _cBackground = Color(0xFFF8F9FB);
+const _cSurface = Color(0xFFFFFFFF);
+const _cBorder = Color(0xFFE8EDF5);
+const _cText = Color(0xFF0D1B3E);
+const _cTextSub = Color(0xFF6B7A99);
+const _cExpense = Color(0xFFE84B4B);
+const _cChipOff = Color(0xFFEEF1F7);
+const _cGold = Color(0xFFF5C842);
 
 class InsightsScreen extends StatefulWidget {
   const InsightsScreen({super.key});
@@ -125,7 +126,7 @@ class _InsightsScreenState extends State<InsightsScreen>
         if (result != null) {
           _searchResult = result;
         } else {
-          _searchError = 'Ticker "$ticker" tidak ditemukan.';
+          _searchError = 'Ticker "$ticker" not found.';
         }
       });
     }
@@ -161,10 +162,10 @@ class _InsightsScreenState extends State<InsightsScreen>
   }
 
   Color _fgColor(int v) {
-    if (v <= 25) return const Color(0xFFEF4444);
+    if (v <= 25) return const Color(0xFFE84B4B);
     if (v <= 45) return const Color(0xFFF97316);
-    if (v <= 55) return const Color(0xFFEAB308);
-    return _cPrimary;
+    if (v <= 55) return const Color(0xFFF5C842);
+    return const Color(0xFF0D1B3E);
   }
 
   String _fearGreedLabel(int v) {
@@ -185,14 +186,14 @@ class _InsightsScreenState extends State<InsightsScreen>
 
   String _sentimentDesc(int v) {
     if (v <= 25)
-      return 'Pasar sangat ketakutan. Potensi peluang beli bagi investor jangka panjang.';
+      return 'Market is extremely fearful. Potential buying opportunity for long-term investors.';
     if (v <= 45)
-      return 'Sentimen negatif mendominasi. Investor cenderung berhati-hati.';
+      return 'Negative sentiment dominates. Investors tend to be cautious.';
     if (v <= 55)
-      return 'Pasar dalam kondisi netral. Tidak ada tren kuat yang mendominasi.';
+      return 'Market is in a neutral state. No strong trend is dominating.';
     if (v <= 75)
-      return 'Momentum bullish kuat. Pasar menunjukkan kepercayaan diri investor.';
-    return 'Euforia sangat tinggi. Waspadai potensi koreksi jangka pendek.';
+      return 'Strong bullish momentum. Market shows strong investor confidence.';
+    return 'Very high euphoria. Watch out for potential short-term correction.';
   }
 
   void _openDetail(MarketPrice p) {
@@ -252,13 +253,13 @@ class _InsightsScreenState extends State<InsightsScreen>
                   color: _cText, fontWeight: FontWeight.w700, fontSize: 15)),
         ]),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
-          Text('Harga sekarang: ${_formatPrice(p)}',
+          Text('Current price: ${_formatPrice(p)}',
               style: const TextStyle(color: _cTextSub, fontSize: 12)),
           const SizedBox(height: 16),
-          _alertField(aboveCtrl, 'Alert jika NAIK di atas...',
+          _alertField(aboveCtrl, 'Alert when price goes ABOVE...',
               Icons.arrow_upward_rounded, _cPrimary),
           const SizedBox(height: 10),
-          _alertField(belowCtrl, 'Alert jika TURUN di bawah...',
+          _alertField(belowCtrl, 'Alert when price goes BELOW...',
               Icons.arrow_downward_rounded, _cExpense),
         ]),
         actions: [
@@ -267,11 +268,11 @@ class _InsightsScreenState extends State<InsightsScreen>
               setState(() => _priceAlerts.remove(key));
               Navigator.pop(ctx);
             },
-            child: const Text('Hapus', style: TextStyle(color: _cExpense)),
+            child: const Text('Remove', style: TextStyle(color: _cExpense)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Batal', style: TextStyle(color: _cTextSub)),
+            child: const Text('Cancel', style: TextStyle(color: _cTextSub)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -287,13 +288,13 @@ class _InsightsScreenState extends State<InsightsScreen>
               Navigator.pop(ctx);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('Alert untuk ${p.symbol} disimpan'),
+                  content: Text('Alert for ${p.symbol} saved'),
                   backgroundColor: _cPrimary,
                   duration: const Duration(seconds: 2),
                 ),
               );
             },
-            child: const Text('Simpan', style: TextStyle(color: Colors.white)),
+            child: const Text('Save', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -347,8 +348,7 @@ class _InsightsScreenState extends State<InsightsScreen>
           backgroundColor: _cPrimary,
           elevation: 4,
           tooltip: 'Currency Converter',
-          child: const Icon(Icons.calculate_rounded,
-              color: Colors.white, size: 26),
+          child: const Icon(Icons.calculate_rounded, color: _cAccent, size: 26),
         ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
@@ -453,7 +453,7 @@ class _InsightsScreenState extends State<InsightsScreen>
                             ),
                             const SizedBox(height: 2),
                             const Center(
-                              child: Text('Tap untuk detail & history',
+                              child: Text('Tap for details & history',
                                   style: TextStyle(
                                       color: _cTextSub, fontSize: 10)),
                             ),
@@ -530,7 +530,7 @@ class _InsightsScreenState extends State<InsightsScreen>
                             })),
                     const SizedBox(width: 8),
                     _tab(
-                        'Saham',
+                        'Stocks',
                         1,
                         _mainTab,
                         (i) => setState(() {
@@ -604,7 +604,7 @@ class _InsightsScreenState extends State<InsightsScreen>
                               autofocus: true,
                               decoration: const InputDecoration(
                                 hintText:
-                                    'Cari ticker... (AAPL, BBCA, BTC-USD)',
+                                    'Search ticker... (AAPL, BBCA, BTC-USD)',
                                 border: InputBorder.none,
                                 isDense: true,
                                 contentPadding: EdgeInsets.zero,
@@ -616,7 +616,7 @@ class _InsightsScreenState extends State<InsightsScreen>
                             ),
                           )
                         else
-                          const Text('Cari saham, crypto, forex...',
+                          const Text('Search stocks, crypto, forex...',
                               style: TextStyle(color: _cTextSub, fontSize: 13)),
                         if (_searching) ...[
                           _searchLoading
@@ -672,7 +672,7 @@ class _InsightsScreenState extends State<InsightsScreen>
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 8, vertical: 2),
                               decoration: BoxDecoration(
-                                  color: _cPrimary.withOpacity(0.1),
+                                  color: _cAccent.withOpacity(0.15),
                                   borderRadius: BorderRadius.circular(20)),
                               child: Text('${_watchlist.length} ★',
                                   style: const TextStyle(
@@ -717,7 +717,7 @@ class _InsightsScreenState extends State<InsightsScreen>
                             fontSize: 15)),
                   ]),
                   const SizedBox(height: 4),
-                  const Text('Tap berita untuk membaca langsung.',
+                  const Text('Tap a news item to read it directly.',
                       style: TextStyle(color: _cTextSub, fontSize: 12)),
                   const SizedBox(height: 12),
                   if (_loadingNews)
@@ -744,7 +744,7 @@ class _InsightsScreenState extends State<InsightsScreen>
         Container(
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-              color: _cPrimary.withOpacity(0.1),
+              color: _cAccent.withOpacity(0.15),
               borderRadius: BorderRadius.circular(8)),
           child:
               const Icon(Icons.trending_up_rounded, color: _cPrimary, size: 16),
@@ -754,12 +754,12 @@ class _InsightsScreenState extends State<InsightsScreen>
             style: TextStyle(
                 color: _cText, fontWeight: FontWeight.w700, fontSize: 15)),
         const Spacer(),
-        const Text('Naik terbesar hari ini',
+        const Text("Biggest gainers today",
             style: TextStyle(color: _cTextSub, fontSize: 11)),
       ]),
       const SizedBox(height: 10),
       if (_gainers.isEmpty)
-        _emptyState('Tidak ada data gainers')
+        _emptyState('No gainers data available')
       else
         ..._gainers.map((p) => _marketItem(p)),
       const SizedBox(height: 20),
@@ -767,7 +767,7 @@ class _InsightsScreenState extends State<InsightsScreen>
         Container(
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-              color: _cExpense.withOpacity(0.1),
+              color: _cExpense.withOpacity(0.10),
               borderRadius: BorderRadius.circular(8)),
           child: const Icon(Icons.trending_down_rounded,
               color: _cExpense, size: 16),
@@ -777,12 +777,12 @@ class _InsightsScreenState extends State<InsightsScreen>
             style: TextStyle(
                 color: _cText, fontWeight: FontWeight.w700, fontSize: 15)),
         const Spacer(),
-        const Text('Turun terbesar hari ini',
+        const Text("Biggest losers today",
             style: TextStyle(color: _cTextSub, fontSize: 11)),
       ]),
       const SizedBox(height: 10),
       if (_losers.isEmpty)
-        _emptyState('Tidak ada data losers')
+        _emptyState('No losers data available')
       else
         ..._losers.map((p) => _marketItem(p)),
     ]);
@@ -799,7 +799,7 @@ class _InsightsScreenState extends State<InsightsScreen>
             borderRadius: BorderRadius.circular(30)),
         child: Text(label,
             style: TextStyle(
-                color: sel ? Colors.white : _cTextSub,
+                color: sel ? _cAccent : _cTextSub,
                 fontWeight: FontWeight.w600,
                 fontSize: 13)),
       ),
@@ -814,11 +814,11 @@ class _InsightsScreenState extends State<InsightsScreen>
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
-            color: sel ? _cText : _cChipOff,
+            color: sel ? _cPrimary : _cChipOff,
             borderRadius: BorderRadius.circular(20)),
         child: Text(label,
             style: TextStyle(
-                color: sel ? Colors.white : _cTextSub,
+                color: sel ? _cAccent : _cTextSub,
                 fontWeight: FontWeight.w600,
                 fontSize: 12)),
       ),
@@ -829,12 +829,12 @@ class _InsightsScreenState extends State<InsightsScreen>
     final isUp = p.changePercent >= 0;
     final color = isUp ? _cPrimary : _cExpense;
     final bgMap = {
-      'crypto': const Color(0xFFFFF7ED),
-      'stock': const Color(0xFFF0F4F8),
-      'idx': const Color(0xFFECFDF5),
-      'forex': const Color(0xFFEFF6FF),
+      'crypto': const Color(0xFFFFF8E1),
+      'stock': const Color(0xFFEEF1F7),
+      'idx': const Color(0xFFE8EDF8),
+      'forex': const Color(0xFFF0F4FF),
     };
-    final bg = bgMap[p.type] ?? const Color(0xFFF0F4F8);
+    final bg = bgMap[p.type] ?? const Color(0xFFEEF1F7);
     final wKey = _watchKey(p);
     final inWatchlist = _watchlist.contains(wKey);
     final hasAlert = _priceAlerts.containsKey(wKey);
@@ -934,7 +934,7 @@ class _InsightsScreenState extends State<InsightsScreen>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                    color: _cPrimary.withOpacity(0.1),
+                    color: _cPrimary.withOpacity(0.08),
                     borderRadius: BorderRadius.circular(20)),
                 child: Text(n.source,
                     style: const TextStyle(
@@ -972,7 +972,7 @@ class _InsightsScreenState extends State<InsightsScreen>
             borderRadius: BorderRadius.circular(14),
             border: Border.all(color: _cBorder)),
         child: const Center(
-            child: Text('Berita tidak tersedia saat ini.',
+            child: Text('No news available at this time.',
                 style: TextStyle(color: _cTextSub))),
       );
 
@@ -1032,11 +1032,11 @@ class _FearGreedSheetState extends State<_FearGreedSheet> {
   }
 
   Color _colorFor(int v) {
-    if (v <= 25) return const Color(0xFFEF4444);
+    if (v <= 25) return const Color(0xFFE84B4B);
     if (v <= 45) return const Color(0xFFF97316);
-    if (v <= 55) return const Color(0xFFEAB308);
-    if (v <= 75) return const Color(0xFF10B981);
-    return const Color(0xFF059669);
+    if (v <= 55) return const Color(0xFFF5C842);
+    if (v <= 75) return const Color(0xFF0D1B3E);
+    return const Color(0xFF0A1428);
   }
 
   String _labelFor(int v) {
@@ -1058,7 +1058,7 @@ class _FearGreedSheetState extends State<_FearGreedSheet> {
       maxChildSize: 0.95,
       builder: (_, scrollCtrl) => Container(
         decoration: const BoxDecoration(
-          color: Color(0xFFF8FAFC),
+          color: Color(0xFFF8F9FB),
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
         child: ListView(
@@ -1071,7 +1071,7 @@ class _FearGreedSheetState extends State<_FearGreedSheet> {
                 width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                    color: const Color(0xFFE2E8F0),
+                    color: const Color(0xFFE8EDF5),
                     borderRadius: BorderRadius.circular(2)),
               ),
             ),
@@ -1090,7 +1090,7 @@ class _FearGreedSheetState extends State<_FearGreedSheet> {
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 const Text('Fear & Greed Index',
                     style: TextStyle(
-                        color: Color(0xFF1E293B),
+                        color: Color(0xFF0D1B3E),
                         fontWeight: FontWeight.w800,
                         fontSize: 17)),
                 Text('Crypto Market Sentiment',
@@ -1127,7 +1127,7 @@ class _FearGreedSheetState extends State<_FearGreedSheet> {
                   child: LinearProgressIndicator(
                     value: v / 100,
                     minHeight: 12,
-                    backgroundColor: const Color(0xFFE2E8F0),
+                    backgroundColor: const Color(0xFFE8EDF5),
                     valueColor: AlwaysStoppedAnimation<Color>(color),
                   ),
                 ),
@@ -1138,72 +1138,72 @@ class _FearGreedSheetState extends State<_FearGreedSheet> {
                     Text('0\nExtreme Fear',
                         textAlign: TextAlign.center,
                         style:
-                            TextStyle(color: Color(0xFF64748B), fontSize: 9)),
+                            TextStyle(color: Color(0xFF6B7A99), fontSize: 9)),
                     Text('50\nNeutral',
                         textAlign: TextAlign.center,
                         style:
-                            TextStyle(color: Color(0xFF64748B), fontSize: 9)),
+                            TextStyle(color: Color(0xFF6B7A99), fontSize: 9)),
                     Text('100\nExtreme Greed',
                         textAlign: TextAlign.center,
                         style:
-                            TextStyle(color: Color(0xFF64748B), fontSize: 9)),
+                            TextStyle(color: Color(0xFF6B7A99), fontSize: 9)),
                   ],
                 ),
               ]),
             ),
             const SizedBox(height: 20),
 
-            // Penjelasan
+            // Explanation
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
+                border: Border.all(color: const Color(0xFFE8EDF5)),
               ),
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Apa itu Fear & Greed Index?',
+                    const Text('What is the Fear & Greed Index?',
                         style: TextStyle(
-                            color: Color(0xFF1E293B),
+                            color: Color(0xFF0D1B3E),
                             fontWeight: FontWeight.w700,
                             fontSize: 13)),
                     const SizedBox(height: 8),
                     const Text(
-                      'Indeks ini mengukur sentimen investor di pasar crypto. '
-                      'Nilainya 0–100. Semakin rendah berarti pasar lebih ketakutan, '
-                      'semakin tinggi berarti pasar lebih serakah (euforia).',
+                      'This index measures investor sentiment in the crypto market. '
+                      'The score ranges from 0–100. Lower values indicate more fear, '
+                      'while higher values indicate more greed (euphoria).',
                       style: TextStyle(
-                          color: Color(0xFF64748B), fontSize: 12, height: 1.5),
+                          color: Color(0xFF6B7A99), fontSize: 12, height: 1.5),
                     ),
                     const SizedBox(height: 14),
                     _infoRow(
                         '0–25',
-                        'Extreme Fear — potensi peluang beli jangka panjang',
-                        const Color(0xFFEF4444)),
+                        'Extreme Fear — potential long-term buying opportunity',
+                        const Color(0xFFE84B4B)),
                     _infoRow(
                         '26–45',
-                        'Fear — sentimen negatif, investor berhati-hati',
+                        'Fear — negative sentiment, investors are cautious',
                         const Color(0xFFF97316)),
-                    _infoRow('46–55', 'Neutral — tidak ada tren kuat',
-                        const Color(0xFFEAB308)),
+                    _infoRow('46–55', 'Neutral — no strong trend',
+                        const Color(0xFFF5C842)),
                     _infoRow(
                         '56–75',
-                        'Greed — momentum bullish, investor percaya diri',
-                        const Color(0xFF10B981)),
+                        'Greed — bullish momentum, investors are confident',
+                        const Color(0xFF0D1B3E)),
                     _infoRow(
                         '76–100',
-                        'Extreme Greed — euforia tinggi, waspadai koreksi',
-                        const Color(0xFF059669)),
+                        'Extreme Greed — high euphoria, watch for correction',
+                        const Color(0xFF0A1428)),
                   ]),
             ),
             const SizedBox(height: 20),
 
             // 30-day chart
-            const Text('Trend 30 Hari',
+            const Text('30-Day Trend',
                 style: TextStyle(
-                    color: Color(0xFF1E293B),
+                    color: Color(0xFF0D1B3E),
                     fontWeight: FontWeight.w700,
                     fontSize: 14)),
             const SizedBox(height: 10),
@@ -1212,18 +1212,18 @@ class _FearGreedSheetState extends State<_FearGreedSheet> {
                     child: Padding(
                     padding: EdgeInsets.all(20),
                     child: CircularProgressIndicator(
-                        color: Color(0xFF10B981), strokeWidth: 2),
+                        color: Color(0xFF0D1B3E), strokeWidth: 2),
                   ))
                 : _history.isEmpty
-                    ? const Text('Data tidak tersedia',
-                        style: TextStyle(color: Color(0xFF64748B)))
+                    ? const Text('Data not available',
+                        style: TextStyle(color: Color(0xFF6B7A99)))
                     : Container(
                         height: 110,
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                          border: Border.all(color: const Color(0xFFE8EDF5)),
                         ),
                         child: CustomPaint(
                           painter: _FearGreedChartPainter(
@@ -1236,19 +1236,19 @@ class _FearGreedSheetState extends State<_FearGreedSheet> {
             const SizedBox(height: 20),
 
             // 7-day history
-            const Text('History 7 Hari',
+            const Text('7-Day History',
                 style: TextStyle(
-                    color: Color(0xFF1E293B),
+                    color: Color(0xFF0D1B3E),
                     fontWeight: FontWeight.w700,
                     fontSize: 14)),
             const SizedBox(height: 10),
             _loading
                 ? const Center(
                     child: CircularProgressIndicator(
-                        color: Color(0xFF10B981), strokeWidth: 2))
+                        color: Color(0xFF0D1B3E), strokeWidth: 2))
                 : _history.isEmpty
-                    ? const Text('Data tidak tersedia',
-                        style: TextStyle(color: Color(0xFF64748B)))
+                    ? const Text('Data not available',
+                        style: TextStyle(color: Color(0xFF6B7A99)))
                     : Column(
                         children: _history.take(7).map((d) {
                           final val = d['value'] as int;
@@ -1262,12 +1262,12 @@ class _FearGreedSheetState extends State<_FearGreedSheet> {
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(12),
                               border:
-                                  Border.all(color: const Color(0xFFE2E8F0)),
+                                  Border.all(color: const Color(0xFFE8EDF5)),
                             ),
                             child: Row(children: [
                               Text(date,
                                   style: const TextStyle(
-                                      color: Color(0xFF64748B), fontSize: 12)),
+                                      color: Color(0xFF6B7A99), fontSize: 12)),
                               const Spacer(),
                               SizedBox(
                                 width: 90,
@@ -1276,7 +1276,7 @@ class _FearGreedSheetState extends State<_FearGreedSheet> {
                                   borderRadius: BorderRadius.circular(3),
                                   child: LinearProgressIndicator(
                                     value: val / 100,
-                                    backgroundColor: const Color(0xFFE2E8F0),
+                                    backgroundColor: const Color(0xFFE8EDF5),
                                     valueColor:
                                         AlwaysStoppedAnimation<Color>(col),
                                   ),
@@ -1307,8 +1307,8 @@ class _FearGreedSheetState extends State<_FearGreedSheet> {
             Center(
               child: TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Tutup',
-                    style: TextStyle(color: Color(0xFF64748B))),
+                child: const Text('Close',
+                    style: TextStyle(color: Color(0xFF6B7A99))),
               ),
             ),
           ],
@@ -1337,7 +1337,7 @@ class _FearGreedSheetState extends State<_FearGreedSheet> {
               TextSpan(
                   text: desc,
                   style:
-                      const TextStyle(color: Color(0xFF64748B), fontSize: 11)),
+                      const TextStyle(color: Color(0xFF6B7A99), fontSize: 11)),
             ]),
           ),
         ),
@@ -1450,14 +1450,14 @@ class _NewsWebViewScreenState extends State<_NewsWebViewScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: const Color(0xFFF8F9FB),
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF8FAFC),
+        backgroundColor: const Color(0xFFF8F9FB),
         elevation: 0,
         surfaceTintColor: Colors.transparent,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_rounded,
-              color: Color(0xFF1E293B), size: 20),
+              color: Color(0xFF0D1B3E), size: 20),
           onPressed: () => Navigator.pop(context),
         ),
         title: Column(
@@ -1465,11 +1465,11 @@ class _NewsWebViewScreenState extends State<_NewsWebViewScreen> {
           children: [
             Text(widget.news.source,
                 style: const TextStyle(
-                    color: Color(0xFF10B981),
+                    color: Color(0xFF0D1B3E),
                     fontSize: 13,
                     fontWeight: FontWeight.w700)),
             Text(widget.news.headline,
-                style: const TextStyle(color: Color(0xFF64748B), fontSize: 10),
+                style: const TextStyle(color: Color(0xFF6B7A99), fontSize: 10),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis),
           ],
@@ -1477,7 +1477,7 @@ class _NewsWebViewScreenState extends State<_NewsWebViewScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_rounded,
-                color: Color(0xFF64748B), size: 20),
+                color: Color(0xFF6B7A99), size: 20),
             onPressed: () => _controller.reload(),
           ),
         ],
@@ -1486,9 +1486,9 @@ class _NewsWebViewScreenState extends State<_NewsWebViewScreen> {
                 preferredSize: const Size.fromHeight(3),
                 child: LinearProgressIndicator(
                   value: _loadingProgress / 100,
-                  backgroundColor: const Color(0xFFE2E8F0),
+                  backgroundColor: const Color(0xFFE8EDF5),
                   valueColor:
-                      const AlwaysStoppedAnimation<Color>(Color(0xFF10B981)),
+                      const AlwaysStoppedAnimation<Color>(Color(0xFF0D1B3E)),
                   minHeight: 3,
                 ),
               )
@@ -1603,7 +1603,7 @@ class _ConverterSheetState extends State<_ConverterSheet> {
   Widget build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
-        color: Color(0xFFF8FAFC),
+        color: Color(0xFFF8F9FB),
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       padding: EdgeInsets.fromLTRB(
@@ -1613,7 +1613,7 @@ class _ConverterSheetState extends State<_ConverterSheet> {
           width: 36,
           height: 4,
           decoration: BoxDecoration(
-              color: const Color(0xFFE2E8F0),
+              color: const Color(0xFFE8EDF5),
               borderRadius: BorderRadius.circular(2)),
         ),
         const SizedBox(height: 16),
@@ -1621,10 +1621,10 @@ class _ConverterSheetState extends State<_ConverterSheet> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-                color: const Color(0xFF10B981).withOpacity(0.1),
+                color: const Color(0xFF0D1B3E).withOpacity(0.08),
                 borderRadius: BorderRadius.circular(10)),
             child: const Icon(Icons.calculate_rounded,
-                color: Color(0xFF10B981), size: 20),
+                color: Color(0xFF0D1B3E), size: 20),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -1632,14 +1632,14 @@ class _ConverterSheetState extends State<_ConverterSheet> {
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               const Text('Currency Converter',
                   style: TextStyle(
-                      color: Color(0xFF1E293B),
+                      color: Color(0xFF0D1B3E),
                       fontWeight: FontWeight.w700,
                       fontSize: 16)),
               Text(
                 _loadingRates
-                    ? 'Memuat rate live...'
-                    : 'Rate live · open.er-api.com',
-                style: const TextStyle(color: Color(0xFF64748B), fontSize: 11),
+                    ? 'Loading live rates...'
+                    : 'Live rate · open.er-api.com',
+                style: const TextStyle(color: Color(0xFF6B7A99), fontSize: 11),
               ),
             ]),
           ),
@@ -1648,7 +1648,7 @@ class _ConverterSheetState extends State<_ConverterSheet> {
               width: 16,
               height: 16,
               child: CircularProgressIndicator(
-                  strokeWidth: 2, color: Color(0xFF10B981)),
+                  strokeWidth: 2, color: Color(0xFF0D1B3E)),
             ),
         ]),
         const SizedBox(height: 20),
@@ -1656,24 +1656,24 @@ class _ConverterSheetState extends State<_ConverterSheet> {
           controller: _amountCtrl,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           decoration: InputDecoration(
-            hintText: 'Masukkan jumlah...',
-            hintStyle: const TextStyle(color: Color(0xFF64748B), fontSize: 13),
+            hintText: 'Enter amount...',
+            hintStyle: const TextStyle(color: Color(0xFF6B7A99), fontSize: 13),
             filled: true,
-            fillColor: const Color(0xFFF1F5F9),
+            fillColor: const Color(0xFFF8F9FB),
             border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                borderSide: const BorderSide(color: Color(0xFFE8EDF5))),
             enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                borderSide: const BorderSide(color: Color(0xFFE8EDF5))),
             focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Color(0xFF10B981))),
+                borderSide: const BorderSide(color: Color(0xFF0D1B3E))),
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           ),
           style: const TextStyle(
-              color: Color(0xFF1E293B),
+              color: Color(0xFF0D1B3E),
               fontSize: 15,
               fontWeight: FontWeight.w600),
           onChanged: (_) => _doConvert(),
@@ -1699,10 +1699,10 @@ class _ConverterSheetState extends State<_ConverterSheet> {
               child: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                    color: const Color(0xFF10B981).withOpacity(0.1),
+                    color: const Color(0xFF0D1B3E).withOpacity(0.08),
                     borderRadius: BorderRadius.circular(10)),
                 child: const Icon(Icons.swap_horiz_rounded,
-                    color: Color(0xFF10B981), size: 20),
+                    color: Color(0xFF0D1B3E), size: 20),
               ),
             ),
           ),
@@ -1717,41 +1717,42 @@ class _ConverterSheetState extends State<_ConverterSheet> {
           width: double.infinity,
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: const Color(0xFF10B981).withOpacity(0.06),
+            color: const Color(0xFF0D1B3E).withOpacity(0.05),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: const Color(0xFF10B981).withOpacity(0.2)),
+            border:
+                Border.all(color: const Color(0xFF0D1B3E).withOpacity(0.15)),
           ),
           child: _loadingRates
               ? const Center(
-                  child: Text('Memuat rate live...',
-                      style: TextStyle(color: Color(0xFF64748B), fontSize: 13)))
+                  child: Text('Loading live rates...',
+                      style: TextStyle(color: Color(0xFF6B7A99), fontSize: 13)))
               : _convertedResult != null
                   ? Column(children: [
                       Text(
                         '${_amountCtrl.text} $_fromCurrency =',
                         style: const TextStyle(
-                            color: Color(0xFF64748B), fontSize: 12),
+                            color: Color(0xFF6B7A99), fontSize: 12),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         _formatConverted(_convertedResult!, _toCurrency),
                         style: const TextStyle(
-                            color: Color(0xFF10B981),
+                            color: Color(0xFF0D1B3E),
                             fontSize: 22,
                             fontWeight: FontWeight.w800),
                       ),
                     ])
                   : const Text(
-                      'Masukkan jumlah untuk melihat konversi',
+                      'Enter an amount to see the conversion',
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: Color(0xFF64748B), fontSize: 13),
+                      style: TextStyle(color: Color(0xFF6B7A99), fontSize: 13),
                     ),
         ),
         const SizedBox(height: 8),
         TextButton(
           onPressed: () => Navigator.pop(context),
           child:
-              const Text('Tutup', style: TextStyle(color: Color(0xFF64748B))),
+              const Text('Close', style: TextStyle(color: Color(0xFF6B7A99))),
         ),
       ]),
     );
@@ -1761,18 +1762,18 @@ class _ConverterSheetState extends State<_ConverterSheet> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
-        color: const Color(0xFFF1F5F9),
+        color: const Color(0xFFF8F9FB),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: const Color(0xFFE8EDF5)),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: value,
           isExpanded: true,
           icon: const Icon(Icons.keyboard_arrow_down_rounded,
-              color: Color(0xFF64748B), size: 18),
+              color: Color(0xFF6B7A99), size: 18),
           style: const TextStyle(
-              color: Color(0xFF1E293B),
+              color: Color(0xFF0D1B3E),
               fontSize: 13,
               fontWeight: FontWeight.w600),
           items: _currencies

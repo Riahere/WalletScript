@@ -42,7 +42,6 @@ class AccountProvider extends ChangeNotifier {
   }
 
   /// Tambah akun dan return akun yang sudah punya ID
-  /// (dipakai wallet_all_screen untuk catat initial balance ke history)
   Future<AppAccount> addAccountAndReturn(AppAccount account) async {
     final saved = await DatabaseService.instance.insertAccount(account);
     _accounts.add(saved);
@@ -71,8 +70,15 @@ class AccountProvider extends ChangeNotifier {
   Future<void> updateBalance(int id, double newBalance) async {
     await DatabaseService.instance.updateAccountBalance(id, newBalance);
     final idx = _accounts.indexWhere((a) => a.id == id);
-    if (idx != -1)
+    if (idx != -1) {
       _accounts[idx] = _accounts[idx].copyWith(balance: newBalance);
+    }
+    notifyListeners();
+  }
+
+  // ── Clear in-memory state (untuk guest mode) ─────────────────────────────
+  void clearAll() {
+    _accounts = [];
     notifyListeners();
   }
 }

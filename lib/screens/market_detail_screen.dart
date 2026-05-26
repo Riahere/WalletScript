@@ -4,11 +4,12 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/market_service.dart';
 
-const _cPrimary = Color(0xFF10B981);
+const _cPrimary = Color(0xFF0D1B3E);
+const _cAccent = Color(0xFFF5C842);
 const _cBackground = Color(0xFFF1F5F9);
-const _cSurface = Color(0xFFF8FAFC);
+const _cSurface = Color(0xFFFFFFFF);
 const _cBorder = Color(0xFFE2E8F0);
-const _cText = Color(0xFF1E293B);
+const _cText = Color(0xFF0D1B3E);
 const _cTextSub = Color(0xFF64748B);
 const _cExpense = Color(0xFFFC7C78);
 
@@ -52,14 +53,14 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
         setState(() {
           _points = data;
           _loading = false;
-          if (data.isEmpty) _error = 'Data tidak tersedia untuk periode ini.';
+          if (data.isEmpty) _error = 'No data available for this period.';
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
           _loading = false;
-          _error = 'Gagal memuat data chart.';
+          _error = 'Failed to load chart data.';
         });
       }
     }
@@ -117,7 +118,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final isUp = widget.asset.changePercent >= 0;
-    final accentColor = isUp ? _cPrimary : _cExpense;
+    final accentColor = isUp ? _cAccent : _cExpense;
 
     double? minVal, maxVal, firstVal, lastVal;
     if (_points.isNotEmpty) {
@@ -133,7 +134,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
         : null;
 
     final chartColor =
-        (periodChange != null && periodChange < 0) ? _cExpense : _cPrimary;
+        (periodChange != null && periodChange < 0) ? _cExpense : _cAccent;
 
     final hoveredPoint = (_hoverIndex != null && _points.isNotEmpty)
         ? _points[_hoverIndex!]
@@ -207,7 +208,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
                       ),
                       child: Text(r,
                           style: TextStyle(
-                              color: sel ? Colors.white : _cTextSub,
+                              color: sel ? _cAccent : _cTextSub,
                               fontWeight: FontWeight.w600,
                               fontSize: 13)),
                     ),
@@ -255,7 +256,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
                                 )
                               : _points.isEmpty
                                   ? Center(
-                                      child: Text('Tidak ada data.',
+                                      child: Text('No data available.',
                                           style: TextStyle(color: _cTextSub)))
                                   : ClipRRect(
                                       borderRadius: BorderRadius.circular(16),
@@ -296,7 +297,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
                           Icon(Icons.touch_app_rounded,
                               color: _cTextSub, size: 13),
                           const SizedBox(width: 4),
-                          Text('Tap atau geser untuk lihat detail harga',
+                          Text('Tap or swipe to view price details',
                               style: TextStyle(color: _cTextSub, fontSize: 11)),
                         ],
                       ),
@@ -306,7 +307,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
 
                     // ── Stats ──────────────────────────────────────────
                     if (!_loading && _error == null && _points.isNotEmpty) ...[
-                      Text('Statistik $_range',
+                      Text('$_range Statistics',
                           style: TextStyle(
                               color: _cText,
                               fontWeight: FontWeight.w700,
@@ -315,23 +316,23 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
                       Row(children: [
                         Expanded(
                             child: _statCard(
-                                'Tertinggi', _formatPrice(maxVal!), _cPrimary)),
+                                'Highest', _formatPrice(maxVal!), _cAccent)),
                         const SizedBox(width: 10),
                         Expanded(
                             child: _statCard(
-                                'Terendah', _formatPrice(minVal!), _cExpense)),
+                                'Lowest', _formatPrice(minVal!), _cExpense)),
                       ]),
                       const SizedBox(height: 10),
                       Row(children: [
                         Expanded(
-                            child: _statCard('Awal Periode',
+                            child: _statCard('Period Open',
                                 _formatPrice(firstVal!), _cTextSub)),
                         const SizedBox(width: 10),
                         Expanded(
                           child: _statCard(
-                            'Perubahan',
+                            'Change',
                             '${periodChange! >= 0 ? '+' : ''}${periodChange.toStringAsFixed(2)}%',
-                            periodChange >= 0 ? _cPrimary : _cExpense,
+                            periodChange >= 0 ? _cAccent : _cExpense,
                           ),
                         ),
                       ]),
@@ -348,7 +349,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
 
                     const SizedBox(height: 24),
 
-                    // ── Berita terkait aset ────────────────────────────
+                    // ── Related asset news ─────────────────────────────
                     _buildNewsSection(),
 
                     const SizedBox(height: 20),
@@ -378,7 +379,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
         Row(
           children: [
             Text(
-              'Berita $typeLabel',
+              '$typeLabel News',
               style: TextStyle(
                   color: _cText, fontWeight: FontWeight.w700, fontSize: 15),
             ),
@@ -432,7 +433,6 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // shimmer baris judul
               Container(
                   height: 12,
                   width: double.infinity,
@@ -465,7 +465,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
         children: [
           Icon(Icons.newspaper_rounded, color: _cBorder, size: 40),
           const SizedBox(height: 8),
-          Text('Belum ada berita tersedia',
+          Text('No news available yet',
               style: TextStyle(color: _cTextSub, fontSize: 13)),
         ],
       ),
@@ -486,7 +486,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Ikon kategori kecil ──
+            // ── Category icon ──
             Container(
               width: 36,
               height: 36,
@@ -501,7 +501,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
                 size: 18,
               ),
             ),
-            // ── Konten ──
+            // ── Content ──
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -587,7 +587,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
     final displayPrice = showHover ? hovered.close : lastVal;
     final displayLabel = showHover
         ? DateFormat('dd MMM yyyy').format(hovered.date)
-        : 'Harga Terakhir';
+        : 'Last Price';
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -608,7 +608,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                  color: chartColor.withOpacity(0.1),
+                  color: chartColor.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(20)),
               child: Text(
                 '${periodChange >= 0 ? '+' : ''}${periodChange.toStringAsFixed(2)}%',
@@ -622,7 +622,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                  color: chartColor.withOpacity(0.1),
+                  color: chartColor.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(20)),
               child: Row(children: [
                 Icon(Icons.radio_button_checked, color: chartColor, size: 10),

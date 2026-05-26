@@ -4,19 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/transaction_model.dart';
 import '../models/account_model.dart';
+import '../services/database_service.dart';
 import 'auth_service.dart';
-
-// ─────────────────────────────────────────────────────────────────────────────
-//  SyncService — Pull data dari Supabase ke local (setelah login)
-//
-//  Asumsi nama tabel Supabase:
-//    - "transactions"  → kolom sesuai AppTransaction.toMap()
-//    - "accounts"      → kolom sesuai AppAccount.toMap() (group → 'grp')
-//
-//  RLS (Row Level Security) Supabase harus aktif dengan policy:
-//    auth.uid() = user_id
-//  Dan setiap row harus punya kolom 'user_id' (UUID dari auth.users)
-// ─────────────────────────────────────────────────────────────────────────────
 
 class SyncService {
   static final SyncService _instance = SyncService._internal();
@@ -26,14 +15,11 @@ class SyncService {
   SupabaseClient get _db => Supabase.instance.client;
   final _auth = AuthService();
 
-  // ─── Pull semua data dari cloud ke local ──────────────────────────────────
+  // ─── Pull dari cloud + simpan ke SQLite lokal ─────────────────────────────
 
-  /// Panggil ini setelah login berhasil.
-  /// Mengembalikan map berisi list accounts dan transactions.
   Future<SyncResult> pullFromCloud() async {
     final userId = _auth.userId;
     if (userId == null) {
-      debugPrint('[SyncService] pullFromCloud: user tidak login, skip.');
       return SyncResult(accounts: [], transactions: []);
     }
 
@@ -48,9 +34,17 @@ class SyncService {
       final accounts = results[0] as List<AppAccount>;
       final transactions = results[1] as List<AppTransaction>;
 
+      // ── Simpan data cloud ke SQLite lokal (merge) ──────────────────────
+      // Ini yang bikin data cloud muncul di app setelah login di device baru
+      if (accounts.isNotEmpty) {
+        await _mergeAccountsToLocal(accounts);
+      }
+      if (transactions.isNotEmpty) {
+        await _mergeTransactionsToLocal(transactions);
+      }
+
       debugPrint(
           '[SyncService] Pull selesai: ${accounts.length} akun, ${transactions.length} transaksi.');
-
       return SyncResult(accounts: accounts, transactions: transactions);
     } catch (e, stack) {
       debugPrint('[SyncService] Error saat pull: $e\n$stack');
@@ -63,10 +57,9 @@ class SyncService {
         .from('accounts')
         .select()
         .eq('user_id', userId)
-        .order('id', ascending: true);
-
+        .order('local_id', ascending: true);
     return (response as List)
-        .map((row) => AppAccount.fromMap(row as Map<String, dynamic>))
+        .map((row) => AppAccount.fromMap(_remapAccountRow(row)))
         .toList();
   }
 
@@ -76,104 +69,187 @@ class SyncService {
         .select()
         .eq('user_id', userId)
         .order('date', ascending: false);
-
     return (response as List)
-        .map((row) => AppTransaction.fromMap(row as Map<String, dynamic>))
+        .map((row) => AppTransaction.fromMap(_remapTxRow(row)))
         .toList();
   }
 
-  // ─── Push: simpan transaksi baru ke cloud ─────────────────────────────────
+  // Remap Supabase row → format AppAccount/AppTransaction.fromMap()
+  Map<String, dynamic> _remapAccountRow(Map<String, dynamic> row) {
+    final m = Map<String, dynamic>.from(row);
+    if (m['local_id'] != null) m['id'] = m['local_id'];
+    return m;
+  }
 
-  /// Panggil ini saat user tambah transaksi baru (opsional, kalau mau realtime sync).
-  Future<void> pushTransaction(AppTransaction tx) async {
+  Map<String, dynamic> _remapTxRow(Map<String, dynamic> row) {
+    final m = Map<String, dynamic>.from(row);
+    if (m['local_id'] != null) m['id'] = m['local_id'];
+    return m;
+  }
+
+  // ── Merge akun dari cloud ke SQLite lokal ──────────────────────────────────
+  Future<void> _mergeAccountsToLocal(List<AppAccount> cloudAccounts) async {
+    final localAccounts = await DatabaseService.instance.getAccounts();
+    final localIds = localAccounts.map((a) => a.id).toSet();
+
+    for (final acc in cloudAccounts) {
+      if (acc.id != null && !localIds.contains(acc.id)) {
+        // Akun dari cloud belum ada di lokal — insert
+        await DatabaseService.instance.insertAccount(acc);
+      } else if (acc.id != null) {
+        // Sudah ada — update supaya balance dll sinkron
+        await DatabaseService.instance.updateAccount(acc);
+      }
+    }
+  }
+
+  // ── Merge transaksi dari cloud ke SQLite lokal ─────────────────────────────
+  Future<void> _mergeTransactionsToLocal(List<AppTransaction> cloudTxs) async {
+    final localTxs = await DatabaseService.instance.getTransactions();
+    final localIds = localTxs.map((t) => t.id).toSet();
+
+    for (final tx in cloudTxs) {
+      if (tx.id != null && !localIds.contains(tx.id)) {
+        // Transaksi dari cloud belum ada di lokal — insert
+        await DatabaseService.instance.insertTransaction(tx);
+      }
+      // Kalau sudah ada, biarkan — data lokal lebih fresh
+    }
+  }
+
+  // ─── Push semua data lokal ke cloud ───────────────────────────────────────
+
+  Future<void> pushAllToCloud({
+    required List<AppAccount> accounts,
+    required List<AppTransaction> transactions,
+  }) async {
     final userId = _auth.userId;
     if (userId == null) return;
 
     try {
-      final data = tx.toMap()
-        ..['user_id'] = userId
-        ..remove('id'); // biar Supabase yang generate id
-
-      await _db.from('transactions').insert(data);
-      debugPrint('[SyncService] Transaksi berhasil disimpan ke cloud.');
+      debugPrint(
+          '[SyncService] Pushing ${accounts.length} akun, ${transactions.length} transaksi...');
+      for (final acc in accounts) {
+        await pushAccount(acc);
+      }
+      for (final tx in transactions) {
+        await pushTransaction(tx);
+      }
+      debugPrint('[SyncService] pushAll selesai.');
     } catch (e) {
-      debugPrint('[SyncService] Gagal push transaksi: $e');
-      rethrow;
+      debugPrint('[SyncService] pushAll error: $e');
     }
   }
 
-  /// Panggil ini saat user tambah/update akun baru.
+  // ─── Push single account ──────────────────────────────────────────────────
+
   Future<void> pushAccount(AppAccount account) async {
     final userId = _auth.userId;
     if (userId == null) return;
 
     try {
-      final data = account.toMap()
-        ..['user_id'] = userId
-        ..remove('id');
+      final map = account.toMap();
+      final data = <String, dynamic>{
+        'user_id': userId,
+        'local_id': map['id'],
+        'name': map['name'],
+        'grp': map['grp'],
+        'type': map['type'],
+        'balance': map['balance'],
+        'currency': map['currency'] ?? 'IDR',
+        'icon': map['icon'] ?? 'wallet',
+        'color': map['color'] ?? '0xFF10B981',
+      };
 
-      await _db.from('accounts').insert(data);
-      debugPrint('[SyncService] Akun berhasil disimpan ke cloud.');
+      await _db.from('accounts').upsert(
+            data,
+            onConflict: 'user_id,local_id',
+          );
     } catch (e) {
-      debugPrint('[SyncService] Gagal push akun: $e');
-      rethrow;
+      debugPrint('[SyncService] pushAccount error: $e');
     }
   }
 
-  // ─── Update balance akun di cloud ─────────────────────────────────────────
+  // ─── Push single transaction ──────────────────────────────────────────────
 
-  Future<void> updateAccountBalance(int accountId, double newBalance) async {
+  Future<void> pushTransaction(AppTransaction tx) async {
     final userId = _auth.userId;
     if (userId == null) return;
 
     try {
+      final map = tx.toMap();
+      final data = <String, dynamic>{
+        'user_id': userId,
+        'local_id': map['id'],
+        'title': map['title'],
+        'amount': map['amount'],
+        'type': map['type'],
+        'category': map['category'],
+        'currency': map['currency'] ?? 'IDR',
+        'accountId': map['accountId'],
+        'toAccountId': map['toAccountId'],
+        'date': map['date'],
+        'note': map['note'],
+        'attachmentPath': map['attachmentPath'],
+      };
+
+      await _db.from('transactions').upsert(
+            data,
+            onConflict: 'user_id,local_id',
+          );
+    } catch (e) {
+      debugPrint('[SyncService] pushTransaction error: $e');
+    }
+  }
+
+  // ─── Update balance ───────────────────────────────────────────────────────
+
+  Future<void> updateAccountBalance(int localId, double newBalance) async {
+    final userId = _auth.userId;
+    if (userId == null) return;
+    try {
       await _db
           .from('accounts')
           .update({'balance': newBalance})
-          .eq('id', accountId)
+          .eq('local_id', localId)
           .eq('user_id', userId);
     } catch (e) {
-      debugPrint('[SyncService] Gagal update balance: $e');
+      debugPrint('[SyncService] updateAccountBalance error: $e');
     }
   }
 
   // ─── Delete ───────────────────────────────────────────────────────────────
 
-  Future<void> deleteTransaction(int txId) async {
+  Future<void> deleteTransaction(int localId) async {
     final userId = _auth.userId;
     if (userId == null) return;
-
     try {
       await _db
           .from('transactions')
           .delete()
-          .eq('id', txId)
+          .eq('local_id', localId)
           .eq('user_id', userId);
     } catch (e) {
-      debugPrint('[SyncService] Gagal delete transaksi: $e');
+      debugPrint('[SyncService] deleteTransaction error: $e');
     }
   }
 
-  Future<void> deleteAccount(int accountId) async {
+  Future<void> deleteAccount(int localId) async {
     final userId = _auth.userId;
     if (userId == null) return;
-
     try {
       await _db
           .from('accounts')
           .delete()
-          .eq('id', accountId)
+          .eq('local_id', localId)
           .eq('user_id', userId);
     } catch (e) {
-      debugPrint('[SyncService] Gagal delete akun: $e');
+      debugPrint('[SyncService] deleteAccount error: $e');
     }
   }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  SyncResult — hasil dari pullFromCloud()
-// ─────────────────────────────────────────────────────────────────────────────
-
 class SyncResult {
   final List<AppAccount> accounts;
   final List<AppTransaction> transactions;

@@ -82,4 +82,10 @@ class NoteProvider extends ChangeNotifier {
       return r.year == date.year && r.month == date.month && r.day == date.day;
     }).toList();
   }
+
+  // ── Clear in-memory state (untuk guest mode) ─────────────────────────────
+  void clearAll() {
+    _notes = [];
+    notifyListeners();
+  }
 }

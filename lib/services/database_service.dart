@@ -85,34 +85,10 @@ class DatabaseService {
       hasReminder INTEGER NOT NULL DEFAULT 0,
       reminderDate TEXT)''');
 
-    // seed default accounts
-    await db.insert('accounts', {
-      'name': 'Cash',
-      'grp': 'Cash',
-      'type': 'cash',
-      'balance': 0.0,
-      'currency': 'IDR',
-      'icon': 'wallet',
-      'color': '0xFF10B981'
-    });
-    await db.insert('accounts', {
-      'name': 'Bank BCA',
-      'grp': 'Debit Card',
-      'type': 'bank',
-      'balance': 0.0,
-      'currency': 'IDR',
-      'icon': 'bank',
-      'color': '0xFF6C63FF'
-    });
-    await db.insert('accounts', {
-      'name': 'Tabungan',
-      'grp': 'Savings',
-      'type': 'savings',
-      'balance': 0.0,
-      'currency': 'IDR',
-      'icon': 'savings',
-      'color': '0xFF10B981'
-    });
+    // ── TIDAK ada seed accounts lagi ────────────────────────────────────
+    // Sebelumnya: 3 akun default otomatis dibuat di sini → ini yang bikin
+    // guest mode kelihatan punya data padahal belum input apapun.
+    // Akun bisa dibuat manual dari WalletAllScreen.
   }
 
   Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -194,6 +170,21 @@ class DatabaseService {
     }
   }
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CLEAR ALL USER DATA — dipanggil saat masuk sebagai guest
+  // Hapus semua data dari semua tabel supaya home screen benar-benar kosong
+  // ═══════════════════════════════════════════════════════════════════════════
+  Future<void> deleteAllUserData() async {
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.delete('transactions');
+      await txn.delete('accounts');
+      await txn.delete('goal_deposits');
+      await txn.delete('budgets');
+      await txn.delete('notes');
+    });
+  }
+
   // ─── Accounts ───────────────────────────────────────────────
 
   Future<List<AppAccount>> getAccounts() async {
@@ -250,15 +241,10 @@ class DatabaseService {
         attachmentPath: tx.attachmentPath);
   }
 
-  // ── TAMBAHAN: update transaksi ────────────────────────────────
   Future updateTransaction(AppTransaction tx) async {
     final db = await database;
-    await db.update(
-      'transactions',
-      tx.toMap(),
-      where: 'id = ?',
-      whereArgs: [tx.id],
-    );
+    await db.update('transactions', tx.toMap(),
+        where: 'id = ?', whereArgs: [tx.id]);
   }
 
   Future deleteTransaction(int id) async {
@@ -332,14 +318,9 @@ class DatabaseService {
   Future updateStreakData(
       int id, int streakMonths, String lastDepositMonth) async {
     final db = await database;
-    await db.update(
-        'budgets',
-        {
-          'streakMonths': streakMonths,
-          'lastDepositMonth': lastDepositMonth,
-        },
-        where: 'id = ?',
-        whereArgs: [id]);
+    await db.update('budgets',
+        {'streakMonths': streakMonths, 'lastDepositMonth': lastDepositMonth},
+        where: 'id = ?', whereArgs: [id]);
   }
 
   Future deleteBudget(int id) async {
@@ -351,12 +332,8 @@ class DatabaseService {
 
   Future<List<GoalDeposit>> getDepositsForBudget(int budgetId) async {
     final db = await database;
-    final maps = await db.query(
-      'goal_deposits',
-      where: 'budgetId = ?',
-      whereArgs: [budgetId],
-      orderBy: 'date DESC',
-    );
+    final maps = await db.query('goal_deposits',
+        where: 'budgetId = ?', whereArgs: [budgetId], orderBy: 'date DESC');
     return maps.map((e) => GoalDeposit.fromMap(e)).toList();
   }
 

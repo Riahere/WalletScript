@@ -23,7 +23,6 @@ class BudgetProvider extends ChangeNotifier {
   List<AppBudget> get otherBudgets =>
       _sorted(_budgets.where((b) => !b.isPriority).toList());
 
-  // Keep for compatibility
   List<AppBudget> get priorityBudget => priorityBudgets;
 
   double get totalSaved => _budgets.fold(0, (sum, b) => sum + b.currentAmount);
@@ -107,8 +106,6 @@ class BudgetProvider extends ChangeNotifier {
     await loadBudgets();
   }
 
-  // ─── Deposit / Setoran ────────────────────────────────────────
-
   Future<List<GoalDeposit>> getDeposits(int budgetId) async {
     return await DatabaseService.instance.getDepositsForBudget(budgetId);
   }
@@ -137,10 +134,7 @@ class BudgetProvider extends ChangeNotifier {
     final newAmount = budget.currentAmount + amount;
     await DatabaseService.instance.updateBudgetAmount(budgetId, newAmount);
 
-    // Update streak
     await _updateStreak(budget);
-
-    // Check milestone notifications
     await _checkMilestoneNotif(budget, newAmount);
 
     if (deductFromWallet && sourceAccount != null) {
@@ -162,12 +156,10 @@ class BudgetProvider extends ChangeNotifier {
     if (budget.lastDepositMonth == null) {
       newStreak = 1;
     } else if (budget.lastDepositMonth == currentMonth) {
-      // Same month, streak unchanged
       return;
     } else if (budget.lastDepositMonth == lastMonth) {
       newStreak = budget.streakMonths + 1;
     } else {
-      // Break streak
       newStreak = 1;
     }
 
@@ -215,5 +207,12 @@ class BudgetProvider extends ChangeNotifier {
         (budget.currentAmount - depositAmount).clamp(0.0, double.infinity);
     await DatabaseService.instance.updateBudgetAmount(budgetId, newAmount);
     await loadBudgets();
+  }
+
+  // ── Clear in-memory state (untuk guest mode) ─────────────────────────────
+  void clearAll() {
+    _budgets = [];
+    _archivedBudgets = [];
+    notifyListeners();
   }
 }
