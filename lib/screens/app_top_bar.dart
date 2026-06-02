@@ -1,5 +1,4 @@
 // lib/screens/app_top_bar.dart
-// Colors match mockup: white avatar border, white app name, white icons — all on navy bg
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -10,8 +9,16 @@ import 'notes_screen.dart';
 import 'calendar_screen.dart';
 import 'notification_screen.dart';
 
-class AppTopBar extends StatelessWidget {
-  const AppTopBar({super.key});
+class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
+  /// [isDark] true  → white text/icons (for dark/navy background, e.g. Home)
+  /// [isDark] false → dark text/icons (for white/light background, e.g. Flow History, etc.)
+  final bool isDark;
+
+  const AppTopBar({super.key, this.isDark = true});
+
+  // Implement PreferredSizeWidget so AppTopBar can be used as AppBar directly
+  @override
+  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
 
   @override
   Widget build(BuildContext context) {
@@ -19,117 +26,157 @@ class AppTopBar extends StatelessWidget {
     final avatar = AuthService().userAvatar;
     final initial = name.isNotEmpty ? name[0].toUpperCase() : 'U';
 
-    return Row(
-      children: [
-        // ── Avatar ────────────────────────────────────────────────────────
-        // mockup: rgba(255,255,255,0.12) bg, border rgba(255,255,255,0.22)
-        GestureDetector(
-          onTap: () => Navigator.push(context,
-              MaterialPageRoute(builder: (_) => const ProfileScreen())),
-          child: Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.white.withOpacity(0.12),
-              border:
-                  Border.all(color: Colors.white.withOpacity(0.22), width: 1.5),
-            ),
-            child: avatar != null
-                ? ClipOval(
-                    child: Image.network(avatar,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Center(
-                              child: Text(initial,
-                                  style: GoogleFonts.dmSans(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 12)),
-                            )),
-                  )
-                : Center(
-                    child: Text(initial,
-                        style: GoogleFonts.dmSans(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 12)),
-                  ),
-          ),
-        ),
-        const SizedBox(width: 7),
+    // ── Adaptive colors ────────────────────────────────────────────────
+    final Color foreground = isDark ? Colors.white : const Color(0xFF1A1A2E);
+    final Color avatarBg = isDark
+        ? Colors.white.withOpacity(0.12)
+        : const Color(0xFF1A1A2E).withOpacity(0.08);
+    final Color avatarBorder = isDark
+        ? Colors.white.withOpacity(0.22)
+        : const Color(0xFF1A1A2E).withOpacity(0.18);
+    final Color iconBg = isDark
+        ? Colors.white.withOpacity(0.10)
+        : const Color(0xFF1A1A2E).withOpacity(0.07);
+    final Color iconColor = isDark
+        ? Colors.white.withOpacity(0.85)
+        : const Color(0xFF1A1A2E).withOpacity(0.75);
 
-        // ── App name — WHITE (on navy bg) ─────────────────────────────────
-        // mockup: font-size:15px, font-weight:800, color:#fff
-        GestureDetector(
-          onTap: () {
-            final shell = context.findAncestorStateOfType<MainShellState>();
-            if (shell != null) {
-              shell.goHome();
-            } else {
-              Navigator.popUntil(context, (route) => route.isFirst);
-            }
-          },
-          child: Text(
-            'WalletScript',
-            style: GoogleFonts.dmSans(
-              color: Colors.white,
-              fontSize: 15,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.3,
-            ),
-          ),
-        ),
-
-        const Spacer(),
-
-        // ── Icon buttons — white icons on rgba(255,255,255,0.1) bg ──────
-        // mockup: width:30px, height:30px, background:rgba(255,255,255,0.1), border-radius:8px
-        _iconBtn(
-          icon: Icons.sticky_note_2_outlined,
-          onTap: () => Navigator.push(
-              context, MaterialPageRoute(builder: (_) => const NotesScreen())),
-        ),
-        const SizedBox(width: 6),
-
-        _iconBtn(
-          icon: Icons.calendar_month_outlined,
-          onTap: () => Navigator.push(context,
-              MaterialPageRoute(builder: (_) => const CalendarScreen())),
-        ),
-        const SizedBox(width: 6),
-
-        // Notification with red dot badge
-        Stack(
-          clipBehavior: Clip.none,
+    return SafeArea(
+      bottom: false,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Row(
           children: [
-            _iconBtn(
-              icon: Icons.notifications_outlined,
+            // ── Avatar ──────────────────────────────────────────────────
+            GestureDetector(
               onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (_) => const NotificationScreen())),
-            ),
-            // red dot badge — mockup: top:5px, right:5px, width:6px, height:6px
-            Positioned(
-              top: 5,
-              right: 5,
+                context,
+                MaterialPageRoute(builder: (_) => const ProfileScreen()),
+              ),
               child: Container(
-                width: 6,
-                height: 6,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFEF4444),
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
                   shape: BoxShape.circle,
+                  color: avatarBg,
+                  border: Border.all(color: avatarBorder, width: 1.5),
+                ),
+                child: avatar != null
+                    ? ClipOval(
+                        child: Image.network(
+                          avatar,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Center(
+                            child: Text(
+                              initial,
+                              style: GoogleFonts.dmSans(
+                                color: foreground,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ),
+                      )
+                    : Center(
+                        child: Text(
+                          initial,
+                          style: GoogleFonts.dmSans(
+                            color: foreground,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+              ),
+            ),
+            const SizedBox(width: 7),
+
+            // ── App name ─────────────────────────────────────────────────
+            GestureDetector(
+              onTap: () {
+                final shell = context.findAncestorStateOfType<MainShellState>();
+                if (shell != null) {
+                  shell.goHome();
+                } else {
+                  Navigator.popUntil(context, (route) => route.isFirst);
+                }
+              },
+              child: Text(
+                'WalletScript',
+                style: GoogleFonts.dmSans(
+                  color: foreground,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.3,
                 ),
               ),
             ),
+
+            const Spacer(),
+
+            // ── Notes icon ───────────────────────────────────────────────
+            _iconBtn(
+              icon: Icons.sticky_note_2_outlined,
+              iconBg: iconBg,
+              iconColor: iconColor,
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => NotesScreen()),
+              ),
+            ),
+            const SizedBox(width: 6),
+
+            // ── Calendar icon ────────────────────────────────────────────
+            _iconBtn(
+              icon: Icons.calendar_month_outlined,
+              iconBg: iconBg,
+              iconColor: iconColor,
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const CalendarScreen()),
+              ),
+            ),
+            const SizedBox(width: 6),
+
+            // ── Notification icon with red dot badge ─────────────────────
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                _iconBtn(
+                  icon: Icons.notifications_outlined,
+                  iconBg: iconBg,
+                  iconColor: iconColor,
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const NotificationScreen()),
+                  ),
+                ),
+                Positioned(
+                  top: 5,
+                  right: 5,
+                  child: Container(
+                    width: 6,
+                    height: 6,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFEF4444),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
-      ],
+      ),
     );
   }
 
   static Widget _iconBtn({
     required IconData icon,
+    required Color iconBg,
+    required Color iconColor,
     required VoidCallback onTap,
   }) {
     return GestureDetector(
@@ -138,14 +185,10 @@ class AppTopBar extends StatelessWidget {
         width: 30,
         height: 30,
         decoration: BoxDecoration(
-          // mockup: rgba(255,255,255,0.1)
-          color: Colors.white.withOpacity(0.1),
+          color: iconBg,
           borderRadius: BorderRadius.circular(8),
         ),
-        child: Icon(icon,
-            // mockup: color:rgba(255,255,255,0.7)
-            color: Colors.white.withOpacity(0.7),
-            size: 15),
+        child: Icon(icon, color: iconColor, size: 15),
       ),
     );
   }

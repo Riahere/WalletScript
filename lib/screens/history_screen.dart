@@ -180,7 +180,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
             // ── AppTopBar
             const Padding(
               padding: EdgeInsets.fromLTRB(20, 16, 20, 0),
-              child: AppTopBar(),
+              child: AppTopBar(isDark: false),
             ),
 
             // ── Title + icons

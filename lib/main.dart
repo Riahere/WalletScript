@@ -66,16 +66,12 @@ class _WalletScriptAppState extends State<WalletScriptApp> {
       final event = data.event;
       debugPrint('>>> Auth event: $event');
 
-      // Hanya handle password recovery
-      // signedOut TIDAK trigger navigasi otomatis —
-      // login_screen dan settings_screen yang handle navigate secara eksplisit
       if (event == AuthChangeEvent.passwordRecovery) {
         _navigatorKey.currentState?.pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => const ResetPasswordScreen()),
           (route) => false,
         );
       }
-      // signedIn dan signedOut: dibiarkan — masing-masing flow handle sendiri
     });
   }
 
@@ -129,7 +125,6 @@ class MainShellState extends State<MainShell> {
 
   @override
   Widget build(BuildContext context) {
-    // ── TIDAK pakai extendBody supaya tidak ada overlap ──────────────────
     return Scaffold(
       backgroundColor: AppTheme.background,
       body: IndexedStack(index: _currentIndex, children: _screens),
@@ -143,7 +138,7 @@ class MainShellState extends State<MainShell> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// FLOATING NAV — animasi bounce + ripple tiap tombol
+// FLOATING NAV — pill expand animation on selected item
 // ─────────────────────────────────────────────────────────────────────────────
 class _FloatingNav extends StatelessWidget {
   final int currentIndex;
@@ -163,7 +158,6 @@ class _FloatingNav extends StatelessWidget {
   Widget build(BuildContext context) {
     final bottomPad = MediaQuery.of(context).padding.bottom;
     return Container(
-      // Padding bawah = safe area, jadi tidak pernah overlap
       padding: EdgeInsets.only(bottom: bottomPad),
       color: Colors.transparent,
       child: Container(
@@ -172,13 +166,7 @@ class _FloatingNav extends StatelessWidget {
         decoration: BoxDecoration(
           color: const Color(0xFF1E293B),
           borderRadius: BorderRadius.circular(36),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF1E293B).withOpacity(0.40),
-              blurRadius: 24,
-              offset: const Offset(0, 8),
-            ),
-          ],
+          // ── box shadow dihapus sesuai permintaan (no glow) ──
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -198,7 +186,7 @@ class _FloatingNav extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// ANIMATED NAV ITEM — bounce scale + ripple
+// ANIMATED NAV ITEM — pill expand: selected = white pill + icon + label
 // ─────────────────────────────────────────────────────────────────────────────
 class _AnimatedNavItem extends StatefulWidget {
   final _NavItem item;
@@ -220,29 +208,37 @@ class _AnimatedNavItem extends StatefulWidget {
 class _AnimatedNavItemState extends State<_AnimatedNavItem>
     with SingleTickerProviderStateMixin {
   late AnimationController _ctrl;
-  late Animation<double> _scaleAnim;
+  late Animation<double> _expandAnim;
+  late Animation<double> _fadeAnim;
 
   @override
   void initState() {
     super.initState();
     _ctrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 140),
+      duration: const Duration(milliseconds: 280),
     );
-    _scaleAnim = TweenSequence([
-      TweenSequenceItem(
-          tween: Tween(begin: 1.0, end: 0.82)
-              .chain(CurveTween(curve: Curves.easeIn)),
-          weight: 40),
-      TweenSequenceItem(
-          tween: Tween(begin: 0.82, end: 1.08)
-              .chain(CurveTween(curve: Curves.easeOut)),
-          weight: 35),
-      TweenSequenceItem(
-          tween: Tween(begin: 1.08, end: 1.0)
-              .chain(CurveTween(curve: Curves.easeInOut)),
-          weight: 25),
-    ]).animate(_ctrl);
+    _expandAnim = CurvedAnimation(
+      parent: _ctrl,
+      curve: Curves.easeOutCubic,
+    );
+    _fadeAnim = CurvedAnimation(
+      parent: _ctrl,
+      // label fade-in sedikit lebih lambat supaya pill sudah terbuka dulu
+      curve: const Interval(0.35, 1.0, curve: Curves.easeOut),
+    );
+
+    if (widget.isSelected) _ctrl.value = 1.0;
+  }
+
+  @override
+  void didUpdateWidget(_AnimatedNavItem oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isSelected && !oldWidget.isSelected) {
+      _ctrl.forward();
+    } else if (!widget.isSelected && oldWidget.isSelected) {
+      _ctrl.reverse();
+    }
   }
 
   @override
@@ -253,92 +249,116 @@ class _AnimatedNavItemState extends State<_AnimatedNavItem>
 
   void _handleTap() {
     HapticFeedback.lightImpact();
-    _ctrl.forward(from: 0);
     widget.onTap(widget.index);
   }
 
   @override
   Widget build(BuildContext context) {
     final isCenter = widget.item.isCenter;
-    final isSelected = widget.isSelected;
 
+    // ── Center (Home) — tetap pakai tampilan lingkaran asli ───────────
+    if (isCenter) {
+      return GestureDetector(
+        onTap: _handleTap,
+        behavior: HitTestBehavior.opaque,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+          child: AnimatedBuilder(
+            animation: _expandAnim,
+            builder: (_, __) => AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeOutCubic,
+              width: widget.isSelected ? 52 : 46,
+              height: widget.isSelected ? 52 : 46,
+              decoration: BoxDecoration(
+                color: widget.isSelected
+                    ? AppTheme.primary
+                    : Colors.white.withOpacity(0.12),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                widget.item.icon,
+                color: widget.isSelected ? Colors.white : Colors.white54,
+                size: widget.isSelected ? 26 : 23,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // ── Regular items — pill expand animation ──────────────────────────
     return GestureDetector(
       onTap: _handleTap,
       behavior: HitTestBehavior.opaque,
-      child: AnimatedBuilder(
-        animation: _scaleAnim,
-        builder: (_, child) => Transform.scale(
-          scale: _scaleAnim.value,
-          child: child,
-        ),
-        child: Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: isCenter ? 6 : 10,
-            vertical: isCenter ? 4 : 8,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // ── Center (Home) — lingkaran tanpa label ─────────────────
-              if (isCenter)
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 250),
-                  curve: Curves.easeOutCubic,
-                  width: isSelected ? 52 : 46,
-                  height: isSelected ? 52 : 46,
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? AppTheme.primary
-                        : Colors.white.withOpacity(0.12),
-                    shape: BoxShape.circle,
-                    boxShadow: isSelected
-                        ? [
-                            BoxShadow(
-                              color: AppTheme.primary.withOpacity(0.50),
-                              blurRadius: 16,
-                              offset: const Offset(0, 5),
-                            )
-                          ]
-                        : [],
-                  ),
-                  child: Icon(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+        child: AnimatedBuilder(
+          animation: _expandAnim,
+          builder: (_, __) {
+            final t = _expandAnim.value;
+
+            // Pill background: transparan → putih
+            final pillColor = Color.lerp(
+              Colors.transparent,
+              Colors.white,
+              t,
+            )!;
+
+            // Icon color: putih redup → hitam gelap
+            final iconColor = Color.lerp(
+              Colors.white38,
+              const Color(0xFF1E293B),
+              t,
+            )!;
+
+            // Label color fade
+            final labelColor = Color.lerp(
+              Colors.transparent,
+              const Color(0xFF1E293B),
+              _fadeAnim.value,
+            )!;
+
+            return Container(
+              padding: EdgeInsets.symmetric(
+                // padding horizontal melebar seiring animasi
+                horizontal: 10 + (6 * t),
+                vertical: 8,
+              ),
+              decoration: BoxDecoration(
+                color: pillColor,
+                borderRadius: BorderRadius.circular(30),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
                     widget.item.icon,
-                    color: isSelected ? Colors.white : Colors.white54,
-                    size: isSelected ? 26 : 23,
+                    color: iconColor,
+                    size: 20,
                   ),
-                )
-              // ── Regular items ──────────────────────────────────────────
-              else ...[
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  curve: Curves.easeOutCubic,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? AppTheme.primary.withOpacity(0.18)
-                        : Colors.transparent,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Icon(
-                    widget.item.icon,
-                    color: isSelected ? AppTheme.primary : Colors.white38,
-                    size: 22,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                AnimatedDefaultTextStyle(
-                  duration: const Duration(milliseconds: 200),
-                  style: TextStyle(
-                    color: isSelected ? AppTheme.primary : Colors.white38,
-                    fontSize: 10,
-                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
-                  ),
-                  child: Text(widget.item.label),
-                ),
-              ],
-            ],
-          ),
+                  // Label muncul saat pill mulai terbuka
+                  if (_fadeAnim.value > 0.01) ...[
+                    SizedBox(width: 6 * t),
+                    ClipRect(
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        widthFactor: t,
+                        child: Text(
+                          widget.item.label,
+                          style: TextStyle(
+                            color: labelColor,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            );
+          },
         ),
       ),
     );

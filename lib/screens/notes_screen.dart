@@ -1,510 +1,340 @@
+// lib/screens/notes_screen.dart
+// Redesign: Nunito font, curved header, iOS-style card list
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../providers/note_provider.dart';
 import '../models/note_model.dart';
-import '../theme/app_theme.dart';
+import 'note_editor_screen.dart';
+
+// ─── Palette ─────────────────────────────────────────────────────
+const Color _navy = Color(0xFF0D1B3E);
+const Color _yellow = Color(0xFFF5C842);
+const Color _white = Colors.white;
+const Color _navySub = Color(0x800D1B3E);
+const Color _navyHint = Color(0x400D1B3E);
+const Color _greyLine = Color(0xFFECECEC);
+const Color _greyFill = Color(0xFFF8F8FA);
+const Color _yellowBg = Color(0x18F5C842);
+
+TextStyle _n({
+  double size = 14,
+  FontWeight weight = FontWeight.w400,
+  Color color = _navy,
+  double height = 1.5,
+  double letterSpacing = 0,
+}) =>
+    GoogleFonts.nunito(
+      fontSize: size,
+      fontWeight: weight,
+      color: color,
+      height: height,
+      letterSpacing: letterSpacing,
+    );
 
 class NotesScreen extends StatefulWidget {
   const NotesScreen({super.key});
+
   @override
   State<NotesScreen> createState() => _NotesScreenState();
 }
 
 class _NotesScreenState extends State<NotesScreen> {
+  final TextEditingController _searchCtrl = TextEditingController();
+  String _query = '';
+
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<NoteProvider>().loadNotes();
-    });
-  }
-
-  void _openNote({AppNote? existing}) {
-    final titleCtrl = TextEditingController(text: existing?.title ?? '');
-    final contentCtrl = TextEditingController(text: existing?.content ?? '');
-    bool hasReminder = existing?.hasReminder ?? false;
-    DateTime? reminderDate = existing?.reminderDate;
-    final author = 'Pengguna WalletScript';
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: AppTheme.surface,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setModal) => Padding(
-          padding: EdgeInsets.only(
-            left: 20,
-            right: 20,
-            top: 20,
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
-          ),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: AppTheme.outline,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: titleCtrl,
-                  style: const TextStyle(
-                    color: AppTheme.onSurface,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800,
-                  ),
-                  decoration: const InputDecoration(
-                    hintText: 'Judul',
-                    hintStyle: TextStyle(
-                      color: AppTheme.onSurfaceVariant,
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                    ),
-                    border: InputBorder.none,
-                    filled: false,
-                  ),
-                ),
-                Text(
-                  existing != null
-                      ? 'Dibuat: ${DateFormat('d MMM yyyy, HH:mm').format(existing.createdAt)}'
-                      : 'Dibuat: ${DateFormat('d MMM yyyy, HH:mm').format(DateTime.now())}',
-                  style: const TextStyle(
-                      color: AppTheme.onSurfaceVariant, fontSize: 11),
-                ),
-                if (existing?.updatedAt != null)
-                  Text(
-                    'Diedit: ${DateFormat('d MMM yyyy, HH:mm').format(existing!.updatedAt!)}',
-                    style: const TextStyle(
-                        color: AppTheme.onSurfaceVariant, fontSize: 11),
-                  ),
-                Text(
-                  'Oleh: $author',
-                  style: const TextStyle(
-                      color: AppTheme.onSurfaceVariant, fontSize: 11),
-                ),
-                const Divider(height: 20),
-                TextField(
-                  controller: contentCtrl,
-                  maxLines: 8,
-                  style: const TextStyle(
-                    color: AppTheme.onSurface,
-                    fontSize: 15,
-                    height: 1.6,
-                  ),
-                  decoration: const InputDecoration(
-                    hintText: 'Mulai menulis...',
-                    border: InputBorder.none,
-                    filled: false,
-                  ),
-                ),
-                const Divider(height: 20),
-                GestureDetector(
-                  onTap: () async {
-                    if (!hasReminder) {
-                      final date = await showDatePicker(
-                        context: ctx,
-                        initialDate:
-                            DateTime.now().add(const Duration(days: 1)),
-                        firstDate: DateTime.now(),
-                        lastDate: DateTime.now().add(const Duration(days: 365)),
-                      );
-                      if (date == null) return;
-                      final time = await showTimePicker(
-                        context: ctx,
-                        initialTime: const TimeOfDay(hour: 9, minute: 0),
-                      );
-                      if (time == null) return;
-                      setModal(() {
-                        hasReminder = true;
-                        reminderDate = DateTime(
-                          date.year,
-                          date.month,
-                          date.day,
-                          time.hour,
-                          time.minute,
-                        );
-                      });
-                    } else {
-                      setModal(() {
-                        hasReminder = false;
-                        reminderDate = null;
-                      });
-                    }
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: hasReminder
-                          ? Colors.orange.withOpacity(0.1)
-                          : AppTheme.surfaceContainer,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: hasReminder
-                            ? Colors.orange.withOpacity(0.4)
-                            : Colors.transparent,
-                      ),
-                    ),
-                    child: Row(children: [
-                      Icon(
-                        Icons.notifications_rounded,
-                        color: hasReminder
-                            ? Colors.orange
-                            : AppTheme.onSurfaceVariant,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              hasReminder
-                                  ? 'Reminder aktif'
-                                  : 'Tambah ke Kalender sebagai Reminder',
-                              style: TextStyle(
-                                color: hasReminder
-                                    ? Colors.orange
-                                    : AppTheme.onSurface,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 14,
-                              ),
-                            ),
-                            if (hasReminder && reminderDate != null)
-                              Text(
-                                DateFormat('d MMMM yyyy, HH:mm', 'id')
-                                    .format(reminderDate!),
-                                style: const TextStyle(
-                                    color: Colors.orange, fontSize: 12),
-                              ),
-                            if (!hasReminder)
-                              const Text(
-                                'Note akan muncul di kalender pada tanggal yang dipilih',
-                                style: TextStyle(
-                                  color: AppTheme.onSurfaceVariant,
-                                  fontSize: 11,
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                      Icon(
-                        hasReminder ? Icons.close_rounded : Icons.add_rounded,
-                        color: hasReminder
-                            ? Colors.orange
-                            : AppTheme.onSurfaceVariant,
-                        size: 20,
-                      ),
-                    ]),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Row(children: [
-                  if (existing != null) ...[
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () async {
-                          await context
-                              .read<NoteProvider>()
-                              .deleteNote(existing.id!);
-                          if (ctx.mounted) Navigator.pop(ctx);
-                          if (mounted) setState(() {});
-                        },
-                        icon: const Icon(Icons.delete_outline_rounded,
-                            color: AppTheme.error, size: 18),
-                        label: const Text('Hapus',
-                            style: TextStyle(color: AppTheme.error)),
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: AppTheme.error),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14)),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                  ],
-                  Expanded(
-                    flex: 2,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primary,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14)),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                      ),
-                      onPressed: () async {
-                        if (titleCtrl.text.trim().isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content: Text('Judul tidak boleh kosong!')),
-                          );
-                          return;
-                        }
-                        final now = DateTime.now();
-                        if (existing != null) {
-                          await context.read<NoteProvider>().updateNote(
-                                existing.copyWith(
-                                  title: titleCtrl.text,
-                                  content: contentCtrl.text,
-                                  updatedAt: now,
-                                  hasReminder: hasReminder,
-                                  reminderDate: reminderDate,
-                                ),
-                              );
-                        } else {
-                          await context.read<NoteProvider>().addNote(
-                                AppNote(
-                                  title: titleCtrl.text,
-                                  content: contentCtrl.text,
-                                  createdAt: now,
-                                  hasReminder: hasReminder,
-                                  reminderDate: reminderDate,
-                                ),
-                              );
-                        }
-                        if (ctx.mounted) Navigator.pop(ctx);
-                        if (mounted) setState(() {});
-                        if (hasReminder && reminderDate != null) {
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                              content: Text(
-                                'Reminder diset: ${DateFormat('d MMM, HH:mm').format(reminderDate!)}',
-                              ),
-                              backgroundColor: Colors.orange,
-                            ));
-                          }
-                        }
-                      },
-                      child: const Text(
-                        'Simpan',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 15,
-                        ),
-                      ),
-                    ),
-                  ),
-                ]),
-                const SizedBox(height: 8),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final notes = context.watch<NoteProvider>().notes;
-    final pinned = notes.where((n) => n.isPinned).toList();
-    final others = notes.where((n) => !n.isPinned).toList();
+    final topPadding = MediaQuery.of(context).padding.top;
 
     return Scaffold(
-      backgroundColor: AppTheme.background,
-      appBar: AppBar(
-        backgroundColor: AppTheme.background,
-        elevation: 0,
-        automaticallyImplyLeading: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: AppTheme.onSurface),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          'Catatan',
-          style: TextStyle(
-            color: AppTheme.onSurface,
-            fontWeight: FontWeight.w800,
-            fontSize: 20,
-          ),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add_rounded,
-                color: AppTheme.primary, size: 28),
-            onPressed: () => _openNote(),
-          ),
-        ],
-      ),
-      body: notes.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.sticky_note_2_outlined,
-                      size: 64, color: AppTheme.onSurfaceVariant),
-                  const SizedBox(height: 16),
-                  const Text('Belum ada catatan',
-                      style: TextStyle(
-                          color: AppTheme.onSurfaceVariant, fontSize: 16)),
-                  const SizedBox(height: 8),
-                  const Text('Tap + untuk membuat catatan baru',
-                      style: TextStyle(
-                          color: AppTheme.onSurfaceVariant, fontSize: 13)),
-                ],
-              ),
-            )
-          : SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (pinned.isNotEmpty) ...[
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8),
-                      child: Text(
-                        'DISEMATKAN',
-                        style: TextStyle(
-                          color: AppTheme.onSurfaceVariant,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.8,
-                        ),
-                      ),
-                    ),
-                    _notesGrid(pinned),
-                    const SizedBox(height: 16),
-                  ],
-                  if (others.isNotEmpty) ...[
-                    if (pinned.isNotEmpty)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 8),
-                        child: Text(
-                          'CATATAN LAIN',
-                          style: TextStyle(
-                            color: AppTheme.onSurfaceVariant,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.8,
-                          ),
-                        ),
-                      ),
-                    _notesGrid(others),
-                  ],
-                ],
+      backgroundColor: _greyFill,
+      body: Column(
+        children: [
+          // ── Header — curved bottom ────────────────────────────
+          Container(
+            decoration: const BoxDecoration(
+              color: _navy,
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(28),
+                bottomRight: Radius.circular(28),
               ),
             ),
-    );
-  }
-
-  Widget _notesGrid(List<AppNote> noteList) {
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-        childAspectRatio: 0.85,
-      ),
-      itemCount: noteList.length,
-      itemBuilder: (ctx, i) {
-        final note = noteList[i];
-        return GestureDetector(
-          onTap: () => _openNote(existing: note),
-          onLongPress: () async {
-            await context.read<NoteProvider>().updateNote(
-                  note.copyWith(isPinned: !note.isPinned),
-                );
-            if (mounted) setState(() {});
-          },
-          child: Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: AppTheme.surface,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: note.hasReminder
-                    ? Colors.orange.withOpacity(0.4)
-                    : AppTheme.outline,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
+            padding: EdgeInsets.only(top: topPadding),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(children: [
-                  Expanded(
-                    child: Text(
-                      note.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppTheme.onSurface,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 15,
+                // Top row: back + title + add button
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  child: Row(
+                    children: [
+                      GestureDetector(
+                        onTap: () => Navigator.pop(context),
+                        child: Container(
+                          width: 38,
+                          height: 38,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(Icons.arrow_back_rounded,
+                              color: _white, size: 20),
+                        ),
                       ),
-                    ),
-                  ),
-                  if (note.isPinned)
-                    const Icon(Icons.push_pin_rounded,
-                        color: AppTheme.primary, size: 16),
-                  if (note.hasReminder)
-                    const Icon(Icons.notifications_rounded,
-                        color: Colors.orange, size: 16),
-                ]),
-                const SizedBox(height: 6),
-                Expanded(
-                  child: Text(
-                    note.content,
-                    overflow: TextOverflow.fade,
-                    style: const TextStyle(
-                      color: AppTheme.onSurfaceVariant,
-                      fontSize: 13,
-                      height: 1.5,
-                    ),
+                      const SizedBox(width: 12),
+                      Text('Notes',
+                          style: _n(
+                              size: 22,
+                              weight: FontWeight.w800,
+                              color: _white)),
+                      const Spacer(),
+                      GestureDetector(
+                        onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => NoteEditorScreen())),
+                        child: Container(
+                          width: 38,
+                          height: 38,
+                          decoration: BoxDecoration(
+                            color: _yellow,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(Icons.add_rounded,
+                              color: _navy, size: 22),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 8),
-                if (note.hasReminder && note.reminderDate != null)
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 6),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+
+                // Search bar
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 20),
+                  child: Container(
+                    height: 42,
                     decoration: BoxDecoration(
-                      color: Colors.orange.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(20),
+                      color: Colors.white.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(14),
                     ),
-                    child: Text(
-                      DateFormat('d MMM, HH:mm').format(note.reminderDate!),
-                      style: const TextStyle(
-                        color: Colors.orange,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
+                    child: TextField(
+                      controller: _searchCtrl,
+                      onChanged: (v) =>
+                          setState(() => _query = v.toLowerCase()),
+                      style: _n(color: _white, size: 14),
+                      decoration: InputDecoration(
+                        hintText: 'Search notes…',
+                        hintStyle:
+                            _n(color: Colors.white.withOpacity(0.35), size: 14),
+                        prefixIcon: Icon(Icons.search_rounded,
+                            color: Colors.white.withOpacity(0.4), size: 19),
+                        border: InputBorder.none,
+                        contentPadding:
+                            const EdgeInsets.symmetric(vertical: 11),
                       ),
                     ),
-                  ),
-                Text(
-                  DateFormat('d MMM yyyy')
-                      .format(note.updatedAt ?? note.createdAt),
-                  style: const TextStyle(
-                    color: AppTheme.onSurfaceVariant,
-                    fontSize: 11,
                   ),
                 ),
               ],
             ),
           ),
-        );
-      },
+
+          const SizedBox(height: 16),
+
+          // ── Notes list ────────────────────────────────────────
+          Expanded(
+            child: Consumer<NoteProvider>(
+              builder: (context, provider, _) {
+                final notes = provider.notes
+                    .where((n) =>
+                        _query.isEmpty ||
+                        n.title.toLowerCase().contains(_query) ||
+                        n.content.toLowerCase().contains(_query))
+                    .toList();
+
+                if (notes.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 72,
+                          height: 72,
+                          decoration: BoxDecoration(
+                            color: _navy.withOpacity(0.07),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(Icons.sticky_note_2_outlined,
+                              size: 36, color: _navy.withOpacity(0.2)),
+                        ),
+                        const SizedBox(height: 14),
+                        Text(
+                          _query.isEmpty
+                              ? 'No notes yet'
+                              : 'No results for "$_query"',
+                          style: _n(
+                              size: 16,
+                              weight: FontWeight.w700,
+                              color: _navySub),
+                        ),
+                        if (_query.isEmpty) ...[
+                          const SizedBox(height: 6),
+                          Text(
+                            'Tap + to create your first note',
+                            style: _n(size: 13, color: _navyHint),
+                          ),
+                        ],
+                      ],
+                    ),
+                  );
+                }
+
+                return ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
+                  itemCount: notes.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 10),
+                  itemBuilder: (context, i) => _NoteCard(note: notes[i]),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+
+      // FAB
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => Navigator.push(
+            context, MaterialPageRoute(builder: (_) => NoteEditorScreen())),
+        backgroundColor: _navy,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: const Icon(Icons.add_rounded, color: _yellow),
+      ),
+    );
+  }
+}
+
+// ── Note card ─────────────────────────────────────────────────────
+class _NoteCard extends StatelessWidget {
+  final AppNote note;
+  const _NoteCard({required this.note});
+
+  // Extract preview text, strip formatting markers
+  String _preview(String raw) {
+    return raw
+        .replaceAll(RegExp(r'^\[.\] ', multiLine: true), '')
+        .replaceAll(RegExp(r'^• ', multiLine: true), '')
+        .replaceAll(RegExp(r'^\d+\. ', multiLine: true), '')
+        .replaceAll(RegExp(r'^  ', multiLine: true), '')
+        .trim();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final hasReminder = note.hasReminder && note.reminderDate != null;
+    final preview = _preview(note.content);
+
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => NoteEditorScreen(existing: note)),
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: _white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: _greyLine, width: 1),
+          boxShadow: [
+            BoxShadow(
+              color: _navy.withOpacity(0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Title
+            Text(
+              note.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: _n(size: 15, weight: FontWeight.w800),
+            ),
+
+            if (preview.isNotEmpty) ...[
+              const SizedBox(height: 5),
+              Text(
+                preview,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: _n(size: 13, color: _navySub, height: 1.55),
+              ),
+            ],
+
+            const SizedBox(height: 12),
+
+            // Footer
+            Row(
+              children: [
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: _navy.withOpacity(0.06),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    DateFormat('d MMM yyyy').format(note.createdAt),
+                    style: _n(
+                        size: 11,
+                        weight: FontWeight.w700,
+                        color: _navySub,
+                        letterSpacing: 0.1),
+                  ),
+                ),
+                const Spacer(),
+                if (hasReminder)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: _yellowBg,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.notifications_active_rounded,
+                            color: _yellow, size: 12),
+                        const SizedBox(width: 4),
+                        Text(
+                          DateFormat('d MMM, HH:mm').format(note.reminderDate!),
+                          style: _n(
+                              size: 11,
+                              weight: FontWeight.w700,
+                              color: _yellow),
+                        ),
+                      ],
+                    ),
+                  ),
+                const SizedBox(width: 8),
+                Icon(Icons.chevron_right_rounded, color: _navyHint, size: 18),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

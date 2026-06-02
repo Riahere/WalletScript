@@ -363,7 +363,7 @@ class _InsightsScreenState extends State<InsightsScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const AppTopBar(),
+                const AppTopBar(isDark: false),
                 const SizedBox(height: 24),
 
                 // ── Sentiment Card (TAPPABLE) ──────────────────────────
