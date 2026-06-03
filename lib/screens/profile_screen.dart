@@ -7,21 +7,16 @@ import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import 'settings_screen.dart';
 import 'wallet_all_screen.dart';
+import 'edit_profile_screen.dart';
 
-// ─── Custom color constants for this screen ───────────────────────────────────
-// Background : #FFFFFF  (white — keep as-is, uses AppTheme.background)
-// Navy blue  : #0D1B3E
-// Yellow     : #F5C842
-// Green      : #1DB87A
-// ──────────────────────────────────────────────────────────────────────────────
 class _ProfileColors {
   static const Color navy = Color(0xFF0D1B3E);
   static const Color yellow = Color(0xFFF5C842);
   static const Color green = Color(0xFF1DB87A);
   static const Color white = Color(0xFFFFFFFF);
-  static const Color greyText = Color(0xFF6B7280); // subtle secondary text
-  static const Color cardBorder = Color(0xFFE5E7EB); // light border on white bg
-  static const Color cardBg = Color(0xFFF9FAFB); // very light card surface
+  static const Color greyText = Color(0xFF6B7280);
+  static const Color cardBorder = Color(0xFFE5E7EB);
+  static const Color cardBg = Color(0xFFF9FAFB);
 }
 
 class ProfileScreen extends StatefulWidget {
@@ -43,11 +38,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   void _initAuth() {
     try {
-      Supabase.instance.client; // throws if not yet initialized
+      Supabase.instance.client;
       _auth = AuthService();
       if (mounted) setState(() => _supabaseReady = true);
     } catch (_) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _initAuth());
+    }
+  }
+
+  Future<void> _goToEditProfile() async {
+    final updated = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (_) => const EditProfileScreen()),
+    );
+    if (updated == true && mounted) {
+      // Re-init auth to pick up new name/email from Supabase
+      _initAuth();
     }
   }
 
@@ -86,7 +92,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             const SizedBox(height: 20),
 
-            // ── Avatar + Name + Email + Edit button ──────────────────────────
+            // ── Avatar + Name + Email + Edit button ────────────────────────
             Center(
               child: Column(
                 children: [
@@ -101,12 +107,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     child: ClipOval(
                       child: avatar != null
-                          ? Image.network(avatar,
+                          ? Image.network(
+                              avatar,
                               fit: BoxFit.cover,
                               errorBuilder: (_, __, ___) => const Icon(
                                   Icons.person_rounded,
                                   color: _ProfileColors.navy,
-                                  size: 50))
+                                  size: 50),
+                            )
                           : const Icon(Icons.person_rounded,
                               color: _ProfileColors.navy, size: 50),
                     ),
@@ -126,11 +134,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         color: _ProfileColors.greyText, fontSize: 14),
                   ),
                   const SizedBox(height: 16),
+
+                  // ← now goes to EditProfileScreen directly
                   OutlinedButton.icon(
-                    onPressed: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const SettingsScreen())),
+                    onPressed: _goToEditProfile,
                     icon: const Icon(Icons.edit_rounded,
                         size: 16, color: _ProfileColors.navy),
                     label: const Text(
@@ -153,7 +160,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             const SizedBox(height: 28),
 
-            // ── Stat cards ───────────────────────────────────────────────────
+            // ── Stat cards ─────────────────────────────────────────────────
             Row(children: [
               _statCard(
                 'Total\nAccounts',
@@ -179,7 +186,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             const SizedBox(height: 20),
 
-            // ── Account Information card ──────────────────────────────────────
+            // ── Account Information card ───────────────────────────────────
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(20),
@@ -188,28 +195,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(color: _ProfileColors.cardBorder)),
               child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Account Information',
-                      style: TextStyle(
-                          color: _ProfileColors.navy,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 16),
-                    ),
-                    const SizedBox(height: 16),
-                    _infoRow(Icons.person_outline_rounded, 'Name', name),
-                    const Divider(height: 24, color: _ProfileColors.cardBorder),
-                    _infoRow(Icons.email_outlined, 'Email', email),
-                    const Divider(height: 24, color: _ProfileColors.cardBorder),
-                    _infoRow(
-                        Icons.calendar_month_outlined, 'Joined', 'May 2026'),
-                  ]),
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Account Information',
+                    style: TextStyle(
+                        color: _ProfileColors.navy,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 16),
+                  ),
+                  const SizedBox(height: 16),
+                  _infoRow(Icons.person_outline_rounded, 'Name', name),
+                  const Divider(height: 24, color: _ProfileColors.cardBorder),
+                  _infoRow(Icons.email_outlined, 'Email', email),
+                  const Divider(height: 24, color: _ProfileColors.cardBorder),
+                  _infoRow(Icons.calendar_month_outlined, 'Joined', 'May 2026'),
+                ],
+              ),
             ),
 
             const SizedBox(height: 20),
 
-            // ── My Accounts / Wallets card ────────────────────────────────────
+            // ── My Accounts / Wallets card ─────────────────────────────────
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(20),
@@ -218,56 +225,56 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(color: _ProfileColors.cardBorder)),
               child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'My Accounts / Wallets',
-                            style: TextStyle(
-                                color: _ProfileColors.navy,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 16),
-                          ),
-                          GestureDetector(
-                            onTap: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (_) => const WalletAllScreen())),
-                            child: const Row(children: [
-                              Text(
-                                'Manage',
-                                style: TextStyle(
-                                    color: _ProfileColors.green,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600),
-                              ),
-                              Icon(Icons.chevron_right_rounded,
-                                  color: _ProfileColors.green, size: 16),
-                            ]),
-                          ),
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'My Accounts / Wallets',
+                        style: TextStyle(
+                            color: _ProfileColors.navy,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 16),
+                      ),
+                      GestureDetector(
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const WalletAllScreen()),
+                        ),
+                        child: const Row(children: [
+                          Text('Manage',
+                              style: TextStyle(
+                                  color: _ProfileColors.green,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600)),
+                          Icon(Icons.chevron_right_rounded,
+                              color: _ProfileColors.green, size: 16),
                         ]),
-                    const SizedBox(height: 16),
-                    if (byGroup.isEmpty)
-                      const Center(
-                          child: Text(
-                        'No accounts yet',
-                        style: TextStyle(color: _ProfileColors.greyText),
-                      ))
-                    else
-                      ...byGroup.entries.map((entry) {
-                        final groupTotal =
-                            entry.value.fold(0.0, (s, a) => s + a.balance);
-                        return Column(children: [
-                          _infoRow(Icons.folder_outlined, entry.key,
-                              formatter.format(groupTotal)),
-                          if (entry.key != byGroup.keys.last)
-                            const Divider(
-                                height: 24, color: _ProfileColors.cardBorder),
-                        ]);
-                      }),
-                  ]),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  if (byGroup.isEmpty)
+                    const Center(
+                      child: Text('No accounts yet',
+                          style: TextStyle(color: _ProfileColors.greyText)),
+                    )
+                  else
+                    ...byGroup.entries.map((entry) {
+                      final groupTotal =
+                          entry.value.fold(0.0, (s, a) => s + a.balance);
+                      return Column(children: [
+                        _infoRow(Icons.folder_outlined, entry.key,
+                            formatter.format(groupTotal)),
+                        if (entry.key != byGroup.keys.last)
+                          const Divider(
+                              height: 24, color: _ProfileColors.cardBorder),
+                      ]);
+                    }),
+                ],
+              ),
             ),
           ],
         ),
@@ -275,7 +282,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // ── Stat card widget ─────────────────────────────────────────────────────────
   static Widget _statCard(
       String label, String value, IconData icon, Color accentColor) {
     return Expanded(
@@ -310,23 +316,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // ── Info row widget ──────────────────────────────────────────────────────────
   static Widget _infoRow(IconData icon, String label, String value) {
     return Row(children: [
       Icon(icon, color: _ProfileColors.navy, size: 20),
       const SizedBox(width: 12),
-      Text(
-        label,
-        style: const TextStyle(color: _ProfileColors.greyText, fontSize: 13),
-      ),
+      Text(label,
+          style: const TextStyle(color: _ProfileColors.greyText, fontSize: 13)),
       const Spacer(),
-      Text(
-        value,
-        style: const TextStyle(
-            color: _ProfileColors.navy,
-            fontWeight: FontWeight.w600,
-            fontSize: 13),
-      ),
+      Text(value,
+          style: const TextStyle(
+              color: _ProfileColors.navy,
+              fontWeight: FontWeight.w600,
+              fontSize: 13)),
     ]);
   }
 }

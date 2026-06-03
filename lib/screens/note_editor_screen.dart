@@ -437,10 +437,30 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
       child: SafeArea(
         top: false,
         child: SizedBox(
-          height: 48,
+          height: 50,
           child: Row(
             children: [
               const SizedBox(width: 4),
+
+              // Bold
+              _toolbarChip(
+                icon: Icons.format_bold_rounded,
+                label: 'Bold',
+                isActive: false,
+                onTap: () {},
+              ),
+
+              // Italic
+              _toolbarChip(
+                icon: Icons.format_italic_rounded,
+                label: 'Italic',
+                isActive: false,
+                onTap: () {},
+              ),
+
+              const SizedBox(width: 6),
+              Container(width: 1, height: 22, color: _greyLine),
+              const SizedBox(width: 6),
 
               // Bullet
               _toolbarChip(
@@ -470,18 +490,6 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                 onTap: () => _applyFormat(active == _LineType.checklist
                     ? _LineType.plain
                     : _LineType.checklist),
-              ),
-
-              const SizedBox(width: 6),
-              Container(width: 1, height: 24, color: _greyLine),
-              const SizedBox(width: 6),
-
-              // New line
-              _toolbarChip(
-                icon: Icons.subdirectory_arrow_left_rounded,
-                label: 'New line',
-                isActive: false,
-                onTap: () => _insertLine(_activeLine),
               ),
 
               const Spacer(),
