@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:io';
+import 'dart:convert'; // ← TAMBAH INI untuk utf8.encode
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import '../services/auth_service.dart';
@@ -10,6 +11,8 @@ import 'app_top_bar.dart';
 import 'login_screen.dart';
 import 'edit_profile_screen.dart';
 import 'security_privacy_screen.dart';
+import 'help_center_screen.dart'; // ← TAMBAH
+import 'privacy_policy_screen.dart'; // ← TAMBAH
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -117,20 +120,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
         return;
       }
 
-      // Build CSV
+      // ── Build CSV dengan UTF-8 BOM + CRLF ─────────────────────────
       final buffer = StringBuffer();
-      buffer.writeln('Date,Type,Category,Amount,Note,Account ID');
+      buffer.write('\uFEFF'); // UTF-8 BOM agar Excel tidak garbled
+      buffer.write('Date,Type,Category,Amount,Note,Account ID\r\n');
       for (final row in res) {
-        final note = (row['note'] ?? '').toString().replaceAll('"', "'");
-        buffer.writeln(
-          '${row['date']},'
-          '${row['type'] ?? ''},'
-          '${row['category'] ?? ''},'
-          '${row['amount']},'
-          '"$note",'
-          '${row['account_id'] ?? ''}',
-        );
+        final date = (row['date'] ?? '').toString();
+        final type = (row['type'] ?? '').toString();
+        final category = (row['category'] ?? '').toString();
+        final amount = (row['amount'] ?? '').toString();
+        final note = (row['note'] ?? '')
+            .toString()
+            .replaceAll('"', "'")
+            .replaceAll('\n', ' ');
+        final accountId = (row['account_id'] ?? '').toString();
+        buffer.write('$date,$type,$category,$amount,"$note",$accountId\r\n');
       }
+      final csvContent = buffer.toString();
+
+      // ✅ FIX: gunakan utf8.encode bukan codeUnits
+      // codeUnits hanya cocok untuk ASCII; utf8.encode benar untuk semua karakter
+      final csvBytes = utf8.encode(csvContent);
 
       if (!mounted) return;
 
@@ -157,7 +167,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         TextStyle(color: _navy.withOpacity(0.5), fontSize: 13)),
                 const SizedBox(height: 16),
 
-                // ── Share via app ──────────────────────────────────────
+                // ── Share via app ────────────────────────────────────
                 ListTile(
                   contentPadding: EdgeInsets.zero,
                   leading: Container(
@@ -182,9 +192,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       final tempDir = await getTemporaryDirectory();
                       final file =
                           File('${tempDir.path}/walletscript_export.csv');
-                      await file.writeAsString(buffer.toString());
+                      // ✅ FIX: tulis sebagai bytes (utf8) bukan codeUnits
+                      await file.writeAsBytes(csvBytes);
                       await Share.shareXFiles(
-                        [XFile(file.path)],
+                        [XFile(file.path, mimeType: 'text/csv')],
                         subject: 'WalletScript Financial Export',
                         text:
                             'Exported ${res.length} transactions from WalletScript',
@@ -197,7 +208,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                 const Divider(),
 
-                // ── Save ke Downloads ──────────────────────────────────
+                // ── Save ke Downloads ────────────────────────────────
                 ListTile(
                   contentPadding: EdgeInsets.zero,
                   leading: Container(
@@ -228,14 +239,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       } else {
                         saveDir = await getApplicationDocumentsDirectory();
                       }
-                      final timestamp = DateTime.now()
-                          .toIso8601String()
-                          .replaceAll(':', '-')
-                          .substring(0, 19);
-                      final file =
-                          File('${saveDir!.path}/walletscript_$timestamp.csv');
-                      await file.writeAsString(buffer.toString());
-                      _snack('Tersimpan: walletscript_$timestamp.csv');
+                      final now = DateTime.now();
+                      final timestamp = '${now.year}-'
+                          '${now.month.toString().padLeft(2, '0')}-'
+                          '${now.day.toString().padLeft(2, '0')}_'
+                          '${now.hour.toString().padLeft(2, '0')}'
+                          '${now.minute.toString().padLeft(2, '0')}';
+                      final filePath =
+                          '${saveDir!.path}/WalletScript_$timestamp.csv';
+                      final file = File(filePath);
+                      // ✅ FIX: tulis sebagai bytes (utf8)
+                      await file.writeAsBytes(csvBytes);
+                      _snack('✅ Tersimpan: WalletScript_$timestamp.csv');
                     } catch (e) {
                       _snack('Save failed: $e', isError: true);
                     }
@@ -452,7 +467,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Theme toggle
                       Row(children: [
                         const Icon(Icons.dark_mode_rounded,
                             color: _navy, size: 20),
@@ -506,7 +520,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                       ]),
                       const SizedBox(height: 16),
-                      // Accent color
                       const Text('Accent Color',
                           style: TextStyle(
                               color: _navy,
@@ -576,17 +589,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 _settingsRow(
                   Icons.help_outline_rounded,
                   'Help Center',
-                  trailing: Icon(Icons.open_in_new_rounded,
-                      color: _navy.withOpacity(0.4), size: 16),
-                  onTap: () => _snack('Help Center coming soon'),
+                  trailing: Icon(Icons.chevron_right_rounded,
+                      color: _navy.withOpacity(0.4)),
+                  // ✅ Navigate ke HelpCenterScreen
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const HelpCenterScreen()),
+                  ),
                 ),
                 Divider(height: 1, color: _navy.withOpacity(0.1)),
                 _settingsRow(
                   Icons.privacy_tip_outlined,
                   'Privacy Policy',
-                  trailing: Icon(Icons.open_in_new_rounded,
-                      color: _navy.withOpacity(0.4), size: 16),
-                  onTap: () => _snack('Privacy Policy coming soon'),
+                  trailing: Icon(Icons.chevron_right_rounded,
+                      color: _navy.withOpacity(0.4)),
+                  // ✅ Navigate ke PrivacyPolicyScreen
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const PrivacyPolicyScreen()),
+                  ),
                 ),
               ]),
               const SizedBox(height: 16),

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/notification_service.dart';
+import 'privacy_policy_screen.dart';
+import 'terms_of_service_screen.dart';
 
 class _C {
   static const navy = Color(0xFF0D1B3E);
@@ -86,7 +88,6 @@ class _SecurityPrivacyScreenState extends State<SecurityPrivacyScreen> {
     }
   }
 
-  // ── Login Alerts toggle → schedule / cancel daily reminder ────────────────
   Future<void> _onLoginAlertChanged(bool v) async {
     setState(() => _loginAlert = v);
     await _savePref(_keyLoginAlert, v);
@@ -187,8 +188,7 @@ class _SecurityPrivacyScreenState extends State<SecurityPrivacyScreen> {
                       label: 'Login Alerts',
                       subtitle: 'Get notified on new sign-ins',
                       value: _loginAlert,
-                      onChanged:
-                          _onLoginAlertChanged, // ← terhubung ke notifikasi
+                      onChanged: _onLoginAlertChanged,
                     ),
                   ]),
                   const SizedBox(height: 20),
@@ -272,17 +272,27 @@ class _SecurityPrivacyScreenState extends State<SecurityPrivacyScreen> {
                     _tappableRow(
                       icon: Icons.privacy_tip_outlined,
                       label: 'Privacy Policy',
-                      trailing: const Icon(Icons.open_in_new_rounded,
-                          color: _C.grey, size: 16),
-                      onTap: () => _snack('Opening privacy policy...'),
+                      trailing: const Icon(Icons.chevron_right_rounded,
+                          color: _C.grey),
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const PrivacyPolicyScreen(),
+                        ),
+                      ),
                     ),
                     _divider(),
                     _tappableRow(
                       icon: Icons.description_outlined,
                       label: 'Terms of Service',
-                      trailing: const Icon(Icons.open_in_new_rounded,
-                          color: _C.grey, size: 16),
-                      onTap: () => _snack('Opening terms of service...'),
+                      trailing: const Icon(Icons.chevron_right_rounded,
+                          color: _C.grey),
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const TermsOfServiceScreen(),
+                        ),
+                      ),
                     ),
                   ]),
                 ],

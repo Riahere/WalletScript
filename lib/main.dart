@@ -9,6 +9,7 @@ import 'providers/budget_provider.dart';
 import 'providers/settings_provider.dart';
 import 'providers/note_provider.dart';
 import 'providers/account_provider.dart';
+import 'providers/notification_provider.dart'; // ← TAMBAH
 import 'theme/app_theme.dart';
 import 'services/notification_service.dart';
 import 'screens/home_screen.dart';
@@ -84,6 +85,10 @@ class _WalletScriptAppState extends State<WalletScriptApp> {
         ChangeNotifierProvider(create: (_) => SettingsProvider()),
         ChangeNotifierProvider(create: (_) => NoteProvider()),
         ChangeNotifierProvider(create: (_) => AccountProvider()),
+        // ← TAMBAH: NotificationProvider dengan load() otomatis saat init
+        ChangeNotifierProvider(
+          create: (_) => NotificationProvider()..load(),
+        ),
       ],
       child: MaterialApp(
         navigatorKey: _navigatorKey,
@@ -166,7 +171,6 @@ class _FloatingNav extends StatelessWidget {
         decoration: BoxDecoration(
           color: const Color(0xFF1E293B),
           borderRadius: BorderRadius.circular(36),
-          // ── box shadow dihapus sesuai permintaan (no glow) ──
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -186,7 +190,7 @@ class _FloatingNav extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// ANIMATED NAV ITEM — pill expand: selected = white pill + icon + label
+// ANIMATED NAV ITEM
 // ─────────────────────────────────────────────────────────────────────────────
 class _AnimatedNavItem extends StatefulWidget {
   final _NavItem item;
@@ -224,7 +228,6 @@ class _AnimatedNavItemState extends State<_AnimatedNavItem>
     );
     _fadeAnim = CurvedAnimation(
       parent: _ctrl,
-      // label fade-in sedikit lebih lambat supaya pill sudah terbuka dulu
       curve: const Interval(0.35, 1.0, curve: Curves.easeOut),
     );
 
@@ -256,7 +259,6 @@ class _AnimatedNavItemState extends State<_AnimatedNavItem>
   Widget build(BuildContext context) {
     final isCenter = widget.item.isCenter;
 
-    // ── Center (Home) — tetap pakai tampilan lingkaran asli ───────────
     if (isCenter) {
       return GestureDetector(
         onTap: _handleTap,
@@ -287,7 +289,6 @@ class _AnimatedNavItemState extends State<_AnimatedNavItem>
       );
     }
 
-    // ── Regular items — pill expand animation ──────────────────────────
     return GestureDetector(
       onTap: _handleTap,
       behavior: HitTestBehavior.opaque,
@@ -298,21 +299,12 @@ class _AnimatedNavItemState extends State<_AnimatedNavItem>
           builder: (_, __) {
             final t = _expandAnim.value;
 
-            // Pill background: transparan → putih
-            final pillColor = Color.lerp(
-              Colors.transparent,
-              Colors.white,
-              t,
-            )!;
-
-            // Icon color: putih redup → hitam gelap
+            final pillColor = Color.lerp(Colors.transparent, Colors.white, t)!;
             final iconColor = Color.lerp(
               Colors.white38,
               const Color(0xFF1E293B),
               t,
             )!;
-
-            // Label color fade
             final labelColor = Color.lerp(
               Colors.transparent,
               const Color(0xFF1E293B),
@@ -321,7 +313,6 @@ class _AnimatedNavItemState extends State<_AnimatedNavItem>
 
             return Container(
               padding: EdgeInsets.symmetric(
-                // padding horizontal melebar seiring animasi
                 horizontal: 10 + (6 * t),
                 vertical: 8,
               ),
@@ -332,12 +323,7 @@ class _AnimatedNavItemState extends State<_AnimatedNavItem>
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(
-                    widget.item.icon,
-                    color: iconColor,
-                    size: 20,
-                  ),
-                  // Label muncul saat pill mulai terbuka
+                  Icon(widget.item.icon, color: iconColor, size: 20),
                   if (_fadeAnim.value > 0.01) ...[
                     SizedBox(width: 6 * t),
                     ClipRect(
