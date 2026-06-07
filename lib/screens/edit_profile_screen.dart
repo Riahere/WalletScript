@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/auth_service.dart';
 
@@ -35,8 +37,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   bool _showNewPw = false;
   bool _showConfirmPw = false;
   bool _loading = false;
+  bool _uploadingPhoto = false;
 
   AuthService? _auth;
+  String? _avatarUrl; // URL tersimpan di Supabase
+  File? _localImage; // File baru yang belum diupload
 
   @override
   void initState() {
@@ -44,8 +49,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     try {
       _auth = AuthService();
     } catch (_) {}
+
     _nameCtrl = TextEditingController(text: _auth?.userName ?? '');
     _emailCtrl = TextEditingController(text: _auth?.userEmail ?? '');
+
+    // Load avatar URL dari user metadata
+    final meta = Supabase.instance.client.auth.currentUser?.userMetadata;
+    _avatarUrl = meta?['avatar_url'] as String?;
   }
 
   @override
@@ -64,6 +74,124 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     super.dispose();
   }
 
+  // ── Pick & upload photo ────────────────────────────────────────────────────
+  Future<void> _pickAndUploadPhoto() async {
+    final picker = ImagePicker();
+
+    // Bottom sheet pilihan sumber foto
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Change Photo',
+                style: TextStyle(
+                    color: _C.navy, fontSize: 16, fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: _C.navy.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.camera_alt_rounded,
+                      color: _C.navy, size: 22),
+                ),
+                title: const Text('Take Photo',
+                    style:
+                        TextStyle(color: _C.navy, fontWeight: FontWeight.w600)),
+                subtitle: Text('Use camera',
+                    style: TextStyle(
+                        color: _C.navy.withOpacity(0.5), fontSize: 12)),
+                onTap: () => Navigator.pop(context, ImageSource.camera),
+              ),
+              const Divider(),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: _C.green.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.photo_library_rounded,
+                      color: _C.green, size: 22),
+                ),
+                title: const Text('Choose from Gallery',
+                    style:
+                        TextStyle(color: _C.navy, fontWeight: FontWeight.w600)),
+                subtitle: Text('Pick from your photos',
+                    style: TextStyle(
+                        color: _C.navy.withOpacity(0.5), fontSize: 12)),
+                onTap: () => Navigator.pop(context, ImageSource.gallery),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (source == null) return;
+
+    final picked = await picker.pickImage(
+      source: source,
+      maxWidth: 512,
+      maxHeight: 512,
+      imageQuality: 85,
+    );
+    if (picked == null) return;
+
+    setState(() {
+      _localImage = File(picked.path);
+      _uploadingPhoto = true;
+    });
+
+    try {
+      final uid = Supabase.instance.client.auth.currentUser!.id;
+      final ext = picked.path.split('.').last.toLowerCase();
+      final path = '$uid/avatar.$ext';
+
+      // Upload ke Supabase Storage bucket "avatars"
+      await Supabase.instance.client.storage.from('avatars').upload(
+            path,
+            _localImage!,
+            fileOptions: const FileOptions(upsert: true),
+          );
+
+      // Ambil public URL
+      final publicUrl =
+          Supabase.instance.client.storage.from('avatars').getPublicUrl(path);
+
+      // Simpan ke user metadata
+      await Supabase.instance.client.auth.updateUser(
+        UserAttributes(data: {'avatar_url': publicUrl}),
+      );
+
+      if (mounted) {
+        setState(() => _avatarUrl = publicUrl);
+        _showSnack('Photo updated!');
+      }
+    } catch (e) {
+      if (mounted) _showSnack('Upload failed: $e', isError: true);
+    } finally {
+      if (mounted) setState(() => _uploadingPhoto = false);
+    }
+  }
+
+  // ── Save profile ───────────────────────────────────────────────────────────
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -84,14 +212,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     try {
       final client = Supabase.instance.client;
 
-      // Update display name in user metadata
+      // Update display name
       await client.auth.updateUser(
         UserAttributes(
           data: {'full_name': _nameCtrl.text.trim()},
         ),
       );
 
-      // Update email if changed
+      // Update email jika berubah
       final currentEmail = _auth?.userEmail ?? '';
       if (_emailCtrl.text.trim().isNotEmpty &&
           _emailCtrl.text.trim() != currentEmail) {
@@ -100,7 +228,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         );
       }
 
-      // Update password if requested
+      // Update password jika diisi
       if (changingPassword) {
         await client.auth.updateUser(
           UserAttributes(password: _newPwCtrl.text),
@@ -120,6 +248,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
   }
 
+  // ── Delete account ─────────────────────────────────────────────────────────
   Future<void> _confirmDeleteAccount() async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -128,7 +257,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         title: const Text('Delete Account',
             style: TextStyle(color: _C.navy, fontWeight: FontWeight.w700)),
         content: const Text(
-          'This will permanently delete your account and all financial data. This action cannot be undone.',
+          'This will permanently delete your account and all financial data. '
+          'This action cannot be undone.',
           style: TextStyle(fontSize: 14),
         ),
         actions: [
@@ -145,7 +275,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       ),
     );
     if (confirm != true) return;
-    // TODO: call your delete-account Supabase Edge Function / RPC here
     _showSnack('Account deletion not yet implemented', isError: true);
   }
 
@@ -157,6 +286,69 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         backgroundColor: isError ? _C.red : _C.green,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+  }
+
+  // ── Avatar widget ──────────────────────────────────────────────────────────
+  Widget _buildAvatar() {
+    ImageProvider? imageProvider;
+
+    if (_localImage != null) {
+      imageProvider = FileImage(_localImage!);
+    } else if (_avatarUrl != null && _avatarUrl!.isNotEmpty) {
+      // cache-bust supaya foto terbaru langsung muncul
+      imageProvider = NetworkImage(
+          '$_avatarUrl?t=${DateTime.now().millisecondsSinceEpoch}');
+    }
+
+    return Center(
+      child: GestureDetector(
+        onTap: _uploadingPhoto ? null : _pickAndUploadPhoto,
+        child: Stack(
+          children: [
+            Container(
+              width: 84,
+              height: 84,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: _C.yellow, width: 3),
+                color: _C.cardBg,
+              ),
+              child: ClipOval(
+                child: _uploadingPhoto
+                    ? const Center(
+                        child: CircularProgressIndicator(
+                            color: _C.navy, strokeWidth: 2),
+                      )
+                    : imageProvider != null
+                        ? Image(
+                            image: imageProvider,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const Icon(
+                              Icons.person_rounded,
+                              color: _C.navy,
+                              size: 46,
+                            ),
+                          )
+                        : const Icon(Icons.person_rounded,
+                            color: _C.navy, size: 46),
+              ),
+            ),
+            Positioned(
+              bottom: 0,
+              right: 0,
+              child: Container(
+                width: 28,
+                height: 28,
+                decoration:
+                    const BoxDecoration(color: _C.navy, shape: BoxShape.circle),
+                child: const Icon(Icons.camera_alt_rounded,
+                    color: _C.white, size: 15),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -185,49 +377,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ── Avatar ────────────────────────────────────────────────────
-              Center(
-                child: GestureDetector(
-                  onTap: () => _showSnack('Photo picker coming soon'),
-                  child: Stack(
-                    children: [
-                      Container(
-                        width: 84,
-                        height: 84,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: _C.yellow, width: 3),
-                          color: _C.cardBg,
-                        ),
-                        child: const ClipOval(
-                          child: Icon(Icons.person_rounded,
-                              color: _C.navy, size: 46),
-                        ),
-                      ),
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: Container(
-                          width: 28,
-                          height: 28,
-                          decoration: const BoxDecoration(
-                              color: _C.navy, shape: BoxShape.circle),
-                          child: const Icon(Icons.camera_alt_rounded,
-                              color: _C.white, size: 15),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+              // ── Avatar ───────────────────────────────────────────────
+              _buildAvatar(),
               const SizedBox(height: 8),
               Center(
                 child: GestureDetector(
-                  onTap: () => _showSnack('Photo picker coming soon'),
-                  child: const Text(
-                    'Change photo',
+                  onTap: _uploadingPhoto ? null : _pickAndUploadPhoto,
+                  child: Text(
+                    _uploadingPhoto ? 'Uploading...' : 'Change photo',
                     style: TextStyle(
-                        color: _C.green,
+                        color: _uploadingPhoto ? _C.grey : _C.green,
                         fontSize: 13,
                         fontWeight: FontWeight.w600),
                   ),
@@ -235,7 +394,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               ),
               const SizedBox(height: 28),
 
-              // ── Personal Info ─────────────────────────────────────────────
+              // ── Personal Info ─────────────────────────────────────────
               _sectionLabel('Personal Info'),
               _fieldCard([
                 _buildField(
@@ -254,7 +413,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               ]),
               const SizedBox(height: 20),
 
-              // ── Contact ───────────────────────────────────────────────────
+              // ── Contact ───────────────────────────────────────────────
               _sectionLabel('Contact'),
               _fieldCard([
                 _buildField(
@@ -263,7 +422,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   hint: 'your@email.com',
                   keyboardType: TextInputType.emailAddress,
                   validator: (v) {
-                    if ((v ?? '').trim().isEmpty) return 'Email is required';
+                    if ((v ?? '').trim().isEmpty) {
+                      return 'Email is required';
+                    }
                     if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(v!.trim())) {
                       return 'Enter a valid email';
                     }
@@ -280,7 +441,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               ]),
               const SizedBox(height: 20),
 
-              // ── Security ──────────────────────────────────────────────────
+              // ── Security ──────────────────────────────────────────────
               _sectionLabel('Security'),
               _fieldCard([
                 _buildPasswordField(
@@ -325,7 +486,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               ),
               const SizedBox(height: 32),
 
-              // ── Save button ───────────────────────────────────────────────
+              // ── Save button ───────────────────────────────────────────
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -356,7 +517,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               ),
               const SizedBox(height: 12),
 
-              // ── Delete account ────────────────────────────────────────────
+              // ── Delete account ────────────────────────────────────────
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton(
@@ -371,7 +532,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     'Delete Account',
                     style: TextStyle(
                         color: _C.red,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w700,
                         fontSize: 15),
                   ),
                 ),
@@ -383,7 +544,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
-  // ── Helper widgets ────────────────────────────────────────────────────────
+  // ── Helper widgets ─────────────────────────────────────────────────────────
 
   Widget _sectionLabel(String label) => Padding(
         padding: const EdgeInsets.only(bottom: 8, left: 2),

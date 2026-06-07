@@ -2,42 +2,80 @@
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../main.dart';
-import '../services/auth_service.dart';
 import 'profile_screen.dart';
 import 'notes_screen.dart';
 import 'calendar_screen.dart';
 import 'notification_screen.dart';
 
-class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
+class AppTopBar extends StatefulWidget implements PreferredSizeWidget {
   /// [isDark] true  → white text/icons (for dark/navy background, e.g. Home)
-  /// [isDark] false → dark text/icons (for white/light background, e.g. Flow History, etc.)
+  /// [isDark] false → dark text/icons (for white/light background, e.g. Settings, etc.)
   final bool isDark;
 
   const AppTopBar({super.key, this.isDark = true});
 
-  // Implement PreferredSizeWidget so AppTopBar can be used as AppBar directly
   @override
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
 
   @override
-  Widget build(BuildContext context) {
-    final name = AuthService().userName ?? 'User';
-    final avatar = AuthService().userAvatar;
-    final initial = name.isNotEmpty ? name[0].toUpperCase() : 'U';
+  State<AppTopBar> createState() => _AppTopBarState();
+}
 
-    // ── Adaptive colors ────────────────────────────────────────────────
-    final Color foreground = isDark ? Colors.white : const Color(0xFF1A1A2E);
-    final Color avatarBg = isDark
+class _AppTopBarState extends State<AppTopBar> {
+  String? _avatarUrl;
+  String _initial = 'U';
+  String _name = 'User';
+
+  late final RealtimeChannel _authSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUser();
+
+    // Listen to auth state changes so avatar updates across all screens
+    Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      if (mounted) _loadUser();
+    });
+  }
+
+  void _loadUser() {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) return;
+
+    final meta = user.userMetadata ?? {};
+    final name = (meta['full_name'] as String? ??
+        meta['name'] as String? ??
+        user.email ??
+        'User');
+    final avatar = meta['avatar_url'] as String?;
+
+    if (mounted) {
+      setState(() {
+        _name = name;
+        _initial = name.isNotEmpty ? name[0].toUpperCase() : 'U';
+        _avatarUrl = (avatar != null && avatar.isNotEmpty) ? avatar : null;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // ── Adaptive colors ──────────────────────────────────────────────────
+    final Color foreground =
+        widget.isDark ? Colors.white : const Color(0xFF1A1A2E);
+    final Color avatarBg = widget.isDark
         ? Colors.white.withOpacity(0.12)
         : const Color(0xFF1A1A2E).withOpacity(0.08);
-    final Color avatarBorder = isDark
+    final Color avatarBorder = widget.isDark
         ? Colors.white.withOpacity(0.22)
         : const Color(0xFF1A1A2E).withOpacity(0.18);
-    final Color iconBg = isDark
+    final Color iconBg = widget.isDark
         ? Colors.white.withOpacity(0.10)
         : const Color(0xFF1A1A2E).withOpacity(0.07);
-    final Color iconColor = isDark
+    final Color iconColor = widget.isDark
         ? Colors.white.withOpacity(0.85)
         : const Color(0xFF1A1A2E).withOpacity(0.75);
 
@@ -47,12 +85,16 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: Row(
           children: [
-            // ── Avatar ──────────────────────────────────────────────────
+            // ── Avatar ────────────────────────────────────────────────────
             GestureDetector(
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ProfileScreen()),
-              ),
+              onTap: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                );
+                // Refresh after returning from ProfileScreen
+                _loadUser();
+              },
               child: Container(
                 width: 32,
                 height: 32,
@@ -61,38 +103,22 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
                   color: avatarBg,
                   border: Border.all(color: avatarBorder, width: 1.5),
                 ),
-                child: avatar != null
-                    ? ClipOval(
-                        child: Image.network(
-                          avatar,
+                child: ClipOval(
+                  child: _avatarUrl != null
+                      ? Image.network(
+                          // Cache-bust so latest photo appears immediately
+                          '$_avatarUrl?t=${DateTime.now().millisecondsSinceEpoch}',
                           fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Center(
-                            child: Text(
-                              initial,
-                              style: GoogleFonts.dmSans(
-                                color: foreground,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                        ),
-                      )
-                    : Center(
-                        child: Text(
-                          initial,
-                          style: GoogleFonts.dmSans(
-                            color: foreground,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
+                          errorBuilder: (_, __, ___) =>
+                              _initialWidget(foreground),
+                        )
+                      : _initialWidget(foreground),
+                ),
               ),
             ),
             const SizedBox(width: 7),
 
-            // ── App name ─────────────────────────────────────────────────
+            // ── App name ──────────────────────────────────────────────────
             GestureDetector(
               onTap: () {
                 final shell = context.findAncestorStateOfType<MainShellState>();
@@ -115,7 +141,7 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
 
             const Spacer(),
 
-            // ── Notes icon ───────────────────────────────────────────────
+            // ── Notes icon ────────────────────────────────────────────────
             _iconBtn(
               icon: Icons.sticky_note_2_outlined,
               iconBg: iconBg,
@@ -127,7 +153,7 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
             ),
             const SizedBox(width: 6),
 
-            // ── Calendar icon ────────────────────────────────────────────
+            // ── Calendar icon ─────────────────────────────────────────────
             _iconBtn(
               icon: Icons.calendar_month_outlined,
               iconBg: iconBg,
@@ -139,7 +165,7 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
             ),
             const SizedBox(width: 6),
 
-            // ── Notification icon with red dot badge ─────────────────────
+            // ── Notification icon with red dot badge ──────────────────────
             Stack(
               clipBehavior: Clip.none,
               children: [
@@ -168,6 +194,20 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
               ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  // ── Initial letter fallback ───────────────────────────────────────────────
+  Widget _initialWidget(Color foreground) {
+    return Center(
+      child: Text(
+        _initial,
+        style: GoogleFonts.dmSans(
+          color: foreground,
+          fontWeight: FontWeight.w700,
+          fontSize: 12,
         ),
       ),
     );

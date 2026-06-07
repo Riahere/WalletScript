@@ -1,5 +1,4 @@
 // lib/screens/note_editor_screen.dart
-// Redesign: Nunito font (Gotham-style), iOS Notes feel, curved layout, accessible toolbar
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -8,7 +7,6 @@ import 'package:provider/provider.dart';
 import '../models/note_model.dart';
 import '../providers/note_provider.dart';
 
-// ─── Color palette ────────────────────────────────────────────────
 const Color _navy = Color(0xFF0D1B3E);
 const Color _yellow = Color(0xFFF5C842);
 const Color _green = Color(0xFF1DB87A);
@@ -16,10 +14,8 @@ const Color _white = Colors.white;
 const Color _navySub = Color(0x800D1B3E);
 const Color _navyHint = Color(0x400D1B3E);
 const Color _greyLine = Color(0xFFECECEC);
-const Color _greyFill = Color(0xFFF8F8FA);
-const Color _surface = Color(0xFFF2F2F7); // iOS-like surface
+const Color _surface = Color(0xFFF2F2F7);
 
-// ─── Font helper — Nunito (Gotham-style: geometric, warm, readable) ──
 TextStyle _n({
   double size = 15,
   FontWeight weight = FontWeight.w400,
@@ -35,7 +31,6 @@ TextStyle _n({
       decoration: decoration,
     );
 
-// ─── Line types ───────────────────────────────────────────────────
 enum _LineType { plain, bullet, numbered, checklist }
 
 class _Line {
@@ -43,7 +38,6 @@ class _Line {
   String text;
   bool checked;
   _Line({required this.type, required this.text, this.checked = false});
-
   _Line copyWith({_LineType? type, String? text, bool? checked}) => _Line(
         type: type ?? this.type,
         text: text ?? this.text,
@@ -51,7 +45,6 @@ class _Line {
       );
 }
 
-// ─── Screen ───────────────────────────────────────────────────────
 class NoteEditorScreen extends StatefulWidget {
   final AppNote? existing;
   const NoteEditorScreen({super.key, this.existing});
@@ -62,7 +55,6 @@ class NoteEditorScreen extends StatefulWidget {
 
 class _NoteEditorScreenState extends State<NoteEditorScreen> {
   late final TextEditingController _titleCtrl;
-
   late List<_Line> _lines;
   final List<TextEditingController> _ctrls = [];
   final List<FocusNode> _focusNodes = [];
@@ -111,7 +103,6 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     }).join('\n');
   }
 
-  // ── Controllers ──────────────────────────────────────────────────
   void _buildControllers() {
     for (final c in _ctrls) c.dispose();
     for (final f in _focusNodes) f.dispose();
@@ -156,8 +147,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     _syncTexts();
     final prevType = _lines[after].type;
     _lines.insert(after + 1, _Line(type: prevType, text: ''));
-    final fn = FocusNode();
     _ctrls.insert(after + 1, TextEditingController());
+    final fn = FocusNode();
     _focusNodes.insert(after + 1, fn);
     for (int i = 0; i < _focusNodes.length; i++) {
       final idx = i;
@@ -184,20 +175,17 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
 
   void _applyFormat(_LineType type) {
     _syncTexts();
-    setState(() {
-      _lines[_activeLine] = _lines[_activeLine].copyWith(type: type);
-    });
+    setState(
+        () => _lines[_activeLine] = _lines[_activeLine].copyWith(type: type));
     _focusNodes[_activeLine].requestFocus();
   }
 
   void _toggleCheck(int i) {
     _syncTexts();
-    setState(() {
-      _lines[i] = _lines[i].copyWith(checked: !_lines[i].checked);
-    });
+    setState(() => _lines[i] = _lines[i].copyWith(checked: !_lines[i].checked));
   }
 
-  // ── Reminder ─────────────────────────────────────────────────────
+  // ── Reminder picker ───────────────────────────────────────────────
   Future<void> _pickReminder() async {
     final now = DateTime.now();
     final date = await showDatePicker(
@@ -205,14 +193,14 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
       initialDate: _reminderDate ?? now.add(const Duration(hours: 1)),
       firstDate: now,
       lastDate: now.add(const Duration(days: 365 * 5)),
-      builder: (ctx, child) => _datePickerTheme(ctx, child),
+      builder: (ctx, child) => _pickerTheme(ctx, child),
     );
     if (date == null || !mounted) return;
     final time = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.fromDateTime(
           _reminderDate ?? now.add(const Duration(hours: 1))),
-      builder: (ctx, child) => _datePickerTheme(ctx, child),
+      builder: (ctx, child) => _pickerTheme(ctx, child),
     );
     if (time == null || !mounted) return;
     setState(() {
@@ -222,7 +210,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     });
   }
 
-  Widget _datePickerTheme(BuildContext ctx, Widget? child) => Theme(
+  Widget _pickerTheme(BuildContext ctx, Widget? child) => Theme(
         data: Theme.of(ctx).copyWith(
           colorScheme: const ColorScheme.light(
             primary: _navy,
@@ -234,7 +222,14 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
         child: child!,
       );
 
-  // ── Save ─────────────────────────────────────────────────────────
+  void _clearReminder() {
+    setState(() {
+      _hasReminder = false;
+      _reminderDate = null;
+    });
+  }
+
+  // ── Save ──────────────────────────────────────────────────────────
   Future<void> _save() async {
     _syncTexts();
     final title = _titleCtrl.text.trim();
@@ -313,16 +308,14 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     if (mounted) Navigator.pop(context);
   }
 
-  // ── Build a single content line ───────────────────────────────────
+  // ── Single line builder ───────────────────────────────────────────
   Widget _buildLine(int i) {
     final line = _lines[i];
-
     Widget leading;
     switch (line.type) {
       case _LineType.plain:
         leading = const SizedBox(width: 4);
         break;
-
       case _LineType.bullet:
         leading = Padding(
           padding: const EdgeInsets.only(top: 11, right: 10, left: 4),
@@ -336,7 +329,6 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
           ),
         );
         break;
-
       case _LineType.numbered:
         final numIdx = _lines
             .sublist(0, i + 1)
@@ -346,18 +338,15 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
           padding: const EdgeInsets.only(top: 2, right: 8, left: 2),
           child: SizedBox(
             width: 22,
-            child: Text(
-              '$numIdx.',
-              style: _n(
-                  size: 15,
-                  weight: FontWeight.w700,
-                  color: _navy.withOpacity(0.45)),
-              textAlign: TextAlign.right,
-            ),
+            child: Text('$numIdx.',
+                style: _n(
+                    size: 15,
+                    weight: FontWeight.w700,
+                    color: _navy.withOpacity(0.45)),
+                textAlign: TextAlign.right),
           ),
         );
         break;
-
       case _LineType.checklist:
         leading = GestureDetector(
           onTap: () => _toggleCheck(i),
@@ -423,7 +412,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     );
   }
 
-  // ── Formatting toolbar ── iOS Notes style ─────────────────────────
+  // ── Toolbar ───────────────────────────────────────────────────────
   Widget _buildToolbar() {
     final active = _activeLine < _lines.length
         ? _lines[_activeLine].type
@@ -441,28 +430,21 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
           child: Row(
             children: [
               const SizedBox(width: 4),
-
-              // Bold
               _toolbarChip(
                 icon: Icons.format_bold_rounded,
                 label: 'Bold',
                 isActive: false,
                 onTap: () {},
               ),
-
-              // Italic
               _toolbarChip(
                 icon: Icons.format_italic_rounded,
                 label: 'Italic',
                 isActive: false,
                 onTap: () {},
               ),
-
               const SizedBox(width: 6),
               Container(width: 1, height: 22, color: _greyLine),
               const SizedBox(width: 6),
-
-              // Bullet
               _toolbarChip(
                 icon: Icons.format_list_bulleted_rounded,
                 label: 'List',
@@ -471,8 +453,6 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                     ? _LineType.plain
                     : _LineType.bullet),
               ),
-
-              // Numbered
               _toolbarChip(
                 icon: Icons.format_list_numbered_rounded,
                 label: '1 2 3',
@@ -481,8 +461,6 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                     ? _LineType.plain
                     : _LineType.numbered),
               ),
-
-              // Checklist
               _toolbarChip(
                 icon: Icons.checklist_rounded,
                 label: 'To-do',
@@ -491,10 +469,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                     ? _LineType.plain
                     : _LineType.checklist),
               ),
-
               const Spacer(),
-
-              // Dismiss keyboard
               GestureDetector(
                 onTap: () => FocusScope.of(context).unfocus(),
                 child: Padding(
@@ -521,7 +496,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 160),
         margin: const EdgeInsets.symmetric(horizontal: 3, vertical: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+        padding: const EdgeInsets.symmetric(horizontal: 10),
         decoration: BoxDecoration(
           color: isActive ? _navy : _surface,
           borderRadius: BorderRadius.circular(10),
@@ -543,7 +518,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     );
   }
 
-  // ── Main build ────────────────────────────────────────────────────
+  // ── Build ─────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     final topPadding = MediaQuery.of(context).padding.top;
@@ -552,7 +527,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
       backgroundColor: _white,
       body: Column(
         children: [
-          // ── Header ── navy, curved bottom ──────────────────────
+          // ── Header ────────────────────────────────────────────────
           Container(
             decoration: const BoxDecoration(
               color: _navy,
@@ -561,85 +536,143 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                 bottomRight: Radius.circular(28),
               ),
             ),
-            padding: EdgeInsets.only(top: topPadding),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 18),
-              child: Row(
-                children: [
-                  // Back button
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Container(
-                      width: 38,
-                      height: 38,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(Icons.arrow_back_rounded,
-                          color: _white, size: 20),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    _isEdit ? 'Edit Note' : 'New Note',
-                    style: _n(size: 19, weight: FontWeight.w800, color: _white),
-                  ),
-                  const Spacer(),
-                  if (_isEdit) ...[
-                    GestureDetector(
-                      onTap: _delete,
-                      child: Container(
-                        width: 38,
-                        height: 38,
-                        decoration: BoxDecoration(
-                          color: Colors.red.withOpacity(0.18),
-                          borderRadius: BorderRadius.circular(12),
+            child: Column(
+              children: [
+                SizedBox(height: topPadding + 12),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 18),
+                  child: Row(
+                    children: [
+                      // Back
+                      GestureDetector(
+                        onTap: () => Navigator.pop(context),
+                        child: Container(
+                          width: 38,
+                          height: 38,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(Icons.arrow_back_rounded,
+                              color: _white, size: 20),
                         ),
-                        child: const Icon(Icons.delete_outline_rounded,
-                            color: Colors.redAccent, size: 20),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                  ],
-                  // Save button
-                  GestureDetector(
-                    onTap: _isSaving ? null : _save,
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 120),
-                      height: 38,
-                      padding: const EdgeInsets.symmetric(horizontal: 18),
-                      decoration: BoxDecoration(
-                        color: _isSaving ? _yellow.withOpacity(0.6) : _yellow,
-                        borderRadius: BorderRadius.circular(12),
+                      const SizedBox(width: 12),
+                      Text(
+                        _isEdit ? 'Edit Note' : 'New Note',
+                        style: _n(
+                            size: 19, weight: FontWeight.w800, color: _white),
                       ),
-                      alignment: Alignment.center,
-                      child: _isSaving
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                  color: _navy, strokeWidth: 2.5))
-                          : Text('Save',
-                              style: _n(
-                                  size: 14,
-                                  weight: FontWeight.w800,
-                                  color: _navy)),
-                    ),
+                      const Spacer(),
+
+                      // ── Reminder button ────────────────────────
+                      GestureDetector(
+                        onTap: _hasReminder ? _clearReminder : _pickReminder,
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          height: 38,
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          decoration: BoxDecoration(
+                            color: _hasReminder
+                                ? _yellow.withOpacity(0.18)
+                                : Colors.white.withOpacity(0.10),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: _hasReminder
+                                  ? _yellow.withOpacity(0.6)
+                                  : Colors.white.withOpacity(0.20),
+                              width: 1.2,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                _hasReminder
+                                    ? Icons.notifications_active_rounded
+                                    : Icons.notifications_none_rounded,
+                                color: _hasReminder
+                                    ? _yellow
+                                    : _white.withOpacity(0.7),
+                                size: 17,
+                              ),
+                              if (_hasReminder && _reminderDate != null) ...[
+                                const SizedBox(width: 6),
+                                Text(
+                                  DateFormat('d MMM').format(_reminderDate!),
+                                  style: _n(
+                                    size: 12,
+                                    weight: FontWeight.w700,
+                                    color: _yellow,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(width: 8),
+
+                      // Delete (edit mode)
+                      if (_isEdit) ...[
+                        GestureDetector(
+                          onTap: _delete,
+                          child: Container(
+                            width: 38,
+                            height: 38,
+                            decoration: BoxDecoration(
+                              color: Colors.red.withOpacity(0.18),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(Icons.delete_outline_rounded,
+                                color: Colors.redAccent, size: 20),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                      ],
+
+                      // Save
+                      GestureDetector(
+                        onTap: _isSaving ? null : _save,
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 120),
+                          height: 38,
+                          padding: const EdgeInsets.symmetric(horizontal: 18),
+                          decoration: BoxDecoration(
+                            color:
+                                _isSaving ? _yellow.withOpacity(0.6) : _yellow,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          alignment: Alignment.center,
+                          child: _isSaving
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                      color: _navy, strokeWidth: 2.5))
+                              : Text('Save',
+                                  style: _n(
+                                      size: 14,
+                                      weight: FontWeight.w800,
+                                      color: _navy)),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
 
-          // ── Body ─────────────────────────────────────────────────
+          // ── Body — full width, no card wrapper ────────────────────
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(22, 28, 22, 48),
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 48),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ── Title field ─────────────────────────────────
+                  // Title
                   TextField(
                     controller: _titleCtrl,
                     maxLines: 1,
@@ -658,124 +691,76 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                     ),
                   ),
 
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 4),
 
-                  // ── Meta date (edit mode) ───────────────────────
+                  // Edit date
                   if (_isEdit)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 6),
-                      child: Text(
-                        DateFormat('d MMM yyyy · HH:mm').format(
-                            widget.existing!.updatedAt ??
-                                widget.existing!.createdAt),
-                        style: _n(size: 12, color: _navyHint),
+                    Text(
+                      DateFormat('d MMM yyyy · HH:mm').format(
+                          widget.existing!.updatedAt ??
+                              widget.existing!.createdAt),
+                      style: _n(size: 12, color: _navyHint),
+                    ),
+
+                  // Active reminder pill (below title)
+                  if (_hasReminder && _reminderDate != null) ...[
+                    const SizedBox(height: 10),
+                    GestureDetector(
+                      onTap: _pickReminder,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: _yellow.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                              color: _yellow.withOpacity(0.4), width: 1),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.notifications_active_rounded,
+                                color: _yellow, size: 14),
+                            const SizedBox(width: 6),
+                            Text(
+                              DateFormat('EEE, d MMM · HH:mm')
+                                  .format(_reminderDate!),
+                              style: _n(
+                                  size: 12,
+                                  weight: FontWeight.w700,
+                                  color: _navy),
+                            ),
+                            const SizedBox(width: 8),
+                            GestureDetector(
+                              onTap: _clearReminder,
+                              child: Icon(Icons.close_rounded,
+                                  color: _navy.withOpacity(0.35), size: 14),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
+                  ],
 
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 16),
 
-                  // ── Curved writing card ─────────────────────────
-                  Container(
-                    width: double.infinity,
-                    constraints: const BoxConstraints(minHeight: 220),
-                    decoration: BoxDecoration(
-                      color: _greyFill,
-                      borderRadius: BorderRadius.circular(22),
-                      border: Border.all(color: _greyLine, width: 1),
-                    ),
-                    padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
-                    child: ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: _lines.length,
-                      itemBuilder: (_, i) => _buildLine(i),
-                    ),
+                  // Divider under title
+                  Divider(height: 1, color: _greyLine),
+                  const SizedBox(height: 16),
+
+                  // Content lines — full width, no card
+                  ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: _lines.length,
+                    itemBuilder: (_, i) => _buildLine(i),
                   ),
 
-                  const SizedBox(height: 28),
-
-                  // ── Reminder section ────────────────────────────
-                  Container(
-                    decoration: BoxDecoration(
-                      color: _greyFill,
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: _greyLine),
-                    ),
-                    child: Column(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 14),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 34,
-                                height: 34,
-                                decoration: BoxDecoration(
-                                  color: _yellow.withOpacity(0.15),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: const Icon(
-                                    Icons.notifications_none_rounded,
-                                    color: _yellow,
-                                    size: 18),
-                              ),
-                              const SizedBox(width: 12),
-                              Text('Reminder',
-                                  style: _n(size: 15, weight: FontWeight.w700)),
-                              const Spacer(),
-                              Switch.adaptive(
-                                value: _hasReminder,
-                                onChanged: (v) async {
-                                  if (v) {
-                                    await _pickReminder();
-                                  } else {
-                                    setState(() {
-                                      _hasReminder = false;
-                                      _reminderDate = null;
-                                    });
-                                  }
-                                },
-                                activeColor: _green,
-                              ),
-                            ],
-                          ),
-                        ),
-                        if (_hasReminder && _reminderDate != null) ...[
-                          Divider(height: 1, color: _greyLine),
-                          GestureDetector(
-                            onTap: _pickReminder,
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 14),
-                              child: Row(
-                                children: [
-                                  Icon(Icons.calendar_today_rounded,
-                                      color: _yellow, size: 15),
-                                  const SizedBox(width: 10),
-                                  Text(
-                                    DateFormat('EEE, d MMM yyyy · HH:mm')
-                                        .format(_reminderDate!),
-                                    style: _n(
-                                        size: 13,
-                                        weight: FontWeight.w600,
-                                        color: _navy),
-                                  ),
-                                  const Spacer(),
-                                  Icon(Icons.edit_rounded,
-                                      color: _navyHint, size: 14),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-
-                  // ── Meta footer (edit mode) ─────────────────────
+                  // Edit mode footer
                   if (_isEdit) ...[
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 32),
+                    Divider(height: 1, color: _greyLine),
+                    const SizedBox(height: 12),
                     Row(children: [
                       Icon(Icons.access_time_rounded,
                           color: _navyHint, size: 13),
@@ -803,7 +788,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
             ),
           ),
 
-          // ── Formatting toolbar ───────────────────────────────────
+          // ── Formatting toolbar ────────────────────────────────────
           _buildToolbar(),
         ],
       ),
